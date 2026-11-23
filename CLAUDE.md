@@ -85,8 +85,9 @@ and restarts `voice-api` with PM2.
 - **Kokoro** (`kokoro`, `soundfile`; system `espeak-ng`, `ffmpeg`):
   - Hindi `KPipeline(lang_code='h')`: voices `hf_alpha`, `hf_beta` (female), `hm_omega`, `hm_psi` (male).
   - English `lang_code='a'` (US) / `'b'` (UK).
-  - Load pipelines once at startup. **One synthesis at a time** (6 GB RAM, no swap) with a simple queue.
+  - Load pipelines once at startup, **sharing one `KModel`** (`KPipeline(..., model=m)`: 1.3 GB vs 2.7 GB). **One synthesis at a time** (6 GB RAM, no swap) with a simple queue.
   - Apache-2.0, so it's OK for the future SaaS.
+  - Measured (phase 1, 4 threads): ~1.35x realtime (60 s of audio ≈ 45 s compute), peak RSS ~1.6 GB during synthesis with shared model.
 - **Hinglish:** Kokoro's Hindi voices read Devanagari; Roman Hinglish ("Raat 11 baje customer ne...") sounds wrong.
   Add a "Transliterate Hinglish" toggle: Roman Hindi → Devanagari before synthesis, English words kept as-is.
 - **edge-tts** (optional): `hi-IN-MadhurNeural`, `hi-IN-SwaraNeural`. Unofficial Microsoft service:

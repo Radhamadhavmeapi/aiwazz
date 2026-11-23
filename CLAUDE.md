@@ -54,8 +54,8 @@ https://login.aiwazz.in  → nginx
 ### Repo layout (cloned at /www/aiwazz)
 ```
 aiwazz/
-  landing/     static landing page → deployed to /www/wwwroot/aiwazz.in
-  dashboard/   web app (Vite + React or plain HTML/JS) → build deployed to /www/wwwroot/login.aiwazz.in
+  landing/     Astro static landing page → build deployed to /www/wwwroot/aiwazz.in
+  dashboard/   web app (Vite + React + TS + Tailwind + shadcn/ui) → build deployed to /www/wwwroot/login.aiwazz.in
   api/         FastAPI app (main.py, auth/, tts/, models/, settings.py), Alembic migrations
   tools/       tts.sh for the video pipeline
   ecosystem.config.js   PM2 config
@@ -90,8 +90,35 @@ and restarts `voice-api` with PM2.
   (split into sentences, join with short pauses, max 5,000 chars)
 - `GET  /api/history` (last 50 for the user), `GET /api/audio/{id}` (only the owner can download)
 
+## Design system (applies to landing + dashboard)
+Goal: a **modern, advanced, technology-focused SaaS** look. Clean, minimal, premium (think Linear, Vercel,
+ElevenLabs). Not a template look, no clutter, no stock photos, no random colors.
+
+- **Stack:** dashboard = Vite + React + TypeScript + Tailwind CSS + shadcn/ui + lucide-react icons +
+  framer-motion (subtle only). Landing = Astro (static HTML output, best for SEO) + Tailwind, same tokens.
+  Shared design tokens (colors, radius, fonts) in one place, used by both.
+- **Theme:** dark-first with a light-mode toggle (remember the choice). Neutral base (zinc/slate),
+  near-black background `#0A0A0B`, surfaces one step lighter, 1px subtle borders, soft shadows.
+  **One accent:** electric violet → cyan gradient, used sparingly (primary button, active states, waveform, key highlights).
+- **Typography:** Inter or Geist for UI, Geist Mono / JetBrains Mono for numbers, API keys and code.
+  Clear hierarchy, generous spacing, tight letter-spacing on large headings.
+- **Signature element:** a live **audio waveform** (wavesurfer.js) in the player and as the landing hero visual,
+  animated while generating. Glassy cards with a faint grid/noise background in the hero only.
+- **Dashboard layout:** collapsible left sidebar (Generate, History, Voices, API keys, Settings), top bar with
+  usage/credits placeholder + theme toggle + avatar menu, ⌘K command palette. Main "Generate" screen:
+  large text editor with character counter, right panel with voice picker (voice cards with play-preview),
+  language, speed slider, Hinglish toggle, big Generate button; result shows waveform player + download (MP3/WAV) + copy link.
+- **States everywhere:** loading skeletons, progress while synthesizing (queue position), empty states with a hint,
+  friendly error toasts (sonner). No blank screens.
+- **Auth pages (login.aiwazz.in):** split layout. Left: form (email, password, show/hide, invite code on signup).
+  Right: brand panel with animated waveform + one-line tagline. Inline validation, password strength meter.
+- **Quality bar:** fully responsive (I use my phone a lot), keyboard accessible, visible focus rings,
+  WCAG AA contrast, `prefers-reduced-motion` respected. Lighthouse ≥ 90 on the landing page.
+  Smooth but fast: animations 150–250 ms, no heavy libraries on the landing page.
+- Before building screens, show me the design tokens + one screen (Generate page) for approval first.
+
 ## Landing page (aiwazz.in)
-Fast static page, dark futuristic design, mobile-first. Hero ("AI voiceovers in Hindi, Hinglish & English"),
+Fast static page following the design system above, mobile-first. Hero ("AI voiceovers in Hindi, Hinglish & English"),
 audio samples, features, how it works, FAQ, "Sign in / Get invite" buttons → login.aiwazz.in.
 SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`, `/hindi-text-to-speech`,
 `/ai-voiceover-for-reels`. No pricing yet.

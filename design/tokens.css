@@ -1,0 +1,105 @@
+/*
+ * AiWazz design tokens: the single source of truth for landing/ and dashboard/.
+ * Plain CSS custom properties. Tailwind mapping lives in theme.css.
+ * Dark is the default; light applies with <html class="light"> (or no "dark" class).
+ * Contrast (WCAG): every text/background pair below is ≥ 4.5:1 (checked, see design/README.md).
+ */
+
+:root,
+.dark {
+  color-scheme: dark;
+
+  /* Neutral base (zinc) */
+  --background: #0a0a0b;
+  --surface: #111113;          /* cards, sidebar */
+  --surface-2: #17171a;        /* inputs, popovers, elevated */
+  --surface-3: #1f1f23;        /* hover / pressed */
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.14);
+  --foreground: #fafafa;       /* 19:1 on background */
+  --muted-foreground: #a1a1aa; /* 7.7:1 */
+  --subtle-foreground: #8b8b94; /* 5.9:1, hints & meta */
+
+  /* Accent: electric violet → cyan (use sparingly) */
+  --brand-violet: #8b5cf6;
+  --brand-cyan: #22d3ee;
+  --brand-text: #a78bfa;       /* violet text/icons on dark, 7.3:1 */
+  --brand-gradient: linear-gradient(120deg, #8b5cf6 0%, #22d3ee 100%);        /* decorative only */
+  --brand-gradient-strong: linear-gradient(120deg, #6d28d9 0%, #0891b2 100%); /* behind white text, ≥ 4.5:1 */
+  --brand-glow: 0 0 0 1px rgb(139 92 246 / 0.35), 0 8px 32px -8px rgb(124 58 237 / 0.55);
+
+  /* Status */
+  --danger: #f87171;
+  --success: #34d399;
+  --warning: #fbbf24;
+
+  --ring: #a78bfa;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  /* Elevation: soft shadows + a faint top highlight (glassy) */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px -16px rgb(0 0 0 / 0.7);
+  --glass: rgb(23 23 26 / 0.72);
+}
+
+.light {
+  color-scheme: light;
+
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #e9e9ec;
+  --border: rgb(9 9 11 / 0.09);
+  --border-strong: rgb(9 9 11 / 0.16);
+  --foreground: #09090b;       /* 19.9:1 */
+  --muted-foreground: #52525b; /* 7.4:1 */
+  --subtle-foreground: #71717a; /* 4.8:1 */
+
+  --brand-violet: #7c3aed;
+  --brand-cyan: #0891b2;
+  --brand-text: #6d28d9;       /* 7.1:1 on white */
+  --brand-gradient: linear-gradient(120deg, #7c3aed 0%, #06b6d4 100%);
+  --brand-gradient-strong: linear-gradient(120deg, #6d28d9 0%, #0891b2 100%);
+  --brand-glow: 0 0 0 1px rgb(124 58 237 / 0.25), 0 8px 24px -10px rgb(124 58 237 / 0.45);
+
+  --danger: #dc2626;
+  --success: #047857;
+  --warning: #b45309;
+
+  --ring: #7c3aed;
+  --overlay: rgb(9 9 11 / 0.4);
+
+  --shadow-sm: 0 1px 2px rgb(9 9 11 / 0.06);
+  --shadow-md: 0 1px 2px rgb(9 9 11 / 0.05), 0 8px 24px -12px rgb(9 9 11 / 0.12);
+  --shadow-lg: 0 2px 4px rgb(9 9 11 / 0.05), 0 24px 48px -16px rgb(9 9 11 / 0.18);
+  --glass: rgb(255 255 255 / 0.75);
+}
+
+:root {
+  /* Typography */
+  /* Devanagari: self-hosted Noto Sans Devanagari (unicode-range split, only loads when Hindi text is on the page) */
+  --font-sans: "Geist Variable", "Noto Sans Devanagari Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, "Noto Sans Devanagari Variable", monospace;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;   /* inputs, small buttons */
+  --radius-lg: 10px;  /* buttons, chips */
+  --radius-xl: 14px;  /* cards */
+  --radius-2xl: 20px; /* panels, modals */
+
+  /* Motion: 150–250 ms, ease-out */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

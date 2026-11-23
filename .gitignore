@@ -17,6 +17,7 @@ __pycache__/
 # Node / builds
 node_modules/
 dist/
+dist-preview/
 build/
 .vite/
 npm-debug.log*

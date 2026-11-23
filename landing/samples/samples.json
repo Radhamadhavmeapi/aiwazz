@@ -1,0 +1,114 @@
+{
+  "hf_alpha": {
+    "voice": "hf_alpha",
+    "text": "नमस्ते! मैं आपकी अगली रील के लिए वॉइसओवर तैयार कर सकती हूँ।",
+    "duration_sec": 5.52,
+    "lufs": -14.1,
+    "file": "hf_alpha.mp3"
+  },
+  "hf_beta": {
+    "voice": "hf_beta",
+    "text": "नमस्ते! मैं आपकी अगली रील के लिए वॉइसओवर तैयार कर सकती हूँ।",
+    "duration_sec": 4.72,
+    "lufs": -14.1,
+    "file": "hf_beta.mp3"
+  },
+  "hm_omega": {
+    "voice": "hm_omega",
+    "text": "नमस्ते! मैं आपकी अगली रील के लिए वॉइसओवर तैयार कर सकता हूँ।",
+    "duration_sec": 5.62,
+    "lufs": -14.2,
+    "file": "hm_omega.mp3"
+  },
+  "hm_psi": {
+    "voice": "hm_psi",
+    "text": "नमस्ते! मैं आपकी अगली रील के लिए वॉइसओवर तैयार कर सकता हूँ।",
+    "duration_sec": 5.53,
+    "lufs": -14.2,
+    "file": "hm_psi.mp3"
+  },
+  "af_heart": {
+    "voice": "af_heart",
+    "text": "Hi, I'm Heart. I can voice your next reel in seconds.",
+    "duration_sec": 3.12,
+    "lufs": -14.1,
+    "file": "af_heart.mp3"
+  },
+  "af_bella": {
+    "voice": "af_bella",
+    "text": "Hi, I'm Bella. I can voice your next reel in seconds.",
+    "duration_sec": 2.94,
+    "lufs": -14.2,
+    "file": "af_bella.mp3"
+  },
+  "af_nicole": {
+    "voice": "af_nicole",
+    "text": "Hi, I'm Nicole. I can voice your next reel in seconds.",
+    "duration_sec": 4.08,
+    "lufs": -14.2,
+    "file": "af_nicole.mp3"
+  },
+  "am_michael": {
+    "voice": "am_michael",
+    "text": "Hi, I'm Michael. I can voice your next reel in seconds.",
+    "duration_sec": 3.35,
+    "lufs": -14.1,
+    "file": "am_michael.mp3"
+  },
+  "am_fenrir": {
+    "voice": "am_fenrir",
+    "text": "Hi, I'm Fenrir. I can voice your next reel in seconds.",
+    "duration_sec": 3.0,
+    "lufs": -14.2,
+    "file": "am_fenrir.mp3"
+  },
+  "am_puck": {
+    "voice": "am_puck",
+    "text": "Hi, I'm Puck. I can voice your next reel in seconds.",
+    "duration_sec": 2.75,
+    "lufs": -14.2,
+    "file": "am_puck.mp3"
+  },
+  "bf_emma": {
+    "voice": "bf_emma",
+    "text": "Hi, I'm Emma. I can voice your next reel in seconds.",
+    "duration_sec": 3.45,
+    "lufs": -14.0,
+    "file": "bf_emma.mp3"
+  },
+  "bf_isabella": {
+    "voice": "bf_isabella",
+    "text": "Hi, I'm Isabella. I can voice your next reel in seconds.",
+    "duration_sec": 3.56,
+    "lufs": -14.2,
+    "file": "bf_isabella.mp3"
+  },
+  "bm_george": {
+    "voice": "bm_george",
+    "text": "Hi, I'm George. I can voice your next reel in seconds.",
+    "duration_sec": 4.34,
+    "lufs": -14.1,
+    "file": "bm_george.mp3"
+  },
+  "bm_fable": {
+    "voice": "bm_fable",
+    "text": "Hi, I'm Fable. I can voice your next reel in seconds.",
+    "duration_sec": 4.59,
+    "lufs": -14.1,
+    "file": "bm_fable.mp3"
+  },
+  "demo-hi": {
+    "voice": "hf_alpha",
+    "text": "रात ग्यारह बजे कस्टमर का फ़ोन आया। ऑर्डर अभी तक नहीं पहुँचा था। हमने दस मिनट में वजह ढूँढी, और अगली सुबह पार्सल उसके दरवाज़े पर था।",
+    "duration_sec": 11.23,
+    "lufs": -14.1,
+    "file": "demo-hi.mp3"
+  },
+  "demo-en": {
+    "voice": "am_michael",
+    "text": "Most reels lose people in the first two seconds. A clear, confident voice keeps them watching. Write your script, pick a voice, done.",
+    "duration_sec": 7.5,
+    "lufs": -14.1,
+    "file": "demo-en.mp3"
+  }
+}

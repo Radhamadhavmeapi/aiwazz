@@ -41,11 +41,13 @@ import {
   createJob,
   downloadUrl,
   getHistory,
+  latinShare,
   loadDraft,
   pollJob,
   rememberedJob,
   rememberJob,
   saveDraft,
+  transliterate as previewTransliteration,
   type Format,
   type HistoryItem,
   type JobStatus,
@@ -97,7 +99,8 @@ export default function GeneratePage() {
   const [lang, setLang] = useState<Lang>(VOICES.find((v) => v.id === initialVoice)!.lang);
   const [voice, setVoice] = useState(initialVoice);
   const [speed, setSpeed] = useState(draft.speed ?? 1);
-  const [transliterate, setTransliterate] = useState(false);
+  const [transliterate, setTransliterate] = useState(draft.transliterate ?? false);
+  const [translitPreview, setTranslitPreview] = useState<string | null>(null);
   const [format, setFormat] = useState<Format>(draft.format ?? "mp3");
   const [normalize, setNormalize] = useState(draft.normalize ?? true);
   const [lufs, setLufs] = useState(draft.loudness_lufs ?? -14);
@@ -118,9 +121,20 @@ export default function GeneratePage() {
 
   // Keep the draft (script + settings) in this browser between visits.
   useEffect(() => {
-    const t = window.setTimeout(() => saveDraft({ text, voice, speed, format, normalize, loudness_lufs: lufs }), 400);
+    const t = window.setTimeout(() => saveDraft({ text, voice, speed, format, normalize, loudness_lufs: lufs, transliterate }), 400);
     return () => clearTimeout(t);
-  }, [text, voice, speed, format, normalize, lufs]);
+  }, [text, voice, speed, format, normalize, lufs, transliterate]);
+
+  // Live preview of the Hinglish → Devanagari conversion (what the voice will actually read).
+  const translitOn = transliterate && lang === "h";
+  useEffect(() => {
+    if (PREVIEW || !translitOn || !text.trim() || text.length > MAX_CHARS) return setTranslitPreview(null);
+    const t = window.setTimeout(() => {
+      previewTransliteration(text.slice(0, MAX_CHARS)).then((r) => setTranslitPreview(r.text), () => setTranslitPreview(null));
+    }, 500);
+    return () => clearTimeout(t);
+  }, [text, translitOn]);
+  const looksHinglish = !PREVIEW && lang === "h" && !transliterate && text.trim().length > 12 && latinShare(text) > 0.6;
 
   const toJob = useCallback((u: JobStatus): Job => {
     if (u.status === "queued") return { state: "queued", position: u.position || 1 };
@@ -202,7 +216,7 @@ export default function GeneratePage() {
       lastReq.current = { voice, format, lufs: normalize ? lufs : null };
       setJob({ state: "queued", position: 1 });
       try {
-        const s = await createJob({ text, voice, lang, speed, format, normalize, loudness_lufs: lufs });
+        const s = await createJob({ text, voice, lang, speed, format, normalize, loudness_lufs: lufs, transliterate: translitOn });
         setJob(toJob(s));
         if (s.status === "queued" || s.status === "running") void track(s.id);
       } catch (e) {
@@ -231,7 +245,7 @@ export default function GeneratePage() {
       });
       toast.success("Voiceover ready", { description: "Saved to History for 7 days." });
     });
-  }, [canGenerate, chars, lang, normalize, lufs, format, text, voice, speed, toJob, track, authFailed]);
+  }, [canGenerate, chars, lang, normalize, lufs, format, text, voice, speed, translitOn, toJob, track, authFailed]);
 
   // ⌘/Ctrl + Enter generates from anywhere on the page.
   useEffect(() => {
@@ -330,6 +344,23 @@ export default function GeneratePage() {
             </div>
           </div>
 
+          {looksHinglish && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3 text-sm">
+              <Languages className="size-4 shrink-0 text-brand" aria-hidden="true" />
+              <span className="min-w-0 flex-1">Looks like Hinglish in Roman letters. Turn on transliteration so the Hindi voice reads it naturally.</span>
+              <Button size="sm" variant="outline" onClick={() => setTransliterate(true)}>
+                Turn on
+              </Button>
+            </div>
+          )}
+          {translitOn && translitPreview && (
+            <div className="rounded-xl border bg-surface px-4 py-3">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Will be read as</p>
+              <p className="mt-1.5 line-clamp-4 text-[15px] leading-7" lang="hi">
+                {translitPreview}
+              </p>
+            </div>
+          )}
           <ResultPanel job={job} onRetry={() => void generate()} reduce={!!reduce} />
           {!PREVIEW && <RecentList refreshKey={recentKey} />}
         </section>
@@ -387,21 +418,18 @@ export default function GeneratePage() {
                 <Label htmlFor="translit" className="flex items-center gap-2 text-sm">
                   <Languages className="size-4 text-brand" aria-hidden="true" />
                   Transliterate Hinglish
-                  {!PREVIEW && <Badge variant="outline" className="font-normal">Soon</Badge>}
                 </Label>
                 <p id="translit-hint" className="text-xs leading-5 text-muted-foreground">
-                  {!PREVIEW
-                    ? "Coming soon: type Hinglish in Roman letters (“Raat 11 baje”) and it's read as Hindi. For now, write Hindi in Devanagari."
-                    : lang === "h"
-                      ? "“Raat 11 baje” → “रात 11 बजे”. English words stay as they are."
-                      : "Available for Hindi voices."}
+                  {lang === "h"
+                    ? "Type Hindi in Roman letters: “Raat 11 baje” → “रात 11 बजे”. English words stay as they are."
+                    : "Available for Hindi voices."}
                 </p>
               </div>
               <Switch
                 id="translit"
                 checked={transliterate}
                 onCheckedChange={setTransliterate}
-                disabled={lang !== "h" || !PREVIEW}
+                disabled={lang !== "h"}
                 aria-describedby="translit-hint"
               />
             </div>

@@ -14,6 +14,7 @@ from auth.deps import Principal, csrf_protect, current_principal
 from db import get_db, utcnow
 from models import Generation
 from settings import get_settings
+from tts.hinglish import latin_share, to_devanagari
 from tts.jobs import ID_RE, Job, JobManager, QueueFull, TooManyPending, TTSRequest
 from tts.voices import DEFAULT_VOICE, VOICES
 
@@ -54,9 +55,25 @@ class TTSIn(BaseModel):
             self.lang = v.lang
         elif self.lang != v.lang:
             raise ValueError(f"voice '{self.voice}' is language '{v.lang}', not '{self.lang}'")
-        if self.transliterate:
-            raise ValueError("transliterate is not available yet (phase 6)")
+        if self.transliterate and self.lang != "h":
+            raise ValueError("transliterate works with Hindi voices only")
         return self
+
+
+class TranslitIn(BaseModel):
+    text: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _len(self):
+        if len(self.text) > get_settings().max_chars:
+            raise ValueError(f"text is longer than {get_settings().max_chars} characters")
+        return self
+
+
+@router.post("/transliterate", dependencies=[Depends(csrf_protect)])
+async def transliterate(body: TranslitIn, p: Principal = Depends(current_principal)):
+    """Preview of the Hinglish → Devanagari conversion used by `transliterate: true`."""
+    return {"text": to_devanagari(body.text), "latin_share": round(latin_share(body.text), 3)}
 
 
 @router.get("/health")
@@ -88,7 +105,8 @@ async def create_tts(
     if not jm.engine.ready:
         raise HTTPException(503, "TTS engine is still loading, try again in a few seconds")
     s = get_settings()
-    req = TTSRequest(text=body.text, engine=body.engine, voice=body.voice, lang=body.lang,
+    text = to_devanagari(body.text) if body.transliterate else body.text
+    req = TTSRequest(text=text, engine=body.engine, voice=body.voice, lang=body.lang,
                      speed=body.speed, format=body.format,
                      loudness_lufs=(body.loudness_lufs if body.loudness_lufs is not None else s.loudness_lufs)
                      if body.normalize else None)

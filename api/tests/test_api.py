@@ -67,7 +67,7 @@ def test_validation(client):
         {"text": "hi", "voice": "hf_alpha", "format": "ogg"},
         {"text": "hi", "voice": "hf_alpha", "loudness_lufs": -3},
         {"text": "hi", "voice": "hf_alpha", "engine": "edge"},
-        {"text": "hi", "voice": "hf_alpha", "transliterate": True},
+        {"text": "hi", "voice": "af_heart", "transliterate": True},
     ]
     for body in bad:
         assert client.post("/api/tts", json=body).status_code == 422, body
@@ -95,3 +95,11 @@ def test_env_example_keys_are_real_settings(monkeypatch):
     assert keys and set(keys) <= fields, set(keys) - fields
     s = Settings(_env_file=API_DIR / ".env.example")
     assert s.env == "production" and not s.debug and s.mp3_bitrate == "192k" and s.compressor
+
+
+def test_transliterate_endpoint_and_tts(client):
+    r = client.post("/api/transliterate", json={"text": "Raat 11 baje customer ne call kiya"})
+    assert r.status_code == 200 and r.json()["text"] == "रात 11 बजे customer ने call किया" and r.json()["latin_share"] == 1.0
+    g = client.post("/api/tts?wait=true", json={"text": "Mera order abhi tak nahi aaya", "voice": "hf_alpha", "transliterate": True})
+    assert g.status_code == 200, g.text
+    assert client.get("/api/history").json()["items"][0]["text_excerpt"] == "Mera order abhi tak nahi aaya"  # user's own text

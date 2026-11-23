@@ -24,6 +24,7 @@ export type TTSParams = {
   format: Format;
   normalize: boolean;
   loudness_lufs: number;
+  transliterate?: boolean;
 };
 
 export type HistoryItem = {
@@ -97,3 +98,16 @@ export const saveDraft = (d: Draft) => {
     /* ignore */
   }
 };
+
+export const transliterate = (text: string) => api<{ text: string; latin_share: number }>("/api/transliterate", { json: { text } });
+
+/** Share of letters in Latin script (client-side, for the "looks like Hinglish" hint). */
+export function latinShare(text: string): number {
+  let latin = 0;
+  let dev = 0;
+  for (const c of text) {
+    if (/[A-Za-z]/.test(c)) latin++;
+    else if (c >= "\u0900" && c <= "\u097f") dev++;
+  }
+  return latin + dev ? latin / (latin + dev) : 0;
+}

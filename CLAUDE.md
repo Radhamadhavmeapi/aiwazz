@@ -112,6 +112,12 @@ password only in `api/.env`). Migrations: Alembic (`api/migrations`). Redis **db
   - Measured (phase 1, 4 threads): ~1.35x realtime (60 s of audio ≈ 45 s compute), peak RSS ~1.6 GB during synthesis with shared model. End-to-end in the API (phase 2): ≈1.0x of *final* audio (Kokoro pads ~20% silence that gets trimmed; post-processing ≈1 s per job), so a 60 s voiceover ≈ 60 s.
 - **Hinglish:** Kokoro's Hindi voices read Devanagari; Roman Hinglish ("Raat 11 baje customer ne...") sounds wrong.
   Add a "Transliterate Hinglish" toggle: Roman Hindi → Devanagari before synthesis, English words kept as-is.
+  **Built (phase 6):** `api/tts/hinglish.py` (lexicon → brands/acronyms kept → English via wordfreq zipf ≥ 3.5 or
+  English compounds → ambiguous words (to/do/main/par…) decided by the sentence → phonetic rules). espeak-ng "hi"
+  pronounces Latin words in English, so English stays in Latin script. `transliterate: true` (Hindi voices only),
+  preview endpoint `POST /api/transliterate`; dashboard shows "Will be read as" and a "looks like Hinglish" hint.
+- **tools/tts.sh** (video pipeline): `AIWAZZ_API_KEY=… tools/tts.sh -v hf_alpha -o out.mp3 [--hinglish] [-f wav] [-s 1.1] "text"`
+  (or text on stdin); prints the duration; exit 0 ok / 1 usage / 2 API error. `--voices` lists voices.
 - **edge-tts** (optional): `hi-IN-MadhurNeural`, `hi-IN-SwaraNeural`. Unofficial Microsoft service:
   admin-only, never offered to SaaS users.
 

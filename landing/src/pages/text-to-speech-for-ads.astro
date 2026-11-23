@@ -1,0 +1,69 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Voiceovers for ads, without the studio",
+    p: [
+      "Product videos, social ads, app promos, offer announcements and explainer ads all need a voice that sounds confident and clear. AiWazz gives you that voice in Hindi, Hinglish or English in about a minute, so you can produce more ad variations and spend your budget on media instead of production.",
+      "Paste the ad copy, pick a voice, and download a file that is already levelled and trimmed, ready for your editor or ad manager.",
+    ],
+  },
+  {
+    h2: "Test more versions of the same ad",
+    p: [
+      "Ad performance often depends on small things: the first line, the voice, the pace. With AiWazz you can generate the same script with three different voices, or three different hooks with the same voice, in a few minutes. Try a warm female voice against a deep male voice, or 1.0× against 1.15×, and keep the version that performs best.",
+      "Since there are no studio sessions, changing a price, a date or an offer later means editing a line of text and generating again, not booking another recording.",
+    ],
+  },
+  {
+    h2: "Hindi, Hinglish and English for Indian audiences",
+    p: [
+      "Run the same ad in Hindi for Tier 2 and Tier 3 cities and in English for metro audiences, with matching voices. For Hinglish copy such as \"Sirf aaj: har order pe free delivery\", turn on Transliterate Hinglish: Hindi words are read in Hindi, product words like \"order\" and \"delivery\" stay in English.",
+    ],
+  },
+  {
+    h2: "Delivery specs that suit ad platforms",
+    list: [
+      "MP3 (192 kbps) or WAV (16-bit), both at 48 kHz, the sample rate video tools expect.",
+      "Levelled to -14 LUFS by default with true peaks under -1 dBTP; choose -16, -18 or -23 LUFS if your platform or broadcaster asks for a different target.",
+      "Silence trimmed at both ends, so the voice lines up with your first frame and ends cleanly.",
+      "Consistent voice across every variation, so a campaign sounds like one brand.",
+    ],
+    p: [],
+  },
+  {
+    h2: "Commercial rights",
+    p: [
+      "Ads are commercial use, so use a paid plan: paid plans include commercial rights for ads, client projects and monetised videos. Agencies producing ads for clients are covered under the same paid plans. The Free plan is for personal, non-commercial use only. See our Terms for details.",
+      "Please make sure your ad copy is accurate and lawful; our Acceptable Use Policy doesn't allow misleading claims, impersonation of real people, or voices used to deceive.",
+    ],
+  },
+  {
+    h2: "For agencies and teams",
+    p: [
+      "If you produce ads at volume, the AiWazz API (Creator plan and above) generates voiceovers directly from your copy deck. Each API key can be revoked at any time, and every generation is listed in your History. For higher volumes or agency invoicing, contact us.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "Can I use AiWazz voices in paid ads?", a: "Yes, on a paid plan. Paid plans include commercial rights for ads, client work and monetised videos. The Free plan is for personal use." },
+  { q: "Can I make ads for my clients?", a: "Yes. Client work is covered by the commercial rights in paid plans." },
+  { q: "What audio specs do I get?", a: "MP3 (192 kbps) or WAV (16-bit) at 48 kHz, levelled to -14 LUFS by default with true peaks under -1 dBTP. Other loudness targets are available." },
+  { q: "Can I make Hindi and English versions of the same ad?", a: "Yes. Generate each language with its own voice; Hinglish copy works too with Transliterate Hinglish." },
+];
+---
+<SeoPage
+  title="Text to speech for ads: AI voiceovers for video ads in India | AiWazz"
+  description="Text to speech for ads in Hindi, Hinglish and English. Test more ad variations, change offers in seconds, MP3/WAV at 48 kHz, commercial rights on paid plans."
+  eyebrow="Text to speech for ads"
+  h1="Text to speech for ads and product videos"
+  lead="Confident, clear voiceovers for social ads, product videos and promos. Test more versions, change offers in seconds, and keep every ad on-brand."
+  blocks={blocks}
+  learn={[{ href: "/learn/choosing-a-voice/", label: "How to choose the right voice" }, { href: "/learn/plans-and-billing/", label: "Plans, billing and commercial use" }]}
+  faq={faq}
+  samplesHeading="Voices for your ads"
+  cta="Make your next ad sound the part."
+/>

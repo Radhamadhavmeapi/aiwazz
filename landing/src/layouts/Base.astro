@@ -1,6 +1,7 @@
 ---
 import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import poppins600 from "@fontsource/poppins/files/poppins-latin-600-normal.woff2?url";
+import poppins700 from "@fontsource/poppins/files/poppins-latin-700-normal.woff2?url";
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import { SITE } from "../data/site";
@@ -56,6 +57,8 @@ const ld = [
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en-IN" href={canonical} />
+    <link rel="alternate" hreflang="x-default" href={canonical} />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#f4f6fb" />
     <script is:inline>
@@ -70,6 +73,7 @@ const ld = [
 
     <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={poppins600} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={poppins700} as="font" type="font/woff2" crossorigin />
 
     <!-- Favicon set: brand/AiWazz-Brand-Kit/03_Favicon -->
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -96,6 +100,7 @@ const ld = [
     <meta name="twitter:image" content={SITE.ogImage} />
 
     {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
+    <slot name="head" />
   </head>
   <body class="min-h-dvh">
     <a href="#main" class="sr-only z-50 rounded-lg bg-foreground px-3 py-2 text-sm text-background focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>

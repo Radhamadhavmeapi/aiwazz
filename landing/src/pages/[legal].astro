@@ -1,6 +1,7 @@
 ---
 import ContactForm from "../components/ContactForm.astro";
 import LegalLayout from "../layouts/LegalLayout.astro";
+import { PHOTOS } from "../data/photos";
 import { loadLegalPages, type LegalPage } from "../lib/legal";
 
 export function getStaticPaths() {
@@ -13,4 +14,14 @@ const { page } = Astro.props as { page: LegalPage };
 ---
 <LegalLayout page={page}>
   {page.slug === "contact" && <ContactForm />}
+  {page.slug === "about" && (
+    <section aria-labelledby="photo-credits" class="mt-12 border-t pt-8 text-sm text-muted-foreground">
+      <h2 id="photo-credits" class="text-base font-semibold text-foreground">Photo credits</h2>
+      <p class="mt-2">Photos: Unsplash/Pexels contributors. The photos on our website are free-licence photos from Pexels, by
+        {Object.values(PHOTOS).map((ph, i, a) => (
+          <> <a href={ph!.pageUrl} target="_blank" rel="noopener" class="text-brand underline underline-offset-2">{ph!.photographer}</a>{i < a.length - 1 ? "," : "."}</>
+        ))}
+        The people shown are not AiWazz customers.</p>
+    </section>
+  )}
 </LegalLayout>

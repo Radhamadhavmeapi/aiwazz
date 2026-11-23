@@ -1,0 +1,66 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Turn lesson notes into clear audio",
+    p: [
+      "Teachers, tutors and course creators spend hours recording lessons. AiWazz turns your notes into clear narration in Hindi or English in about a minute, so you can spend that time on the teaching itself. Use it for recorded lessons, revision audio, slide narration, language practice, and announcements for students and parents.",
+      "Paste a section of your notes, pick a voice and a speed, and download an MP3 your students can play on any phone, or a WAV for your video editor.",
+    ],
+  },
+  {
+    h2: "शिक्षकों के लिए टेक्स्ट टू स्पीच",
+    p: [
+      "अपने नोट्स हिंदी में लिखें, आवाज़ और गति चुनें, और कुछ ही मिनटों में साफ़ ऑडियो तैयार करें। धीमी गति (0.85× या 0.9×) छात्रों के लिए समझना आसान बनाती है।",
+    ],
+  },
+  {
+    h2: "A pace students can follow",
+    p: [
+      "Speed control goes from 0.7× to 1.3×. For new topics, younger students or language learners, 0.85× to 0.9× is easier to follow; for revision, 1.0× or a little faster works well. Every sentence ends with a short, even pause, and paragraphs get a slightly longer one, which gives students natural breaks to take notes.",
+      "Write the way you'd explain it in class: short sentences, one idea at a time, and the key word near the end of the sentence where the voice naturally stresses it.",
+    ],
+  },
+  {
+    h2: "Hindi and English, in the same course",
+    p: [
+      "Many courses in India mix languages: explanations in Hindi, technical terms in English. AiWazz handles this naturally. Write explanations in Devanagari and keep terms like \"photosynthesis\" or \"equation\" in English; the Hindi voice reads them in English. Prefer typing Hindi in Roman letters? Turn on Transliterate Hinglish.",
+      "For English-medium lessons, choose a US or UK English voice. Using the same voice across all lessons gives a course a consistent, professional feel.",
+    ],
+  },
+  {
+    h2: "Easy to update",
+    p: [
+      "When a syllabus changes or you spot a mistake, edit the text and generate that section again: no re-recording the whole lesson. Split long lessons into sections of up to 5,000 characters each (about five minutes of speech); every section has the same loudness, so they join cleanly.",
+      "Generated files are kept for seven days in your History, so download the final versions into your course folder.",
+    ],
+  },
+  {
+    h2: "Selling courses",
+    p: [
+      "If you sell your course or publish it on a paid platform, use a paid plan: paid plans include commercial rights. The Free plan is for personal, non-commercial use, such as trying out a lesson.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "Can I use AiWazz for a paid online course?", a: "Yes, on a paid plan. Paid plans include commercial rights; the Free plan is for personal, non-commercial use." },
+  { q: "Which speed is best for students?", a: "0.85× to 0.9× for new topics and language learners, 1.0× for revision. You can try both in a few minutes." },
+  { q: "Can I mix Hindi and English terms?", a: "Yes. Write Hindi in Devanagari and keep English terms in English; the Hindi voice reads them in English." },
+  { q: "How long can a lesson be?", a: "Up to 5,000 characters per voiceover (about five minutes). Generate longer lessons in sections." },
+];
+---
+<SeoPage
+  title="Text to speech for teachers: Hindi & English lesson audio | AiWazz"
+  description="Text to speech for teachers and course creators. Turn notes into clear Hindi or English narration at a pace students can follow. MP3/WAV, easy to update."
+  eyebrow="Text to speech for teachers"
+  h1="Text to speech for teachers and online courses"
+  lead="Turn lesson notes into clear Hindi or English narration at a pace your students can follow, and update a lesson by editing text instead of re-recording."
+  blocks={blocks}
+  learn={[{ href: "/learn/speed-and-loudness/", label: "Speed and loudness: choosing the right settings" }, { href: "/learn/writing-scripts/", label: "How to write a voiceover script" }]}
+  faq={faq}
+  samplesHeading="Voices for your lessons"
+  cta="Spend your time teaching, not recording."
+/>

@@ -1,0 +1,69 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Why reels with a voiceover keep people watching",
+    p: [
+      "On Instagram, people decide in the first second or two whether to keep watching. A clear voice saying exactly what the reel is about holds attention better than text alone, and pairs well with captions for people watching on mute. AiWazz gives you that voice in about a minute, in Hindi, Hinglish or English, without recording yourself.",
+      "Use it for tips and how-tos, product showcases, before-and-after reels, story-time reels, news in 30 seconds, or any reel where the visuals need a narrator.",
+    ],
+  },
+  {
+    h2: "From script to reel in three steps",
+    p: [
+      "1. Write a short script: a hook in the first line, one idea, and a clear call to action at the end. Most reels are 15 to 60 seconds, which is roughly 200 to 900 characters. 2. Paste it into AiWazz, pick a voice and a speed, and generate. 3. Download the MP3 and add it in Instagram's editor or in your video app, then add captions and post.",
+      "AiWazz shows an estimated duration as you type, so you can trim the script before you generate instead of cutting audio afterwards.",
+    ],
+  },
+  {
+    h2: "Sized and levelled for reels",
+    list: [
+      "Every file is levelled to -14 LUFS, the loudness most short-video platforms target, with true peaks under -1 dBTP so it doesn't distort when Instagram compresses it.",
+      "Silence is trimmed to about 100 ms at the start, so the voice starts on your first frame, which matters when the first second decides everything.",
+      "Speed from 0.7× to 1.3×: 1.1× or 1.2× often suits fast-paced reels; 0.9× suits calm, aesthetic ones.",
+      "MP3 at 48 kHz imports cleanly into Instagram's editor, CapCut, InShot and other phone apps.",
+    ],
+    p: [],
+  },
+  {
+    h2: "Hinglish hooks that sound like you",
+    p: [
+      "Reels in India are mostly Hinglish. Type your hook the way you'd say it, like \"Ye 3 mistakes aapki reach kam kar rahi hain\", turn on Transliterate Hinglish, and a Hindi voice reads it naturally while words like \"reach\" or \"followers\" stay in English. You see the converted text before you generate.",
+    ],
+  },
+  {
+    h2: "Post more without recording more",
+    p: [
+      "Batch a week of reels in one sitting: write seven scripts, generate seven voiceovers, and spend the rest of your time on the visuals. Every voiceover stays in your History for seven days, so you can come back and download it again while editing.",
+      "Using one consistent voice across your reels also helps your audience recognise your content as it scrolls past, the way a familiar presenter's voice does.",
+    ],
+  },
+  {
+    h2: "Brand and sponsored reels",
+    p: [
+      "If the reel promotes a product, a client or your own business, or the account earns money from it, choose a paid plan: paid plans include commercial rights for ads, client work and monetised videos. The Free plan is for personal use.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "How long should a reel voiceover be?", a: "Most reels are 15 to 60 seconds: roughly 200 to 900 characters of script. AiWazz shows an estimated duration as you type." },
+  { q: "How do I add the voiceover in Instagram?", a: "Download the MP3, then add it as audio in Instagram's reel editor or in an app like CapCut before uploading. Our guide on using audio in editors has step-by-step instructions." },
+  { q: "Will the voice be loud enough?", a: "Yes. Every file is levelled to -14 LUFS, the loudness most short-video platforms target, so you don't need to boost it." },
+  { q: "Can I use it for sponsored reels?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use." },
+];
+---
+<SeoPage
+  title="AI voice for Instagram Reels: Hindi, Hinglish & English | AiWazz"
+  description="AI voiceovers for Instagram Reels in Hindi, Hinglish and English. Hooks that start on the first frame, levelled to -14 LUFS, MP3 ready for Instagram and CapCut."
+  eyebrow="AI voice for Instagram Reels"
+  h1="AI voice for Instagram Reels"
+  lead="A clear voice from the first frame. Type your reel script in Hindi, Hinglish or English and get a voiceover sized and levelled for Instagram in about a minute."
+  blocks={blocks}
+  learn={[{ href: "/learn/writing-scripts/", label: "How to write a voiceover script for reels" }, { href: "/learn/using-audio-in-editors/", label: "Adding your voiceover in Instagram and CapCut" }]}
+  faq={faq}
+  samplesHeading="Voices made for reels"
+  cta="Voice a week of reels in one sitting."
+/>

@@ -1,0 +1,69 @@
+---
+import { LANG_LABEL, VOICE_SAMPLES, fmt } from "../data/site";
+import PlayButton from "./PlayButton.astro";
+const chips = [
+  { group: "lang", value: "all", label: "All voices" },
+  { group: "lang", value: "h", label: "Hindi" },
+  { group: "lang", value: "a", label: "English (US)" },
+  { group: "lang", value: "b", label: "English (UK)" },
+  { group: "gender", value: "female", label: "Female" },
+  { group: "gender", value: "male", label: "Male" },
+];
+---
+<section id="voices" aria-labelledby="voices-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+  <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+    <div class="max-w-2xl">
+      <p class="font-mono text-xs tracking-wider text-brand uppercase">Voices</p>
+      <h2 id="voices-title" class="mt-3 text-h1 font-semibold">14 voices, ready when you are</h2>
+      <p class="mt-3 text-muted-foreground">Real output from AiWazz, only loudness-levelled to -14 LUFS like every file you download. Press play on any card.</p>
+    </div>
+    <div role="group" aria-label="Filter voices" class="flex flex-wrap gap-2" id="voice-filters">
+      {chips.map((c) => (
+        <button type="button" data-group={c.group} data-value={c.value} aria-pressed={c.value === "all" ? "true" : "false"}
+          class="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground aria-pressed:border-transparent aria-pressed:bg-foreground aria-pressed:text-background">{c.label}</button>
+      ))}
+    </div>
+  </div>
+  <ul class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" id="voice-grid">
+    {VOICE_SAMPLES.map((v) => (
+      <li data-sample-card={v.id} data-lang={v.lang} data-gender={v.gender}
+        class="flex items-center gap-3 rounded-2xl border bg-surface p-4 shadow-sm transition-[border-color,box-shadow] data-[playing=true]:border-transparent data-[playing=true]:shadow-brand-glow">
+        <PlayButton id={v.id} name={`${v.name}, ${LANG_LABEL[v.lang]} ${v.gender} voice`} />
+        <div class="min-w-0 flex-1">
+          <p class="flex items-center gap-2 font-medium">
+            {v.name}
+            <span class="eq flex h-3 items-end gap-[2px]" aria-hidden="true">
+              {[0.55, 1, 0.7].map((h, i) => <span class="w-[3px] rounded-full bg-brand-gradient" style={`height:${h * 100}%;animation-delay:${i * 120}ms`} />)}
+            </span>
+          </p>
+          <p class="truncate text-sm text-muted-foreground">{LANG_LABEL[v.lang]} · {v.gender === "female" ? "Female" : "Male"} · {v.tone}</p>
+        </div>
+        <span class="font-mono text-xs text-subtle-foreground">{fmt(v.duration)}</span>
+      </li>
+    ))}
+  </ul>
+  <p id="voice-empty" hidden class="mt-6 text-sm text-muted-foreground">No voices match this filter yet.</p>
+</section>
+<script>
+  const box = document.getElementById("voice-filters");
+  const state = { lang: "all", gender: "all" };
+  box?.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-group]");
+    if (!b) return;
+    const g = b.dataset.group as "lang" | "gender";
+    const v = b.dataset.value!;
+    if (g === "lang") state.lang = v;
+    else state.gender = state.gender === v ? "all" : v; // gender chips toggle
+    box.querySelectorAll<HTMLButtonElement>("button[data-group]").forEach((x) => {
+      const on = x.dataset.group === "lang" ? x.dataset.value === state.lang : x.dataset.value === state.gender;
+      x.setAttribute("aria-pressed", String(on));
+    });
+    let shown = 0;
+    document.querySelectorAll<HTMLElement>("#voice-grid > li").forEach((li) => {
+      const ok = (state.lang === "all" || li.dataset.lang === state.lang) && (state.gender === "all" || li.dataset.gender === state.gender);
+      li.hidden = !ok;
+      if (ok) shown++;
+    });
+    document.getElementById("voice-empty")!.hidden = shown > 0;
+  });
+</script>

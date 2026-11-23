@@ -1,40 +1,95 @@
 ---
-import CtaBand from "../components/CtaBand.astro";
 import Faq, { type QA } from "../components/Faq.astro";
 import Icon from "../components/Icon.astro";
+import Picture from "../components/Picture.astro";
 import PlayButton from "../components/PlayButton.astro";
-import Samples from "../components/Samples.astro";
+import VoicesGallery from "../components/VoicesGallery.astro";
+import { PHOTOS } from "../data/photos";
 import { DEMOS, SITE, fmt } from "../data/site";
-import { fmtINR, LEGAL } from "../lib/legal";
 import Base from "../layouts/Base.astro";
+import { fmtINR, LEGAL } from "../lib/legal";
+
+const starter = LEGAL.plans.find((p) => p.id === "starter")!;
+const perMinute = Math.round(starter.priceMonthly / (starter.characters / 800)); // ≈ ₹ per minute of audio on Starter
+
+const proof = [
+  { icon: "mic", text: "14 voices" },
+  { icon: "languages", text: "Hindi + English" },
+  { icon: "file-audio", text: "MP3 & WAV, 48 kHz" },
+  { icon: "gauge", text: "Ready for reels (-14 LUFS)" },
+  { icon: "indian-rupee", text: "Pay in ₹ with UPI" },
+];
 
 const features = [
-  { icon: "languages", title: "Hindi & Hinglish first", text: "Natural Hindi voices that read Devanagari properly, plus US and UK English. Mix Hindi and English the way you actually talk." },
-  { icon: "gauge", title: "Reel-ready loudness", text: "Every file is levelled to -14 LUFS, the loudness most short-video platforms target, with peaks under -1 dBTP." },
-  { icon: "scissors", title: "Clean edges, natural pauses", text: "Silence is trimmed to a tidy 100 ms, with short breaths between sentences, so it drops straight onto your timeline." },
-  { icon: "file-audio", title: "MP3 or WAV, 48 kHz", text: "192 kbps MP3 for quick posts, 16-bit WAV for editing. Both at 48 kHz, the video standard." },
-  { icon: "code-xml", title: "API for your pipeline", text: "Generate voiceovers from scripts and video tools with an API key. Same voices, same quality, no clicking." },
-  { icon: "shield-check", title: "Private by default", text: "Your scripts and audio are yours. Generated files are deleted automatically after 7 days." },
+  { icon: "languages", title: "Natural Hindi voices", text: "Four Hindi voices that read Devanagari with natural rhythm and stress, so your voiceover sounds like it was recorded in India." },
+  { icon: "type", title: "Hinglish-friendly", text: "Type Hindi in Roman letters the way you text and turn on Transliterate Hinglish. English words stay in English." },
+  { icon: "globe", title: "English, US & UK", text: "Six US and four UK English voices, from warm and conversational to classic narrator." },
+  { icon: "gauge", title: "Studio-ready loudness", text: "Every file is levelled to -14 LUFS, the loudness most short-video platforms target, with true peaks kept under -1 dBTP." },
+  { icon: "scissors", title: "Clean edges", text: "Silence trimmed to about 100 ms at the start and end, with even pauses between sentences. It drops straight onto your timeline." },
+  { icon: "file-audio", title: "MP3 + WAV, 48 kHz", text: "192 kbps MP3 for quick posts, 16-bit WAV for editing. Both at 48 kHz, the sample rate video editors expect." },
+  { icon: "code-xml", title: "API for automation", text: "Generate voiceovers from scripts and video pipelines with an API key (Creator plan and above)." },
+  { icon: "shield-check", title: "Private by default", text: "Generated audio is deleted automatically after 7 days, and your scripts are never used to train voices." },
 ];
 
 const steps = [
-  { n: "01", icon: "type", title: "Type or paste your script", text: "Up to 5,000 characters. Hindi in Devanagari, English, or both." },
-  { n: "02", icon: "mic", title: "Pick a voice", text: "Preview each voice, set the speed, choose MP3 or WAV." },
-  { n: "03", icon: "download", title: "Hear it, download it", text: "A 60-second voiceover is ready in about a minute." },
+  { n: "01", icon: "type", title: "Write or paste your script", text: "Up to 5,000 characters per voiceover. Hindi in Devanagari, Hinglish in Roman letters, or English." },
+  { n: "02", icon: "mic", title: "Pick a voice and speed", text: "Preview every voice, set the speed from 0.7× to 1.3×, choose MP3 or WAV." },
+  { n: "03", icon: "download", title: "Download and edit", text: "A 60-second voiceover is ready in about a minute. Drop it into your video editor." },
+];
+
+type Slot = "reels" | "youtube" | "ads" | "teachers" | "stories";
+const useCases: { slot: Slot | null; icon: string; title: string; text: string; href: string; page: string | null; more: string }[] = [
+  { slot: "reels", icon: "smartphone", title: "Instagram reels & YouTube Shorts", text: "A clear hook in the first second, ready at the loudness short-video apps play.", href: "/learn/writing-scripts/", page: "/ai-voice-for-instagram-reels/", more: "AI voice for reels" },
+  { slot: "youtube", icon: "video", title: "YouTube explainers", text: "Consistent narration for long videos, generated in parts and joined in your editor.", href: "/learn/using-audio-in-editors/", page: "/ai-voice-for-youtube/", more: "AI voice for YouTube" },
+  { slot: "ads", icon: "megaphone", title: "Ads & product videos", text: "Try three voices for the same ad in minutes, then keep the one that converts.", href: "/learn/choosing-a-voice/", page: "/text-to-speech-for-ads/", more: "Text to speech for ads" },
+  { slot: "teachers", icon: "graduation-cap", title: "Online courses & teachers", text: "Turn lesson notes into clear audio in Hindi or English, at a pace students can follow.", href: "/learn/speed-and-loudness/", page: "/text-to-speech-for-teachers/", more: "Text to speech for teachers" },
+  { slot: null, icon: "store", title: "Business announcements", text: "Offers, opening hours and IVR-style messages in a friendly, consistent voice.", href: "/learn/getting-started/", page: null, more: "" },
+  { slot: "stories", icon: "book-open", title: "Audiobooks & stories", text: "Narrate stories and long-form text you own, chapter by chapter.", href: "/learn/writing-scripts/", page: null, more: "" },
+];
+
+const tools = [
+  { name: "CapCut", anchor: "capcut" },
+  { name: "Instagram editor", anchor: "instagram" },
+  { name: "YouTube Studio", anchor: "youtube-studio" },
+  { name: "Premiere Pro", anchor: "premiere-pro" },
+  { name: "DaVinci Resolve", anchor: "davinci-resolve" },
+  { name: "Canva", anchor: "canva" },
+  { name: "Remotion", anchor: "remotion" },
+];
+
+const comparison = [
+  { row: "Time for a 60-second voiceover", ai: "About a minute", self: "30–60 minutes with setup and retakes", artist: "Usually 1–3 days" },
+  { row: "Cost per minute", ai: `From ≈ ${fmtINR(perMinute)} (Starter plan)`, self: "Free, plus a mic and a quiet room", artist: "Priced per project, usually far higher" },
+  { row: "Retakes", ai: "Edit the text, generate again", self: "Record the whole line again", artist: "Extra revision rounds" },
+  { row: "Consistency across videos", ai: "Same voice every time", self: "Depends on your day, room and mic", artist: "Same artist, if available" },
+  { row: "Hindi support", ai: "4 Hindi voices + Hinglish", self: "Yes", artist: "Depends on the artist" },
 ];
 
 const faq: QA[] = [
-  { q: "Which languages does AiWazz support?", a: "Hindi (4 voices), US English (6 voices) and UK English (4 voices). Hindi voices read Devanagari script. Hinglish works too: write Hindi in Devanagari, or type it in Roman letters (\"Raat 11 baje...\") and turn on Transliterate Hinglish, which converts it to Devanagari and keeps English words as they are." },
-  { q: "How long does a voiceover take?", a: "About as long as the audio itself: a 60-second voiceover is usually ready in around a minute. Short lines take a few seconds." },
-  { q: "Can I use the voiceovers in monetised reels and ads?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use. See our Terms at aiwazz.in/terms/." },
-  { q: "What audio format do I get?", a: "MP3 at 192 kbps or 16-bit WAV, both 48 kHz, loudness-normalised to -14 LUFS (you can choose other targets like -16 or -23) with silence trimmed at the start and end." },
-  { q: "Why is it invite-only?", a: "Voices are rendered on our own servers, one at a time, so we keep the queue short by inviting people in batches during early access." },
-  { q: "Is there an API?", a: "Yes. Create an API key in your dashboard and send your script to the API from any tool or video pipeline. You get back a link to the finished file." },
-  { q: "What happens to my scripts and audio?", a: "They are only used to create your voiceover. Generated audio is deleted automatically after 7 days, so download what you want to keep." },
+  { q: "What is a character?", a: "Every letter, number, space and punctuation mark in your script counts as one character, in any language. A typical 60-second reel script is about 700 to 900 characters." },
+  { q: "Which languages and voices are available?", a: "Hindi (4 voices), US English (6 voices) and UK English (4 voices). Hindi voices read Devanagari, and Hinglish typed in Roman letters can be converted automatically." },
+  { q: "Can I use the voiceovers commercially?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use. See our Terms at aiwazz.in/terms/." },
+  { q: "How does Hinglish work?", a: "Turn on Transliterate Hinglish and type the way you text, like \"Raat 11 baje customer ne call kiya\". Hindi words are converted to Devanagari, English words stay in English, and you can check the converted text before generating." },
+  { q: "How long does a voiceover take?", a: "About as long as the audio itself: a 60-second voiceover is usually ready in around a minute. Voiceovers are made one at a time, so at busy moments you may wait briefly in the queue." },
+  { q: "What file formats do I get?", a: "MP3 at 192 kbps or 16-bit WAV, both at 48 kHz. You can download either format for every voiceover." },
+  { q: "How loud are the files?", a: "Every file is levelled to -14 LUFS by default, the loudness most short-video platforms target, with true peaks under -1 dBTP. You can choose -16, -18 or -23 LUFS, or turn levelling off." },
+  { q: "Do you offer refunds?", a: "Yes, in the cases described in our Cancellation and Refund Policy at aiwazz.in/refund-policy/." },
+  { q: "Will I get a GST invoice?", a: `Yes. Prices are in Indian rupees, ${LEGAL.gstRatePercent}% GST is added at checkout, and a GST invoice is issued for every payment.` },
+  { q: "Is there an API?", a: "Yes. On the Creator plan and above, create an API key in your dashboard and send scripts from any tool or video pipeline. You get back links to the finished MP3 and WAV." },
+  { q: "What happens to my scripts and audio?", a: "They are only used to create your voiceover. Generated audio is deleted automatically after 7 days, and your scripts are never used to train voices. You can delete your account and data at any time." },
+  { q: "Can I clone my own voice?", a: "Not yet. Voice cloning may come later, and only with the documented consent of the person whose voice it is." },
+  { q: "Why do I need an invite code?", a: "During early access, voices are rendered on our own servers one at a time, so we let people in in small batches to keep the queue short." },
 ];
 
 const jsonLd = [
-  { "@context": "https://schema.org", "@type": "WebSite", name: SITE.name, url: SITE.url, description: SITE.description },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    inLanguage: "en-IN",
+    potentialAction: { "@type": "SearchAction", target: `${SITE.url}/learn/?q={search_term_string}`, "query-input": "required name=search_term_string" },
+  },
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -44,6 +99,7 @@ const jsonLd = [
     description: SITE.description,
     url: SITE.url,
     inLanguage: ["hi", "en"],
+    offers: LEGAL.plans.map((p) => ({ "@type": "Offer", name: p.name, price: p.priceMonthly, priceCurrency: "INR", url: `${SITE.url}/pricing/` })),
   },
   {
     "@context": "https://schema.org",
@@ -51,74 +107,160 @@ const jsonLd = [
     mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
   },
 ];
+const problem = PHOTOS.problem;
 ---
-<Base title="AiWazz: AI voiceovers in Hindi, Hinglish & English" description={SITE.description} jsonLd={jsonLd}>
+<Base title="AiWazz: AI text to speech in Hindi, Hinglish & English" description="Turn any script into a natural voiceover in seconds. Hindi, Hinglish and English AI voices for reels, YouTube, ads and courses. MP3 & WAV at 48 kHz, prices in ₹." jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" href="/media/dashboard-generate.avif" type="image/avif" fetchpriority="high" />
+
   <!-- Hero -->
   <section class="relative overflow-hidden">
     <div aria-hidden="true" class="hero-grid absolute inset-0"></div>
     <div aria-hidden="true" class="hero-noise absolute inset-0"></div>
-    <div aria-hidden="true" class="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[900px] -translate-x-1/2 rounded-full opacity-20 blur-3xl" style="background: var(--brand-gradient)"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute -top-48 left-1/2 h-[460px] w-[980px] -translate-x-1/2 rounded-full opacity-20 blur-3xl" style="background: var(--brand-gradient)"></div>
 
-    <div class="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 sm:pt-20 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pt-28 lg:pb-32">
-      <div>
-        <p class="tagline inline-flex items-center gap-2 rounded-full border bg-surface/70 px-3 py-1 text-sm text-muted-foreground">
+    <div class="relative mx-auto max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20 lg:pt-24">
+      <div class="mx-auto max-w-3xl text-center">
+        <p class="inline-flex items-center gap-2 rounded-full border bg-surface/80 px-3 py-1 text-sm text-muted-foreground">
           <span class="size-1.5 rounded-full bg-brand-gradient" aria-hidden="true"></span>
-          Type it, hear it.
+          AI text to speech for India
         </p>
-        <h1 class="mt-6 text-[2.5rem] leading-[1.08] font-bold tracking-[-0.03em] sm:text-[3.25rem] lg:text-[3.75rem]">
-          AI voiceovers in <span class="text-brand-gradient">Hindi, Hinglish</span> &amp; English
+        <h1 class="mt-6 text-[2.5rem] leading-[1.08] font-bold tracking-[-0.03em] sm:text-[3.25rem] lg:text-[3.9rem]">
+          Turn any script into a <span class="text-brand-gradient">natural voiceover</span> in seconds
         </h1>
-        <p class="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">
-          Paste your script, pick a natural voice and get a reel-ready MP3 or WAV in about a minute. No mic, no studio, no retakes.
+        <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+          Hindi, Hinglish and English voices for reels, YouTube, ads and courses. Paste your script, pick a voice, download studio-ready audio.
         </p>
-        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a href={SITE.getInvite} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong px-6 text-[15px] font-semibold text-white shadow-brand-glow transition-[filter] hover:brightness-110">
-            Get an invite <Icon name="arrow-right" class="size-[18px]" />
+        <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href={SITE.getStarted} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong px-6 text-[15px] font-semibold text-white shadow-brand-glow transition-[filter] hover:brightness-110">
+            Get started free <Icon name="arrow-right" class="size-[18px]" />
           </a>
-          <a href="#samples" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-input bg-surface/80 px-6 text-[15px] font-medium transition-colors hover:bg-surface-2">
+          <a href="#voices" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-input bg-surface/80 px-6 text-[15px] font-medium transition-colors hover:bg-surface-2">
             <Icon name="audio-lines" class="size-[18px] text-brand" /> Hear the voices
           </a>
         </div>
-        <p class="mt-5 text-sm text-subtle-foreground">Invite-only early access · 14 voices · MP3 &amp; WAV at 48 kHz</p>
+        <p class="mt-5 text-sm text-subtle-foreground">Free plan · No card needed · GST invoice on paid plans</p>
+        <p class="mt-1 text-xs text-subtle-foreground">Early access: signing up needs an invite code.</p>
       </div>
 
-      <!-- Demo card -->
-      <div class="glass rounded-3xl border p-5 shadow-lg sm:p-6">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2.5">
-            <img src="/brand/icon-64.webp" srcset="/brand/icon-64.webp 64w, /brand/icon-128.webp 128w" sizes="28px" width="28" height="28" alt="" decoding="async" />
-            <span class="text-sm font-medium">Live demo</span>
+      <!-- Real dashboard in device frames + live demo player -->
+      <div class="relative mx-auto mt-14 max-w-5xl pb-16 sm:pb-24">
+        <div class="rounded-[22px] border bg-surface p-2 shadow-lg sm:p-3">
+          <div class="mb-2 flex items-center gap-1.5 px-1.5 sm:mb-3" aria-hidden="true">
+            <span class="size-2.5 rounded-full bg-surface-3"></span><span class="size-2.5 rounded-full bg-surface-3"></span><span class="size-2.5 rounded-full bg-surface-3"></span>
+            <span class="ml-3 hidden h-6 flex-1 items-center rounded-md bg-surface-2 px-3 font-mono text-[11px] text-subtle-foreground sm:flex">login.aiwazz.in/generate</span>
           </div>
-          <span class="font-mono text-[11px] text-subtle-foreground">48 kHz · -14 LUFS</span>
+          <Picture src="/media/dashboard-generate" alt="The AiWazz dashboard: a Hindi script in the editor, the Alpha voice selected and a finished voiceover with waveform and MP3/WAV download buttons" width={1600} height={1000} class="block h-auto w-full rounded-xl border" eager sizes="(min-width: 1024px) 1000px, 100vw" />
         </div>
-        {[DEMOS.hi, DEMOS.en].map((d, i) => (
-          <div data-sample-card={d.file} class:list={["mt-5 rounded-2xl border bg-surface p-4 transition-shadow data-[playing=true]:shadow-brand-glow", i === 1 && "mt-3"]}>
-            <div class="flex items-center gap-3">
-              <PlayButton id={d.file} name={`demo voiceover, ${d.voice}`} size="lg" />
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium">{d.voice}</p>
-                <p class="font-mono text-xs text-subtle-foreground">{fmt(d.duration)}</p>
-              </div>
+        <div class="absolute -right-2 bottom-0 hidden w-[180px] rounded-[30px] border-[6px] border-foreground/90 bg-foreground/90 shadow-lg md:block lg:-right-10 lg:w-[210px]">
+          <Picture src="/media/dashboard-generate-phone" alt="The AiWazz dashboard on a phone" width={600} height={1298} class="block h-auto w-full rounded-[24px]" sizes="210px" />
+        </div>
+
+        <div class="glass relative mt-4 rounded-2xl border p-4 shadow-lg md:absolute md:bottom-6 md:left-6 md:mt-0 md:w-[360px] lg:-left-8" id="demo">
+          <div class="flex items-center justify-between gap-2">
+            <div role="tablist" aria-label="Demo language" class="inline-flex rounded-lg border bg-surface p-0.5 text-xs">
+              <button role="tab" type="button" data-demo-tab="hi" aria-selected="true" class="rounded-md px-2.5 py-1 font-medium text-muted-foreground aria-selected:bg-foreground aria-selected:text-background">Hindi</button>
+              <button role="tab" type="button" data-demo-tab="en" aria-selected="false" class="rounded-md px-2.5 py-1 font-medium text-muted-foreground aria-selected:bg-foreground aria-selected:text-background">English</button>
             </div>
-            <aiwazz-wave for={d.file} bars={i === 0 ? "56" : "40"} mode="idle" class:list={["mt-4 block", i === 0 ? "h-16" : "h-10"]}></aiwazz-wave>
-            <p class="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground" lang={i === 0 ? "hi" : "en"}>“{d.text}”</p>
+            <span class="inline-flex items-center gap-1.5 rounded-full border bg-surface px-2 py-0.5 text-[11px] text-muted-foreground" id="demo-chip">
+              <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span> <span>Playing: Hindi, Alpha</span>
+            </span>
           </div>
-        ))}
+          {[DEMOS.hi, DEMOS.en].map((d, i) => (
+            <div data-demo-panel={i === 0 ? "hi" : "en"} hidden={i !== 0} data-sample-card={d.file} class="mt-3">
+              <div class="flex items-center gap-3">
+                <PlayButton id={d.file} name={`demo voiceover, ${d.voice}`} size="lg" />
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium">{d.voice}</p>
+                  <p class="font-mono text-xs text-subtle-foreground">{fmt(d.duration)} · 48 kHz · -14 LUFS</p>
+                </div>
+              </div>
+              <aiwazz-wave for={d.file} bars="44" mode="idle" class="mt-3 block h-12"></aiwazz-wave>
+              <p class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground" lang={i === 0 ? "hi" : "en"}>“{d.text}”</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   </section>
 
-  <Samples />
+  <!-- Proof strip -->
+  <section aria-label="At a glance" class="border-y bg-surface/50">
+    <ul class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-5 text-sm text-muted-foreground sm:px-6">
+      {proof.map((p) => <li class="flex items-center gap-2"><Icon name={p.icon} class="size-4 text-brand" /> {p.text}</li>)}
+    </ul>
+  </section>
+
+  <!-- Problem → solution -->
+  <section aria-labelledby="problem-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+    <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <p class="font-mono text-xs tracking-wider text-brand uppercase">Why AiWazz</p>
+        <h2 id="problem-title" class="mt-3 text-h1 font-semibold">Recording voiceovers is slow</h2>
+        <ul class="mt-6 space-y-3 text-[15px] text-muted-foreground">
+          {["Setting up a mic and finding a quiet room", "Retake after retake for one stumble", "Fans, traffic and echo in the background", "Studio time or voice artists cost more than one reel earns"].map((t) => (
+            <li class="flex gap-3"><Icon name="x" class="mt-0.5 size-4 shrink-0 text-danger" /> {t}</li>
+          ))}
+        </ul>
+        <div class="mt-8 rounded-2xl border bg-surface p-6 shadow-md">
+          <p class="tagline text-lg"><span class="text-brand-gradient">AiWazz:</span> type it, hear it.</p>
+          <ul class="mt-4 space-y-3 text-[15px] text-muted-foreground">
+            {["A finished voiceover in minutes, not hours", "The same voice in every video, every day", "No mic, no studio, no background noise"].map((t) => (
+              <li class="flex gap-3"><Icon name="check" class="mt-0.5 size-4 shrink-0 text-success" /> {t}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {problem ? (
+        <figure>
+          <Picture src={problem.src} alt={problem.alt} width={problem.width} height={problem.height} class="aspect-[4/3] h-auto w-full rounded-3xl border object-cover shadow-lg" sizes="(min-width: 1024px) 560px, 100vw" />
+        </figure>
+      ) : (
+        <div class="rounded-3xl border bg-surface p-3 shadow-lg">
+          <Picture src="/media/dashboard-history-phone" alt="Voiceover history on a phone: play and download each file" width={600} height={1298} class="mx-auto block h-auto w-[260px] rounded-2xl" sizes="260px" />
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Voices -->
+  <div class="border-y bg-surface/40"><VoicesGallery /></div>
+
+  <!-- How it works -->
+  <section id="how-it-works" aria-labelledby="how-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+    <div class="max-w-2xl">
+      <p class="font-mono text-xs tracking-wider text-brand uppercase">How it works</p>
+      <h2 id="how-title" class="mt-3 text-h1 font-semibold">Three steps. About a minute.</h2>
+    </div>
+    <div class="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+      <ol class="grid gap-4">
+        {steps.map((s) => (
+          <li class="flex gap-4 rounded-2xl border bg-surface p-5">
+            <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-gradient-strong text-white"><Icon name={s.icon} class="size-5" /></span>
+            <div>
+              <h3 class="flex items-center gap-2 text-h3 font-semibold"><span class="font-mono text-sm font-normal text-subtle-foreground">{s.n}</span> {s.title}</h3>
+              <p class="mt-1.5 text-[15px] leading-7 text-muted-foreground">{s.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <figure class="rounded-2xl border bg-surface p-2 shadow-lg">
+        <video class="block h-auto w-full rounded-xl" width="1024" height="640" autoplay muted loop playsinline preload="none" poster="/media/how-it-works-poster.webp" aria-label="Screen recording: Hinglish typed in the AiWazz dashboard, converted to Devanagari, generated with the Beta voice and played back">
+          <source src="/media/how-it-works.webm" type="video/webm" />
+          <source src="/media/how-it-works.mp4" type="video/mp4" />
+        </video>
+        <figcaption class="px-2 pt-2 pb-1 text-xs text-subtle-foreground">Real screen recording of the dashboard.</figcaption>
+      </figure>
+    </div>
+  </section>
 
   <!-- Features -->
   <section id="features" aria-labelledby="features-title" class="border-y bg-surface/40">
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
       <div class="max-w-2xl">
-        <p class="font-mono text-xs tracking-wider text-brand uppercase">Why AiWazz</p>
-        <h2 id="features-title" class="mt-3 text-h1 font-semibold">Built for creators who post every day</h2>
-        <p class="mt-3 text-muted-foreground">Everything a short video needs from a voiceover, done for you.</p>
+        <p class="font-mono text-xs tracking-wider text-brand uppercase">Features</p>
+        <h2 id="features-title" class="mt-3 text-h1 font-semibold">Everything a voiceover needs, done for you</h2>
       </div>
-      <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {features.map((f) => (
           <li class="rounded-2xl border bg-surface p-6 shadow-md">
             <span class="grid size-10 place-items-center rounded-xl border bg-surface-2 text-brand"><Icon name={f.icon} class="size-5" /></span>
@@ -130,24 +272,70 @@ const jsonLd = [
     </div>
   </section>
 
-  <!-- How it works -->
-  <section id="how-it-works" aria-labelledby="how-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+  <!-- Use cases -->
+  <section aria-labelledby="usecases-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
     <div class="max-w-2xl">
-      <p class="font-mono text-xs tracking-wider text-brand uppercase">How it works</p>
-      <h2 id="how-title" class="mt-3 text-h1 font-semibold">Three steps. About a minute.</h2>
+      <p class="font-mono text-xs tracking-wider text-brand uppercase">Use cases</p>
+      <h2 id="usecases-title" class="mt-3 text-h1 font-semibold">Made for the videos you post every day</h2>
     </div>
-    <ol class="mt-12 grid gap-4 md:grid-cols-3">
-      {steps.map((s) => (
-        <li class="relative rounded-2xl border bg-surface p-6">
-          <div class="flex items-center justify-between">
-            <span class="grid size-10 place-items-center rounded-xl bg-brand-gradient-strong text-white"><Icon name={s.icon} class="size-5" /></span>
-            <span class="font-mono text-sm text-subtle-foreground">{s.n}</span>
-          </div>
-          <h3 class="mt-5 text-h3 font-semibold">{s.title}</h3>
-          <p class="mt-2 text-[15px] leading-7 text-muted-foreground">{s.text}</p>
-        </li>
-      ))}
-    </ol>
+    <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {useCases.map((u) => {
+        const photo = u.slot ? PHOTOS[u.slot] : undefined;
+        return (
+          <li class="flex flex-col overflow-hidden rounded-2xl border bg-surface shadow-md">
+            {photo ? (
+              <Picture src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} class="aspect-[16/9] h-auto w-full object-cover" sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" />
+            ) : (
+              <div class="grid aspect-[16/9] place-items-center bg-surface-2" aria-hidden="true">
+                <span class="grid size-14 place-items-center rounded-2xl bg-brand-gradient-strong text-white shadow-brand-glow"><Icon name={u.icon} class="size-7" /></span>
+              </div>
+            )}
+            <div class="flex flex-1 flex-col p-5">
+              <h3 class="text-h3 font-semibold">{u.title}</h3>
+              <p class="mt-2 flex-1 text-[15px] leading-7 text-muted-foreground">{u.text}</p>
+              <div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <a href={u.href} class="font-medium text-brand underline-offset-4 hover:underline">Learn how</a>
+                {u.page && <a href={u.page} class="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">{u.more}</a>}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+
+  <!-- Hindi & Hinglish -->
+  <section aria-labelledby="hindi-title" class="border-y bg-surface/40">
+    <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <p class="font-mono text-xs tracking-wider text-brand uppercase">Hindi & Hinglish</p>
+        <h2 id="hindi-title" class="mt-3 text-h1 font-semibold">Write the way you talk</h2>
+        <p class="mt-4 text-[15px] leading-7 text-muted-foreground">
+          Hindi voices read Devanagari. Mix in English words like <em>order</em> or <em>offer</em> and they're read in English. Typing Hindi in Roman letters? Turn on <strong class="text-foreground">Transliterate Hinglish</strong>: Hindi words become Devanagari, English words stay as they are, and you see the converted text before you generate.
+        </p>
+        <a href="/learn/hindi-and-hinglish/" class="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-brand underline-offset-4 hover:underline">Read the Hindi & Hinglish guide <Icon name="arrow-right" class="size-4" /></a>
+      </div>
+      <div class="grid gap-3">
+        <div class="rounded-2xl border bg-surface p-5">
+          <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">You type</p>
+          <p class="mt-2 font-mono text-[15px] leading-7">Raat 11 baje customer ne call kiya. Uska order abhi tak nahi aaya tha!</p>
+        </div>
+        <div class="flex justify-center text-brand" aria-hidden="true"><Icon name="arrow-down" class="size-5" /></div>
+        <div class="rounded-2xl border bg-surface p-5 shadow-brand-glow">
+          <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">The voice reads</p>
+          <p class="mt-2 text-[17px] leading-8" lang="hi">रात 11 बजे customer ने call किया। उसका order अभी तक नहीं आया था!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Works with your tools -->
+  <section aria-labelledby="tools-title" class="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6">
+    <h2 id="tools-title" class="text-h2 font-semibold">Works with the tools you already use</h2>
+    <p class="mt-2 text-sm text-muted-foreground">Download MP3 or WAV and drop it in. Step-by-step guides for each editor:</p>
+    <ul class="mt-6 flex flex-wrap justify-center gap-2">
+      {tools.map((t) => <li><a href={`/learn/using-audio-in-editors/#${t.anchor}`} class="inline-flex rounded-full border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-surface-2">{t.name}</a></li>)}
+    </ul>
   </section>
 
   <!-- Pricing teaser -->
@@ -160,7 +348,7 @@ const jsonLd = [
           <p class="mt-3 text-muted-foreground">Start free, upgrade when your channel grows. GST invoice with every payment.</p>
         </div>
         <a href="/pricing/" class="inline-flex h-11 items-center gap-2 self-start rounded-xl border border-input bg-surface px-5 text-[15px] font-medium hover:bg-surface-2 md:self-auto">
-          See all plans <Icon name="arrow-right" class="size-[18px]" />
+          See full pricing <Icon name="arrow-right" class="size-[18px]" />
         </a>
       </div>
       <ul class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -176,11 +364,92 @@ const jsonLd = [
     </div>
   </section>
 
+  <!-- Comparison -->
+  <section aria-labelledby="compare-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+    <div class="max-w-2xl">
+      <p class="font-mono text-xs tracking-wider text-brand uppercase">Compare</p>
+      <h2 id="compare-title" class="mt-3 text-h1 font-semibold">AiWazz vs recording yourself vs hiring a voice artist</h2>
+    </div>
+    <div class="mt-10 overflow-x-auto rounded-2xl border bg-surface shadow-md">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <thead>
+          <tr class="border-b bg-surface-2">
+            <th scope="col" class="px-5 py-3.5 font-semibold"><span class="sr-only">Comparison</span></th>
+            <th scope="col" class="px-5 py-3.5 font-semibold text-brand">AiWazz</th>
+            <th scope="col" class="px-5 py-3.5 font-semibold">Recording yourself</th>
+            <th scope="col" class="px-5 py-3.5 font-semibold">Hiring a voice artist</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comparison.map((c) => (
+            <tr class="border-b last:border-0">
+              <th scope="row" class="px-5 py-3.5 font-medium">{c.row}</th>
+              <td class="px-5 py-3.5 text-foreground">{c.ai}</td>
+              <td class="px-5 py-3.5 text-muted-foreground">{c.self}</td>
+              <td class="px-5 py-3.5 text-muted-foreground">{c.artist}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-subtle-foreground">Voice artists bring acting and direction a synthetic voice can't; AiWazz is for fast, consistent everyday voiceovers.</p>
+  </section>
+
+  <!-- Security & privacy -->
+  <section aria-labelledby="security-title" class="border-y bg-surface/40">
+    <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+      <div class="max-w-2xl">
+        <p class="font-mono text-xs tracking-wider text-brand uppercase">Security & privacy</p>
+        <h2 id="security-title" class="mt-3 text-h1 font-semibold">Your scripts stay yours</h2>
+      </div>
+      <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { icon: "lock", t: "HTTPS everywhere", d: "Every page and API call is encrypted in transit." },
+          { icon: "key-round", t: "Hashed passwords and keys", d: "Passwords are hashed with Argon2; API keys are stored only as hashes and shown once." },
+          { icon: "timer", t: "Audio deleted after 7 days", d: "Generated files are removed automatically. Download what you want to keep." },
+          { icon: "brain", t: "No training on your scripts", d: "Your text is used only to create your voiceover." },
+          { icon: "receipt-indian-rupee", t: "GST invoices", d: "Prices in rupees with a GST invoice for every payment." },
+          { icon: "credit-card", t: "Payments through Razorpay", d: "Card, UPI and net banking are processed by Razorpay; we never see your full card details." },
+        ].map((x) => (
+          <li class="flex gap-4 rounded-2xl border bg-surface p-5">
+            <span class="grid size-10 shrink-0 place-items-center rounded-xl border bg-surface-2 text-brand"><Icon name={x.icon} class="size-5" /></span>
+            <div><h3 class="font-semibold">{x.t}</h3><p class="mt-1 text-sm leading-6 text-muted-foreground">{x.d}</p></div>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-6 text-sm text-muted-foreground">Read our <a href="/privacy/" class="text-brand underline underline-offset-2">Privacy Policy</a> and <a href="/terms/" class="text-brand underline underline-offset-2">Terms</a>, or <a href="/data-deletion/" class="text-brand underline underline-offset-2">delete your data</a> any time.</p>
+    </div>
+  </section>
+
   <Faq items={faq} />
-  <CtaBand />
+
+  <!-- Final CTA -->
+  <section class="px-4 pb-20 sm:px-6 sm:pb-28">
+    <div class="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-gradient-strong px-6 py-14 text-center text-white shadow-lg sm:px-12 sm:py-20">
+      <div aria-hidden="true" class="hero-grid absolute inset-0 opacity-20"></div>
+      <p class="tagline relative text-lg text-white/90">Type it, hear it.</p>
+      <h2 class="relative mx-auto mt-3 max-w-2xl text-h1 font-semibold sm:text-[2.75rem] sm:leading-[1.1]">Your next reel needs a voice. Make it in seconds.</h2>
+      <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <a href={SITE.getStarted} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-[15px] font-semibold text-[#070d25] transition-transform hover:scale-[1.02]">
+          Get started free <Icon name="arrow-right" class="size-[18px]" />
+        </a>
+        <a href="/learn/" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/50 px-6 text-[15px] font-medium text-white hover:bg-white/10">Read the Learn guides</a>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <script>
   import "../scripts/waveform";
   import "../scripts/player";
+  const tabs = document.querySelectorAll<HTMLButtonElement>("[data-demo-tab]");
+  const chip = document.querySelector("#demo-chip span:last-child");
+  tabs.forEach((t) =>
+    t.addEventListener("click", () => {
+      const v = t.dataset.demoTab!;
+      tabs.forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+      document.querySelectorAll<HTMLElement>("[data-demo-panel]").forEach((p) => (p.hidden = p.dataset.demoPanel !== v));
+      if (chip) chip.textContent = v === "hi" ? "Playing: Hindi, Alpha" : "Playing: English, Michael";
+    }),
+  );
 </script>

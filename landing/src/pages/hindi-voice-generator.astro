@@ -1,0 +1,73 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "A Hindi voice generator built for everyday videos",
+    p: [
+      "AiWazz turns Hindi text into a natural Hindi voice in about a minute. Paste a script in Devanagari, pick one of four Hindi voices, and download a clean MP3 or WAV that is ready for a reel, a YouTube video, an ad or a lesson. There is nothing to install: it runs in your browser on a laptop or a phone.",
+      "The voices were chosen for clarity and warmth rather than drama. Alpha and Beta are female voices, Omega and Psi are male. Alpha is warm and clear, Beta bright and friendly, Omega deep and calm, and Psi a steady narrator. You can hear every one of them on this page before you sign up.",
+    ],
+  },
+  {
+    h2: "हिंदी वॉइस जनरेटर",
+    p: [
+      "अपनी स्क्रिप्ट देवनागरी में लिखें या पेस्ट करें, चार में से कोई एक आवाज़ चुनें और लगभग एक मिनट में तैयार ऑडियो डाउनलोड करें। ये आवाज़ें हिंदी को स्वाभाविक ठहराव और सही ज़ोर के साथ पढ़ती हैं, इसलिए आपका वीडियो सुनने में अपनापन लगता है।",
+      "रोमन अक्षरों में लिखी हिंदी भी चलेगी: “Transliterate Hinglish” चालू करें और बाकी काम AiWazz कर देगा।",
+    ],
+  },
+  {
+    h2: "How it works",
+    p: [
+      "Generating a Hindi voiceover takes three steps. First, write or paste your script, up to 5,000 characters at a time, which is roughly five minutes of speech. Second, choose a voice and a speed between 0.7× and 1.3×; slower speeds suit explainers and lessons, faster speeds suit hooks and trends. Third, press Generate. AiWazz splits the script into sentences, synthesises each one, adds even pauses between sentences and slightly longer pauses between paragraphs, and then levels the result to a consistent loudness.",
+      "When the voiceover is ready you can play it in the browser, download it as MP3 (192 kbps) or WAV (16-bit), and find it again in your History for seven days.",
+    ],
+  },
+  {
+    h2: "Studio-ready audio, not just speech",
+    p: ["A raw text-to-speech file usually needs work before it goes into a video. AiWazz does that work for you:"],
+    list: [
+      "Loudness is levelled to -14 LUFS by default, the loudness most short-video platforms target, so the voice doesn't sound quiet next to other videos. You can also choose -16, -18 or -23 LUFS.",
+      "True peaks are kept under -1 dBTP, so the audio doesn't distort when a platform compresses it.",
+      "Silence at the start and end is trimmed to about 100 ms, so the voice starts right on your first frame.",
+      "Both formats are 48 kHz, the sample rate video editors such as CapCut, Premiere Pro and DaVinci Resolve expect.",
+    ],
+  },
+  {
+    h2: "Tips for a natural Hindi voiceover",
+    p: [
+      "Write the way you would speak. Short sentences sound more natural than long, formal ones, and a full stop or the Devanagari danda (।) gives the voice a natural breath. Numbers can stay as digits: a Hindi voice reads 11 as ग्यारह. Common English words such as order, offer or video can stay in English; the Hindi voices pronounce them in English, the way most people in India say them.",
+      "If one sentence doesn't sound right, change the wording rather than the spelling of a single word, then generate again. Because generation takes about as long as the audio itself, trying two or three versions of a hook takes only a few minutes.",
+    ],
+  },
+  {
+    h2: "Who uses a Hindi voice generator?",
+    p: [
+      "Creators who post daily reels and Shorts, small businesses explaining a product or an offer, teachers turning notes into short lessons, and agencies that need the same video in Hindi and English. Anyone who needs a clear Hindi voice quickly, without booking a voice artist or recording at home, can use AiWazz.",
+      "If you automate your videos, the AiWazz API (Creator plan and above) generates voiceovers straight from your scripts, so a whole week of videos can be voiced in one go.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "How many Hindi voices are there?", a: "Four: Alpha and Beta (female), Omega and Psi (male). You can preview all of them on this page." },
+  { q: "Can I type Hindi in English letters?", a: "Yes. Turn on Transliterate Hinglish and Roman Hindi such as \"Raat 11 baje\" is converted to Devanagari before the voice reads it. English words stay in English." },
+  { q: "Is there a limit on script length?", a: "Each voiceover can be up to 5,000 characters, about five minutes of speech. Longer scripts can be generated in parts." },
+  { q: "Can I use the Hindi voice commercially?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use. See our Terms at aiwazz.in/terms/." },
+  { q: "Which file formats can I download?", a: "MP3 at 192 kbps and 16-bit WAV, both at 48 kHz and loudness-levelled." },
+];
+---
+<SeoPage
+  title="Hindi voice generator: natural AI Hindi voices online | AiWazz"
+  description="Free-to-try Hindi voice generator with 4 natural AI Hindi voices. Paste Devanagari or Hinglish, download reel-ready MP3 or WAV at 48 kHz in about a minute."
+  eyebrow="Hindi voice generator"
+  h1="Hindi voice generator with natural AI voices"
+  lead="Four natural Hindi voices that read Devanagari and Hinglish. Paste your script and download studio-ready audio in about a minute."
+  blocks={blocks}
+  learn={[{ href: "/learn/hindi-and-hinglish/", label: "Hindi and Hinglish scripts: the complete guide" }, { href: "/learn/choosing-a-voice/", label: "How to choose the right voice" }]}
+  faq={faq}
+  langs={["h"]}
+  samplesHeading="Hear the four Hindi voices"
+  cta="Give your Hindi script a voice."
+/>

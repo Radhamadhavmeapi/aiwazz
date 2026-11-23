@@ -5,6 +5,10 @@ const PAGES = [
   { path: "/text-to-speech/", priority: "0.8" },
   { path: "/hindi-text-to-speech/", priority: "0.8" },
   { path: "/ai-voiceover-for-reels/", priority: "0.8" },
+  ...["hindi-voice-generator", "hinglish-text-to-speech", "ai-voice-for-youtube", "ai-voice-for-instagram-reels", "text-to-speech-for-ads", "text-to-speech-for-teachers"].map((p) => ({
+    path: `/${p}/`,
+    priority: "0.8",
+  })),
   { path: "/pricing/", priority: "0.8" },
   { path: "/about/", priority: "0.5" },
   { path: "/contact/", priority: "0.5" },

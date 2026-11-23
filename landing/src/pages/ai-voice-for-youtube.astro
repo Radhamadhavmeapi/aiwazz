@@ -1,0 +1,69 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Narration for YouTube without a mic",
+    p: [
+      "Explainers, list videos, tutorials, news recaps and faceless channels all need the same thing: clear narration, every week, in the same voice. AiWazz gives you that voice in Hindi, Hinglish or English. Write the script, pick a voice, and download audio you can drop straight into your editor.",
+      "Because the voice is the same every time, a series sounds like a series. There's no change in tone between episodes recorded on different days, no room echo, and no background noise to clean up.",
+    ],
+  },
+  {
+    h2: "Long videos, generated in parts",
+    p: [
+      "Each AiWazz voiceover can be up to 5,000 characters, roughly five minutes of speech. For a ten-minute video, split the script at natural section breaks (intro, each point, outro) and generate each part with the same voice and speed. Every file is levelled to the same loudness, so the parts join seamlessly on your timeline.",
+      "Splitting by section has a second benefit: when you change one point, you regenerate only that part instead of re-recording the whole video.",
+    ],
+  },
+  {
+    h2: "Audio that's ready for the edit",
+    list: [
+      "WAV (16-bit) for editing in Premiere Pro, DaVinci Resolve or Final Cut; MP3 (192 kbps) for quick drafts. Both at 48 kHz, the standard for video.",
+      "Levelled to -14 LUFS by default, with true peaks under -1 dBTP. For long-form content with music you can choose -16 or -18 LUFS to leave more headroom.",
+      "Silence at the start and end trimmed to about 100 ms, with consistent pauses between sentences and slightly longer ones between paragraphs.",
+      "Speed from 0.7× to 1.3×: a little slower for tutorials, a little faster for top-10 style videos.",
+    ],
+    p: [],
+  },
+  {
+    h2: "Hindi and English channels from one script workflow",
+    p: [
+      "Many Indian channels publish the same video in Hindi and English. With AiWazz you can keep two scripts side by side and generate both with matching voices: Alpha or Omega for Hindi, Heart or Michael for US English, Emma or George for UK English. Hinglish scripts work too: turn on Transliterate Hinglish and type the way you speak.",
+    ],
+  },
+  {
+    h2: "Automate a weekly upload schedule",
+    p: [
+      "If your videos are built from templates, the AiWazz API (Creator plan and above) generates narration directly from your scripts with an API key. Send the text, voice and format, wait for the result, and download the file into your render pipeline. The same voices, loudness and formats as the dashboard, with no clicking.",
+      "Generated audio is kept for seven days, so download the files you want to keep into your project folder.",
+    ],
+  },
+  {
+    h2: "Monetised channels and commercial use",
+    p: [
+      "If your channel is monetised or you make videos for clients, use a paid plan: paid plans include commercial rights for monetised videos, ads and client work. The Free plan is for personal, non-commercial use.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "Can I use AiWazz voices on a monetised YouTube channel?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use." },
+  { q: "How do I make a 10-minute voiceover?", a: "Split the script into parts of up to 5,000 characters each, generate them with the same voice and speed, and place them one after another in your editor. Every part has the same loudness." },
+  { q: "Which format should I use for YouTube editing?", a: "WAV for editing (it has no compression), MP3 for quick drafts. Both are 48 kHz." },
+  { q: "What loudness should I choose for YouTube?", a: "-14 LUFS is a safe default. If you add background music, -16 or -18 LUFS leaves more room for it." },
+];
+---
+<SeoPage
+  title="AI voice for YouTube: Hindi & English narration for videos | AiWazz"
+  description="AI voice for YouTube videos in Hindi, Hinglish and English. Consistent narration for explainers and faceless channels, WAV or MP3 at 48 kHz, API for automation."
+  eyebrow="AI voice for YouTube"
+  h1="AI voice for YouTube videos in Hindi and English"
+  lead="Consistent, clear narration for explainers, tutorials and faceless channels. Write the script, pick a voice, download a ready-to-edit WAV or MP3."
+  blocks={blocks}
+  learn={[{ href: "/learn/using-audio-in-editors/", label: "Adding your voiceover in Premiere, DaVinci Resolve and more" }, { href: "/learn/speed-and-loudness/", label: "Speed and loudness: choosing the right settings" }]}
+  faq={faq}
+  samplesHeading="Voices for your channel"
+  cta="Narrate your next video without a mic."
+/>

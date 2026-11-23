@@ -205,6 +205,12 @@ Footer (company line) on both sites. Contact form → `POST /api/contact` (proxi
 `contact_messages`, read with `manage.py list-messages`; no email sending yet). Signup stores consent (`consent_at`,
 `terms_version`, `consent_ip`, `marketing_opt_in`); account deletion logs a reference in `deletion_log`.
 Policy aliases (301) in `deploy/nginx/aiwazz.in.conf`.
+**Built (phase 8, landing v2):** home rebuilt per `content/LANDING-V2.md` (real dashboard screenshots + screen recording
+in `landing/media/`, 6 Pexels photos in `landing/media/photos/` with `CREDITS.md`, voices gallery with filters, comparison,
+security, 13 FAQs). New SEO pages: /hindi-voice-generator/, /hinglish-text-to-speech/, /ai-voice-for-youtube/,
+/ai-voice-for-instagram-reels/, /text-to-speech-for-ads/, /text-to-speech-for-teachers/ (english-indian-accent skipped:
+no Indian-English voice). Before/after audio section skipped (no real phone recording). Fonts: Poppins 600+700 preloaded
+(CLS 0). Lighthouse mobile 100/100/100/100 on home, pricing, SEO page.
 
 ## Build phases
 -1. **Repo setup:** create the deploy key, show me the public key so I add it in GitHub

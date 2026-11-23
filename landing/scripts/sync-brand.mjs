@@ -14,4 +14,6 @@ cpSync(join(assets, "favicon"), pub, { recursive: true });
 cpSync(join(assets, "og-image.png"), join(pub, "og-image.png"));
 for (const f of readdirSync(assets)) if (f.endsWith(".webp")) cpSync(join(assets, f), join(pub, "brand", f));
 for (const f of readdirSync(join(here, "../samples"))) if (f.endsWith(".mp3")) cpSync(join(here, "../samples", f), join(pub, "samples", f));
-console.log("brand assets + samples synced to public/");
+// product screenshots + screen recording (landing/media, committed)
+cpSync(join(here, "../media"), join(pub, "media"), { recursive: true });
+console.log("brand assets + samples + media synced to public/");

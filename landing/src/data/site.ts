@@ -9,6 +9,7 @@ export const SITE = {
   app: "https://login.aiwazz.in",
   signIn: "https://login.aiwazz.in/login",
   getInvite: "https://login.aiwazz.in/signup",
+  getStarted: "https://login.aiwazz.in/signup",
   ogImage: "https://aiwazz.in/og-image.png",
 };
 
@@ -63,6 +64,12 @@ export const FOOTER = {
     { href: "/about/", label: "About" },
     { href: "/contact/", label: "Contact" },
     { href: "/grievance/", label: "Grievance" },
+  ],
+  learn: [
+    { href: "/learn/getting-started/", label: "Getting started" },
+    { href: "/learn/hindi-and-hinglish/", label: "Hindi & Hinglish" },
+    { href: "/learn/api-quickstart/", label: "API quickstart" },
+    { href: "/learn/troubleshooting/", label: "Troubleshooting" },
   ],
   legal: [
     { href: "/terms/", label: "Terms" },

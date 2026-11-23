@@ -1,0 +1,9 @@
+---
+// AVIF + WebP <picture> with explicit size (no layout shift). src = "/media/name" (no extension).
+interface Props { src: string; alt: string; width: number; height: number; class?: string; eager?: boolean; sizes?: string }
+const { src, alt, width, height, class: cls, eager = false, sizes } = Astro.props;
+---
+<picture>
+  <source srcset={`${src}.avif`} type="image/avif" sizes={sizes} />
+  <img src={`${src}.webp`} alt={alt} width={width} height={height} class={cls} loading={eager ? "eager" : "lazy"} decoding={eager ? "sync" : "async"} fetchpriority={eager ? "high" : undefined} sizes={sizes} />
+</picture>

@@ -4,13 +4,14 @@ import { FOOTER } from "../data/site";
 import Logo from "./Logo.astro";
 const cols = [
   { title: "Product", links: FOOTER.product },
+  { title: "Learn", links: FOOTER.learn },
   { title: "Company", links: FOOTER.company },
   { title: "Legal", links: FOOTER.legal },
 ];
 const tel = LEGAL.phone.replace(/\s+/g, "");
 ---
 <footer class="border-t">
-  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
     <div>
       <Logo variant="full" width={180} />
       <p class="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">

@@ -1,0 +1,66 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Hinglish is how India writes, so your TTS should read it",
+    p: [
+      "Most people in India don't write scripts in pure Hindi or pure English. They write \"Aaj ka offer sirf 24 ghante ke liye hai\" or \"Raat 11 baje customer ne call kiya\": Hindi grammar, Roman letters and a few English words. Text-to-speech tools that expect clean Devanagari read these lines like broken English. AiWazz is built to read them the way you meant them.",
+      "Turn on Transliterate Hinglish, paste your script exactly as you would type it in WhatsApp, and AiWazz converts the Hindi words to Devanagari before the Hindi voice reads them. English words such as offer, customer, order or video stay in English and are pronounced in English.",
+    ],
+  },
+  {
+    h2: "हिंग्लिश टेक्स्ट टू स्पीच",
+    p: [
+      "जैसे आप चैट में लिखते हैं, वैसे ही अपनी स्क्रिप्ट लिखिए: “Raat 11 baje customer ne call kiya”। AiWazz हिंदी शब्दों को देवनागरी में बदलता है, अंग्रेज़ी शब्दों को वैसा ही रहने देता है, और जनरेट करने से पहले आपको बदला हुआ टेक्स्ट दिखा देता है।",
+    ],
+  },
+  {
+    h2: "See exactly what the voice will read",
+    p: [
+      "When transliteration is on, the dashboard shows a \"Will be read as\" box under your script. \"Raat 11 baje customer ne call kiya\" becomes \"रात 11 बजे customer ने call किया\", so you can spot a word that needs a different spelling before you spend characters on a generation. If you paste a Roman script with a Hindi voice selected, AiWazz also suggests turning transliteration on.",
+      "The conversion uses a dictionary of common Hinglish words with their correct Devanagari spelling (नहीं, मैं, बहुत, क्योंकि), recognises English words and brand names such as YouTube or AiWazz and leaves them alone, and spells any other Hindi word by sound. Words that are both English and Hindi, like \"to\", \"do\" or \"main\", are decided by the rest of the sentence.",
+    ],
+  },
+  {
+    h2: "Writing Hinglish that sounds natural",
+    list: [
+      "Spell words the common way: \"nahi\", \"bahut\", \"kya\", \"accha\". Unusual spellings are read by sound, which may not be what you meant.",
+      "Keep English words that people actually say in English: \"order\", \"delivery\", \"discount\".",
+      "Use full stops and question marks; each one gives the voice a natural pause.",
+      "Digits are fine: \"11 baje\" is read as ग्यारह बजे.",
+      "Check the \"Will be read as\" box, change any odd word, and generate.",
+    ],
+    p: [],
+  },
+  {
+    h2: "Hinglish voiceovers for reels, ads and shop videos",
+    p: [
+      "Hinglish is the language of Indian Instagram and YouTube. A reel hook like \"Ye ek mistake aapki sales kam kar rahi hai\" or a shop video like \"Diwali offer: har order pe free delivery\" sounds natural with a Hindi voice and English product words. Every AiWazz voiceover is levelled to -14 LUFS, the loudness most short-video platforms target, and comes as MP3 or WAV at 48 kHz, ready to drop under your clips.",
+      "You can also send Hinglish to the AiWazz API with \"transliterate\": true, which is handy when scripts come from a spreadsheet or a content tool.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "Do I need to type in Devanagari?", a: "No. Turn on Transliterate Hinglish and type Hindi in Roman letters. Hindi words are converted to Devanagari; English words stay in English." },
+  { q: "What if a word is converted wrongly?", a: "Check the \"Will be read as\" box before you generate. Try the most common spelling of the word, or type that one word in Devanagari; the rest of the script can stay in Roman letters." },
+  { q: "Does Hinglish work with English voices?", a: "Transliteration is for the four Hindi voices. English voices read English text." },
+  { q: "Can I use Hinglish through the API?", a: "Yes. Send \"transliterate\": true with a Hindi voice in your API request (Creator plan and above)." },
+  { q: "Can I use Hinglish voiceovers in paid ads?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use." },
+];
+---
+<SeoPage
+  title="Hinglish text to speech: type Roman Hindi, get a natural voice | AiWazz"
+  description="Hinglish text to speech that reads Roman Hindi the way India talks. Hindi words converted to Devanagari, English words kept. Preview the text, download MP3 or WAV."
+  eyebrow="Hinglish text to speech"
+  h1="Hinglish text to speech that reads the way India talks"
+  lead="Type Hindi in Roman letters, keep your English words, and get a natural Hindi voiceover. You see exactly what the voice will read before you generate."
+  blocks={blocks}
+  learn={[{ href: "/learn/hindi-and-hinglish/", label: "Hindi and Hinglish scripts: the complete guide" }, { href: "/learn/writing-scripts/", label: "How to write a voiceover script" }]}
+  faq={faq}
+  langs={["h"]}
+  samplesHeading="Hindi voices that read Hinglish"
+  cta="Write it like you text it. Hear it like you say it."
+/>

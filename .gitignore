@@ -1,0 +1,44 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / builds
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+
+# Runtime data, models and audio
+storage/
+api/storage/
+logs/
+*.log
+*.pth
+*.pt
+*.onnx
+*.bin
+*.safetensors
+*.wav
+*.mp3
+*.ogg
+*.flac
+!landing/samples/*.mp3
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -80,9 +80,14 @@ def test_audio_path_traversal(client):
     assert client.get("/api/tts/jobs/" + "0" * 32).status_code == 404
 
 
+def test_security_headers(client):
+    r = client.get("/api/auth/me")
+    assert r.headers["x-content-type-options"] == "nosniff" and r.headers["cache-control"] == "no-store"
+
+
 def test_env_example_keys_are_real_settings(monkeypatch):
-    monkeypatch.delenv("AIWAZZ_ENV")
-    monkeypatch.delenv("AIWAZZ_STORAGE_DIR")
+    for k in ("AIWAZZ_ENV", "AIWAZZ_STORAGE_DIR", "AIWAZZ_DATABASE_URL"):
+        monkeypatch.delenv(k, raising=False)
     from dotenv import dotenv_values
     from settings import API_DIR, Settings
     keys = dotenv_values(API_DIR / ".env.example").keys()

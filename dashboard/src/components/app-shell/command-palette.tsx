@@ -10,6 +10,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
+import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { langLabel, VOICES } from "@/lib/voices";
 import { NAV } from "./nav";
@@ -25,6 +26,7 @@ export function CommandPalette({
 }) {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
+  const { logout } = useAuth();
   const run = (fn: () => void) => () => {
     onOpenChange(false);
     fn();
@@ -64,7 +66,7 @@ export function CommandPalette({
             {theme === "dark" ? <Sun /> : <Moon />}
             Switch to {theme === "dark" ? "light" : "dark"} theme
           </CommandItem>
-          <CommandItem onSelect={run(() => navigate("/login"))}>
+          <CommandItem onSelect={run(() => logout().then(() => navigate("/login", { replace: true })))}>
             <LogOut />
             Sign out
           </CommandItem>

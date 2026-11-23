@@ -30,6 +30,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { PREVIEW } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { langLabel, LANGS, sampleUrl, VOICES, type Lang } from "@/lib/voices";
 
@@ -159,6 +160,12 @@ export default function GeneratePage() {
       <div className="mx-auto grid max-w-[1400px] gap-5 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6 lg:p-6 lg:pb-24">
         {/* ── Editor + result ─────────────────────────────────────────── */}
         <section aria-label="Script" className="flex min-w-0 flex-col gap-5">
+          {!PREVIEW && (
+            <p className="flex items-center gap-2 rounded-xl border border-dashed bg-surface/60 px-4 py-2.5 text-xs text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true" />
+              You're signed in. Generating is being connected to the voice engine next; for now this screen plays a demo.
+            </p>
+          )}
           <div className="flex flex-col rounded-2xl border bg-surface shadow-md">
             <div className="flex items-center gap-2 border-b px-4 py-2.5">
               <span className="text-sm font-medium">Script</span>
@@ -388,7 +395,7 @@ export default function GeneratePage() {
         </div>
       </div>
 
-      <PreviewStateBar current={job.state} onPick={showState} />
+      {PREVIEW && <PreviewStateBar current={job.state} onPick={showState} />}
     </AppShell>
   );
 }

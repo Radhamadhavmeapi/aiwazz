@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 
 export function ThemeToggle() {
@@ -30,6 +31,12 @@ export function ThemeToggle() {
 
 export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: () => void; onCommand: () => void }) {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const initial = (user?.email[0] ?? "?").toUpperCase();
+  const signOut = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
   return (
     <header className="glass sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 sm:px-5">
       <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={onMenu} aria-label="Open menu">
@@ -71,13 +78,13 @@ export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: ()
               aria-label="Account menu"
               className="ml-1 grid size-8 place-items-center rounded-full bg-brand-gradient-strong text-xs font-semibold text-white ring-2 ring-background transition-transform hover:scale-105"
             >
-              A
+              {initial}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
-              <p className="text-sm font-medium">Admin</p>
-              <p className="text-xs text-muted-foreground">Preview account</p>
+              <p className="truncate text-sm font-medium">{user?.email}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => navigate("/settings")}>
@@ -90,7 +97,7 @@ export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: ()
               <Settings /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => navigate("/login")}>
+            <DropdownMenuItem onSelect={signOut}>
               <LogOut /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

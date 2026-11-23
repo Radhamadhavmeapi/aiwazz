@@ -50,3 +50,14 @@ Setup from scratch: `python3 -m venv api/.venv`, install CPU torch (see `api/req
 Shared design tokens and brand assets live in `design/` (see `design/README.md`); the brand kit masters in `brand/`.
 `public/` in both apps is generated from `design/assets` at build time. Regenerate voice samples with
 `python3 tools/make_samples.py` (needs `voice-api` running).
+
+## Accounts (invite-only)
+
+```bash
+cd api
+.venv/bin/python manage.py create-user --email you@example.com --role admin   # prompts for the password
+.venv/bin/python manage.py create-invite --label "friend" --days 14            # prints XXXX-XXXX once
+.venv/bin/python manage.py list-invites
+```
+
+Deploy: `tools/deploy-api.sh` (migrations + restart), `tools/deploy-dashboard.sh`, `tools/deploy-landing.sh`.

@@ -1,13 +1,20 @@
-"""Public API routes (phase 2: no auth yet; the service binds to 127.0.0.1 only)."""
+"""TTS routes. Health + voices are public; everything else needs a session or an API key.
+Audio is owner-only (admins can read everything)."""
 import asyncio
+import secrets
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.deps import Principal, csrf_protect, current_principal
+from db import get_db, utcnow
+from models import Generation
 from settings import get_settings
-from tts.jobs import ID_RE, JobManager, QueueFull, TTSRequest
+from tts.jobs import ID_RE, Job, JobManager, QueueFull, TooManyPending, TTSRequest
 from tts.voices import DEFAULT_VOICE, VOICES
 
 router = APIRouter(prefix="/api")
@@ -16,6 +23,10 @@ WAIT_TIMEOUT = 290  # stay under nginx proxy_read_timeout (300 s)
 
 def manager(request: Request) -> JobManager:
     return request.app.state.jobs
+
+
+def audio_urls(gen_id: str) -> dict:
+    return {f: f"/api/audio/{gen_id}?format={f}" for f in ("mp3", "wav")}
 
 
 class TTSIn(BaseModel):
@@ -65,9 +76,14 @@ async def voices():
     return {"voices": [v.to_dict() for v in VOICES.values()]}
 
 
-@router.post("/tts")
-async def create_tts(body: TTSIn, request: Request,
-                     wait: bool = Query(False, description="Block until done (≤290 s)")):
+@router.post("/tts", dependencies=[Depends(csrf_protect)])
+async def create_tts(
+    body: TTSIn,
+    request: Request,
+    wait: bool = Query(False, description="Block until done (≤290 s)"),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_db),
+):
     jm = manager(request)
     if not jm.engine.ready:
         raise HTTPException(503, "TTS engine is still loading, try again in a few seconds")
@@ -77,9 +93,21 @@ async def create_tts(body: TTSIn, request: Request,
                      loudness_lufs=(body.loudness_lufs if body.loudness_lufs is not None else s.loudness_lufs)
                      if body.normalize else None)
     try:
-        job = jm.submit(req)
+        jm.check_capacity(p.user.id)
     except QueueFull:
         raise HTTPException(429, "The queue is full, please try again in a minute")
+    except TooManyPending:
+        raise HTTPException(429, "You already have 3 voiceovers waiting. Let one finish first.")
+
+    gen = Generation(
+        id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
+        engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
+        loudness_target=req.loudness_lufs, text_chars=len(body.text), text_excerpt=" ".join(body.text.split())[:160],
+    )
+    db.add(gen)
+    await db.commit()
+    job = jm.submit(req, job_id=gen.id, user_id=p.user.id)
+
     if wait:
         try:
             await asyncio.wait_for(job.done_event.wait(), WAIT_TIMEOUT)
@@ -91,22 +119,88 @@ async def create_tts(body: TTSIn, request: Request,
     return JSONResponse(status, status_code=200 if job.status == "done" else 202)
 
 
+async def _owned_generation(db: AsyncSession, gen_id: str, p: Principal) -> Generation:
+    gen = await db.get(Generation, gen_id) if ID_RE.match(gen_id) else None
+    # Same 404 for "doesn't exist" and "not yours": no probing other users' ids.
+    if gen is None or (gen.user_id != p.user.id and not p.user.is_admin):
+        raise HTTPException(404, "Not found")
+    return gen
+
+
+def _gen_status(gen: Generation) -> dict:
+    d = {"id": gen.id, "status": gen.status, "progress": 1.0 if gen.status == "done" else 0.0}
+    if gen.error:
+        d["error"] = gen.error
+    if gen.status == "done":
+        d |= {"url": f"/api/audio/{gen.id}?format={gen.format}", "urls": audio_urls(gen.id),
+              "duration_sec": gen.duration_sec, "compute_sec": gen.compute_sec}
+    return d
+
+
 @router.get("/tts/jobs/{job_id}")
-async def job_status(job_id: str, request: Request):
+async def job_status(job_id: str, request: Request, p: Principal = Depends(current_principal),
+                     db: AsyncSession = Depends(get_db)):
+    gen = await _owned_generation(db, job_id, p)
     jm = manager(request)
-    job = jm.jobs.get(job_id) if ID_RE.match(job_id) else None
-    if job is None:
-        raise HTTPException(404, "Job not found")
-    return jm.status(job)
+    job = jm.jobs.get(gen.id)
+    return jm.status(job) if job else _gen_status(gen)  # in-memory has live progress; DB survives restarts
 
 
 @router.get("/audio/{audio_id}")
-async def get_audio(audio_id: str, request: Request,
-                    format: Literal["mp3", "wav"] = "mp3", download: bool = False):
-    path = manager(request).audio_path(audio_id, format)
+async def get_audio(audio_id: str, request: Request, format: Literal["mp3", "wav"] = "mp3", download: bool = False,
+                    p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_db)):
+    gen = await _owned_generation(db, audio_id, p)
+    path = manager(request).audio_path(gen.id, format)
     if path is None:
-        raise HTTPException(404, "Audio not found")
+        if gen.status == "done":
+            raise HTTPException(410, "This audio has expired (files are kept for 7 days)")
+        raise HTTPException(404, "Audio not ready")
     media = "audio/mpeg" if format == "mp3" else "audio/wav"
-    name = f"aiwazz-{audio_id[:8]}.{format}"
-    return FileResponse(path, media_type=media, filename=name,
-                        content_disposition_type="attachment" if download else "inline")
+    return FileResponse(path, media_type=media, filename=f"aiwazz-{gen.id[:8]}.{format}",
+                        content_disposition_type="attachment" if download else "inline",
+                        headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get("/history")
+async def history(request: Request, limit: int = Query(50, ge=1, le=50), p: Principal = Depends(current_principal),
+                  db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(Generation).where(Generation.user_id == p.user.id)
+                             .order_by(Generation.created_at.desc()).limit(limit))).scalars().all()
+    jm = manager(request)
+    items = []
+    for g in rows:
+        available = g.status == "done" and jm.audio_path(g.id, g.format) is not None
+        items.append({
+            "id": g.id, "status": g.status, "voice": g.voice, "lang": g.lang, "speed": g.speed, "format": g.format,
+            "loudness_target": g.loudness_target, "output_lufs": g.output_lufs, "text_excerpt": g.text_excerpt,
+            "text_chars": g.text_chars, "duration_sec": g.duration_sec, "error": g.error, "via_api": g.api_key_id is not None,
+            "created_at": g.created_at.isoformat() + "Z", "available": available,
+            "urls": audio_urls(g.id) if available else None,
+        })
+    return {"items": items}
+
+
+# ── Job → DB hooks (wired in main.py) ─────────────────────────────────────────
+def make_hooks(sessionmaker):
+    async def on_start(job: Job) -> None:
+        async with sessionmaker() as db:
+            gen = await db.get(Generation, job.id)
+            if gen:
+                gen.status = "running"
+                await db.commit()
+
+    async def on_finish(job: Job) -> None:
+        async with sessionmaker() as db:
+            gen = await db.get(Generation, job.id)
+            if not gen:
+                return
+            gen.status = job.status
+            gen.finished_at = utcnow()
+            if job.result:
+                gen.duration_sec = job.result.get("duration_sec")
+                gen.compute_sec = job.result.get("compute_sec")
+                gen.output_lufs = (job.result.get("loudness") or {}).get("output_lufs")
+            gen.error = (job.error or None) and job.error[:255]
+            await db.commit()
+
+    return on_start, on_finish

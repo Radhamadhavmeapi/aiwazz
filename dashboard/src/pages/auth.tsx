@@ -1,6 +1,6 @@
-import { ArrowRight, Eye, EyeOff, Loader2, Pause, Play, Ticket } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Pause, Play, Ticket } from "lucide-react";
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { LiveWaveform } from "@/components/brand/live-waveform";
@@ -9,6 +9,9 @@ import { ThemeToggle } from "@/components/app-shell/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ApiError } from "@/lib/api";
+import { safeNext, useAuth } from "@/lib/auth";
+import { PREVIEW } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { sampleUrl } from "@/lib/voices";
 
@@ -132,6 +135,8 @@ function BrandPanel() {
 
 export default function AuthPage({ mode }: { mode: Mode }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const auth = useAuth();
   const ids = { email: useId(), pw: useId(), invite: useId() };
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -139,6 +144,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [server, setServer] = useState<{ email?: string; pw?: string; invite?: string; form?: string }>({});
   const signup = mode === "signup";
   const score = useMemo(() => passwordScore(pw), [pw]);
 
@@ -153,10 +159,12 @@ export default function AuthPage({ mode }: { mode: Mode }) {
           : undefined,
     invite: signup ? (!invite ? "An invite code is required for now" : !INVITE_RE.test(invite) ? "Format: XXXX-XXXX" : undefined) : undefined,
   };
-  const show = (k: keyof typeof errors) => (touched[k] ? errors[k] : undefined);
+  // Client-side checks first; server messages (invalid invite, email taken, ...) override until edited.
+  const show = (k: keyof typeof errors) => server[k] ?? (touched[k] ? errors[k] : undefined);
+  const edited = (k: keyof typeof errors) => setServer((x) => ({ ...x, [k]: undefined, form: undefined }));
   const blur = (k: string) => () => setTouched((t) => ({ ...t, [k]: true }));
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setTouched({ email: true, pw: true, invite: true });
     if (Object.values(errors).some(Boolean)) {
@@ -165,12 +173,23 @@ export default function AuthPage({ mode }: { mode: Mode }) {
       return;
     }
     setSubmitting(true);
-    setTimeout(() => {
-      // Preview: no backend yet.
+    setServer({});
+    try {
+      const user = signup ? await auth.signup(email, pw, invite) : await auth.login(email, pw);
+      toast.success(signup ? "Account created" : "Welcome back", {
+        description: PREVIEW ? "Preview only: no account was created." : user.email,
+      });
+      navigate(safeNext(params.get("next")), { replace: true });
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, "Something went wrong. Please try again.");
+      const m = e.message;
+      if (e.status === 409) setServer({ email: m });
+      else if (signup && e.status === 422 && /invite/i.test(m)) setServer({ invite: m });
+      else if (signup && e.status === 422 && /password|characters|guess/i.test(m)) setServer({ pw: m });
+      else if (e.status === 422 && /email/i.test(m)) setServer({ email: "That doesn't look like an email address" });
+      else setServer({ form: m });
       setSubmitting(false);
-      toast.success(signup ? "Account created" : "Welcome back", { description: "Preview only: no account was created." });
-      navigate("/generate");
-    }, 900);
+    }
   };
 
   return (
@@ -205,7 +224,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                   inputMode="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value.trim())}
+                  onChange={(e) => (setEmail(e.target.value.trim()), edited("email"))}
                   onBlur={blur("email")}
                   aria-invalid={!!show("email")}
                   aria-describedby={show("email") ? `${ids.email}-err` : undefined}
@@ -226,7 +245,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                     autoComplete={signup ? "new-password" : "current-password"}
                     placeholder={signup ? "At least 10 characters" : "Your password"}
                     value={pw}
-                    onChange={(e) => setPw(e.target.value)}
+                    onChange={(e) => (setPw(e.target.value), edited("pw"))}
                     onBlur={blur("pw")}
                     aria-invalid={!!show("pw")}
                     aria-describedby={show("pw") ? `${ids.pw}-err` : signup ? `${ids.pw}-hint` : undefined}
@@ -262,6 +281,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                     onChange={(e) => {
                       const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
                       setInvite(raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw);
+                      edited("invite");
                     }}
                     onBlur={blur("invite")}
                     aria-invalid={!!show("invite")}
@@ -271,6 +291,12 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                 </FieldRow>
               )}
 
+              {server.form && (
+                <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>{server.form}</span>
+                </div>
+              )}
               <Button type="submit" variant="brand" size="xl" className="w-full" disabled={submitting}>
                 {submitting ? <Loader2 className="animate-spin" /> : null}
                 {submitting ? (signup ? "Creating account…" : "Signing in…") : signup ? "Create account" : "Sign in"}

@@ -6,6 +6,7 @@ import re
 import secrets
 import time
 from collections import OrderedDict
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -38,6 +39,7 @@ class TTSRequest:
 class Job:
     id: str
     req: TTSRequest
+    user_id: int | None = None       # owner (None only in tests/tools)
     status: str = "queued"           # queued → running → done | error
     created_at: float = field(default_factory=time.time)
     progress: float = 0.0            # 0..1 (sentences synthesized)
@@ -50,6 +52,14 @@ class QueueFull(Exception):
     pass
 
 
+class TooManyPending(Exception):
+    """This user already has the maximum number of jobs waiting."""
+
+
+Hook = Callable[[Job], Awaitable[None]]
+MAX_PENDING_PER_USER = 3
+
+
 class JobManager:
     def __init__(self, settings: Settings, engine: KokoroEngine):
         self.s = settings
@@ -58,13 +68,21 @@ class JobManager:
         self.pending: list[str] = []                     # ids waiting, in order
         self.jobs: OrderedDict[str, Job] = OrderedDict()  # recent jobs (status lookups)
         self.running: str | None = None
+        self.on_start: Hook | None = None   # e.g. mark the DB row "running"
+        self.on_finish: Hook | None = None  # e.g. store result/error in the DB
         self.s.audio_dir.mkdir(parents=True, exist_ok=True)
 
     # ---- public API -------------------------------------------------------
-    def submit(self, req: TTSRequest) -> Job:
+    def check_capacity(self, user_id: int | None) -> None:
+        """Raise before any DB row is created if the job can't be queued."""
         if len(self.pending) + (1 if self.running else 0) >= self.s.max_queue:
             raise QueueFull()
-        job = Job(id=secrets.token_hex(16), req=req)
+        if user_id is not None and sum(1 for j in self.pending if self.jobs.get(j) and self.jobs[j].user_id == user_id) >= MAX_PENDING_PER_USER:
+            raise TooManyPending()
+
+    def submit(self, req: TTSRequest, job_id: str | None = None, user_id: int | None = None) -> Job:
+        self.check_capacity(user_id)
+        job = Job(id=job_id or secrets.token_hex(16), req=req, user_id=user_id)
         self.jobs[job.id] = job
         while len(self.jobs) > 500:
             self.jobs.popitem(last=False)
@@ -102,6 +120,7 @@ class JobManager:
             self.pending.remove(job.id)
             self.running, job.status = job.id, "running"
             t0 = time.perf_counter()
+            await self._hook(self.on_start, job)
             try:
                 job.result = await asyncio.to_thread(self._process, job)
                 job.status = "done"
@@ -113,8 +132,17 @@ class JobManager:
                 job.error = str(e) if isinstance(e, (audio.AudioError, ValueError)) else "Synthesis failed"
             finally:
                 self.running = None
+                await self._hook(self.on_finish, job)
                 job.done_event.set()
                 self.queue.task_done()
+
+    async def _hook(self, hook: Hook | None, job: Job) -> None:
+        if hook is None:
+            return
+        try:
+            await hook(job)
+        except Exception:  # a DB hiccup must never kill the worker
+            log.exception("job hook failed for %s", job.id)
 
     def _process(self, job: Job) -> dict:
         r, s, sr = job.req, self.s, self.engine.sample_rate

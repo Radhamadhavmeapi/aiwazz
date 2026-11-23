@@ -10,7 +10,7 @@
     "prebuild:preview": "npm run sync-brand",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "build:preview": "tsc -b && vite build --base=/preview/ --outDir dist-preview",
+    "build:preview": "tsc -b && VITE_PREVIEW=1 vite build --base=/preview/ --outDir dist-preview",
     "typecheck": "tsc -b"
   },
   "dependencies": {

@@ -79,6 +79,23 @@ so nginx never serves them directly. `tools/deploy.sh` builds and copies `landin
 and restarts `voice-api` with PM2.
 
 ## Auth (login.aiwazz.in)
+**Built (step 3).** DB `aiwazz_voice` (MariaDB, own user `aiwazz_voice`@localhost/127.0.0.1, ALL on that DB only;
+password only in `api/.env`). Migrations: Alembic (`api/migrations`). Redis **db 5**, prefix `aiwazz:` (db 0 = other project).
+- Tables: users, sessions (token SHA-256 only), invites (code SHA-256 only, single-use by default, expiry, role),
+  api_keys (SHA-256 only, `aiw_live_…`, shown once), generations (owner, settings, 160-char excerpt, results).
+- Cookies `__Host-aiwazz_session` (httpOnly) + `__Host-aiwazz_csrf` (JS-readable): Secure, SameSite=Lax, Path=/.
+  Writes need `X-CSRF-Token` = CSRF cookie **and** an allowed Origin (`https://login.aiwazz.in`); API-key calls are exempt.
+- Rate limits: login 5/15 min per email + 20/15 min per IP, signup 10/h per IP (Redis). Same 404 for "not yours".
+- TTS, jobs, audio, history need a session or `X-API-Key`; audio is owner-only (admin: all); expired audio → 410.
+- Admin CLI (no default accounts anywhere): `cd api && .venv/bin/python manage.py create-user --email E --role admin`,
+  `create-invite [--uses N --days D --label L]`, `list-invites`, `revoke-invite --id N`, `list-users`,
+  `set-password --email E`, `set-active --email E --active no`.
+- nginx: `deploy/nginx/login.aiwazz.in.conf` → `/www/server/panel/vhost/nginx/extension/login.aiwazz.in/aiwazz.conf`
+  (proxy /api/, SPA fallback, HTTP→HTTPS except /.well-known/); `deploy/nginx/aiwazz.in.conf` (HTTP→HTTPS).
+  Main aaPanel vhost files are not edited. Always `nginx -t` before `nginx -s reload`.
+- Deploy: `tools/deploy-api.sh` (alembic upgrade + PM2 restart + health), `tools/deploy-dashboard.sh` (app at the
+  site root, keeps `preview/` + aaPanel files), `tools/deploy-preview.sh`, `tools/deploy-landing.sh`.
+
 - Email + password signup/login. Passwords hashed with **argon2** (or bcrypt).
 - Sessions in **httpOnly, Secure, SameSite=Lax cookies**. CSRF protection on POST routes.
 - **Signup is invite-only for now** (invite code in .env, or admin approval) so strangers can't use the CPU.

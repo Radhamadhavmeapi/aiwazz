@@ -38,6 +38,28 @@ class Settings(BaseSettings):
     compressor_threshold_rel_db: float = 0.0  # relative to the clip's measured loudness
     compressor_ratio: float = Field(2.0, ge=1.0, le=8.0)
 
+    # Database / Redis (secrets live in .env only)
+    database_url: str = ""                    # mysql+aiomysql://user:pw@127.0.0.1:3306/aiwazz_voice?charset=utf8mb4
+    redis_url: str = "redis://127.0.0.1:6379/5"
+    redis_prefix: str = "aiwazz:"
+
+    # Auth
+    allowed_origins: list[str] = ["https://login.aiwazz.in"]  # Origin check for cookie-authenticated writes
+    cookie_secure: bool = True                # False only for local http dev (drops the __Host- prefix)
+    session_days: int = Field(30, ge=1, le=365)
+    login_max_per_email: int = 5              # per 15 minutes
+    login_max_per_ip: int = 20                # per 15 minutes
+    signup_max_per_ip: int = 10               # per hour
+    password_min_length: int = Field(10, ge=8)
+
+    @property
+    def session_cookie(self) -> str:
+        return "__Host-aiwazz_session" if self.cookie_secure else "aiwazz_session"
+
+    @property
+    def csrf_cookie(self) -> str:
+        return "__Host-aiwazz_csrf" if self.cookie_secure else "aiwazz_csrf"
+
     @property
     def debug(self) -> bool:
         """Fail-closed: API docs etc. only for an explicit dev/test env."""

@@ -36,16 +36,107 @@ class FakeEngine:
         return np.concatenate([pad, speechlike(1.0, amp=0.05), pad])
 
 
+ORIGIN = "https://login.aiwazz.in"
+
+
+def _run(coro):
+    import asyncio
+    return asyncio.run(coro)
+
+
+async def _setup_db(url: str) -> None:
+    import models  # noqa: F401
+    from db import Base, make_engine
+    eng = make_engine(url)
+    async with eng.begin() as c:
+        await c.run_sync(Base.metadata.create_all)
+    await eng.dispose()
+
+
+async def _add_invite(url: str, code: str, **kw) -> None:
+    from auth.security import normalize_invite, sha256
+    from db import make_engine, make_sessionmaker
+    from models import Invite
+    eng = make_engine(url)
+    async with make_sessionmaker(eng)() as db:
+        db.add(Invite(code_hash=sha256(normalize_invite(code)), **kw))
+        await db.commit()
+    await eng.dispose()
+
+
 @pytest.fixture
-def client(monkeypatch):
+def app_env(monkeypatch, tmp_path):
+    from settings import get_settings
+    url = f"sqlite+aiosqlite:///{tmp_path}/test.db"
+    monkeypatch.setenv("AIWAZZ_DATABASE_URL", url)
+    monkeypatch.setenv("AIWAZZ_STORAGE_DIR", str(tmp_path / "storage"))
+    get_settings.cache_clear()
+    _run(_setup_db(url))
+    yield url
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def make_invite(app_env):
+    def make(code="ABCD-EFGH", **kw):
+        _run(_add_invite(app_env, code, **kw))
+        return code
+    return make
+
+
+@pytest.fixture
+def anon(app_env, monkeypatch):
+    """Unauthenticated client (https, correct Origin) with a fake TTS engine and fake Redis."""
+    import fakeredis
     import main
     from fastapi.testclient import TestClient
 
     monkeypatch.setattr(main, "KokoroEngine", FakeEngine)
-    with TestClient(main.create_app()) as c:
+    app = main.create_app()
+    app.state.redis = fakeredis.FakeAsyncRedis(decode_responses=True)
+    with TestClient(app, base_url="https://testserver", headers={"Origin": ORIGIN}) as c:
         import time
         for _ in range(50):
             if c.get("/api/health").status_code == 200:
                 break
             time.sleep(0.05)
+        c.headers["X-CSRF-Token"] = c.get("/api/auth/csrf").json()["csrf_token"]
         yield c
+
+
+def signup(c, email="me@example.com", password="correct horse battery", code="ABCD-EFGH"):
+    r = c.post("/api/auth/signup", json={"email": email, "password": password, "invite_code": code})
+    if r.status_code == 201:  # CSRF cookie rotates with the new session
+        c.headers["X-CSRF-Token"] = c.cookies.get("__Host-aiwazz_csrf")
+    return r
+
+
+@pytest.fixture
+def client(anon, make_invite):
+    """Signed-in client (regular user)."""
+    make_invite()
+    assert signup(anon).status_code == 201
+    return anon
+
+
+class identity:
+    """Temporarily act as someone else on the same TestClient (same event loop as the app's worker):
+    with identity(c): ...  -> no cookies, no CSRF/Origin headers (like a script using X-API-Key)."""
+
+    def __init__(self, c, keep_origin: bool = False):
+        self.c, self.keep_origin = c, keep_origin
+
+    def __enter__(self):
+        self.cookies = dict(self.c.cookies)
+        self.headers = dict(self.c.headers)
+        self.c.cookies.clear()
+        for h in ("x-csrf-token",) + (() if self.keep_origin else ("origin",)):
+            self.c.headers.pop(h, None)
+        return self.c
+
+    def __exit__(self, *exc):
+        self.c.cookies.clear()
+        for k, v in self.cookies.items():
+            self.c.cookies.set(k, v)
+        self.c.headers.clear()
+        self.c.headers.update(self.headers)

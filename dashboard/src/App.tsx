@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { PreviewPlayerProvider } from "@/components/audio/preview-player";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,23 @@ export const ROUTES = ["tokens", "generate", "login", "signup", "history", "voic
 const guard = (el: ReactNode) => (PREVIEW ? el : <RequireAuth>{el}</RequireAuth>);
 const guest = (el: ReactNode) => (PREVIEW ? el : <GuestOnly>{el}</GuestOnly>);
 
+/** Only /login and /signup may be indexed; the app itself and the design preview are noindex. */
+function RobotsMeta() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const indexable = !PREVIEW && (pathname === "/login" || pathname === "/signup");
+    let m = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (indexable) return void m?.remove();
+    if (!m) {
+      m = document.createElement("meta");
+      m.name = "robots";
+      document.head.appendChild(m);
+    }
+    m.content = "noindex";
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -33,6 +51,7 @@ export default function App() {
         <PreviewPlayerProvider>
           <AuthProvider>
             <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <RobotsMeta />
               <Suspense fallback={<div className="min-h-dvh bg-background" />}>
                 <Routes>
                   <Route path="/" element={PREVIEW ? <PreviewIndex /> : <Navigate to="/generate" replace />} />

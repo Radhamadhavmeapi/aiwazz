@@ -244,7 +244,7 @@ const problem = PHOTOS.problem;
         ))}
       </ol>
       <figure class="rounded-2xl border bg-surface p-2 shadow-lg">
-        <video class="block h-auto w-full rounded-xl" width="1024" height="640" autoplay muted loop playsinline preload="none" poster="/media/how-it-works-poster.webp" aria-label="Screen recording: Hinglish typed in the AiWazz dashboard, converted to Devanagari, generated with the Beta voice and played back">
+        <video data-lazy-video class="block h-auto w-full rounded-xl" width="1024" height="640" muted loop playsinline preload="none" poster="/media/how-it-works-poster.webp" aria-label="Screen recording: Hinglish typed in the AiWazz dashboard, converted to Devanagari, generated with the Beta voice and played back">
           <source src="/media/how-it-works.webm" type="video/webm" />
           <source src="/media/how-it-works.mp4" type="video/mp4" />
         </video>
@@ -442,6 +442,12 @@ const problem = PHOTOS.problem;
 <script>
   import "../scripts/waveform";
   import "../scripts/player";
+  // Start the screen recording only when it scrolls into view (keeps the initial load light).
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll<HTMLVideoElement>("video[data-lazy-video]").forEach((v) => {
+    if (reduced) return void (v.controls = true);
+    new IntersectionObserver(([e]) => (e.isIntersecting ? v.play().catch(() => (v.controls = true)) : v.pause()), { rootMargin: "200px" }).observe(v);
+  });
   const tabs = document.querySelectorAll<HTMLButtonElement>("[data-demo-tab]");
   const chip = document.querySelector("#demo-chip span:last-child");
   tabs.forEach((t) =>

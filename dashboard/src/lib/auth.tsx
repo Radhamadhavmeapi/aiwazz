@@ -22,8 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (PREVIEW) return;
-    api<User>("/api/auth/me").then(
-      (user) => setState({ status: "authed", user }),
+    api<{ user: User | null }>("/api/auth/session").then(
+      ({ user }) => setState(user ? { status: "authed", user } : { status: "anon" }),
       () => setState({ status: "anon" }),
     );
   }, []);

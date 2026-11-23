@@ -12,7 +12,7 @@ from models import ApiKey, Invite, User, UserSession
 from settings import get_settings
 
 from . import ratelimit
-from .deps import Principal, client_ip, csrf_protect, current_principal
+from .deps import Principal, client_ip, csrf_protect, current_principal, optional_principal
 from .security import (
     hash_password,
     needs_rehash,
@@ -170,6 +170,12 @@ async def logout(request: Request, db: AsyncSession = Depends(get_db)):
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(s.session_cookie, path="/", secure=s.cookie_secure, httponly=True, samesite="lax")
     return resp
+
+
+@router.get("/auth/session")
+async def session(p: Principal | None = Depends(optional_principal)):
+    """Like /auth/me but always 200 ({"user": null} when signed out), so the app's first check is quiet."""
+    return {"user": me_payload(p.user, p.via) if p else None}
 
 
 @router.get("/auth/me")

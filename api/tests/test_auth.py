@@ -229,3 +229,8 @@ def test_api_key_stops_working_after_downgrade(client, set_plan):
     set_plan("free")
     with identity(client) as bare:
         assert bare.get("/api/auth/me", headers={"X-API-Key": key}).status_code == 403
+
+
+def test_session_endpoint_is_quiet_when_signed_out(anon):
+    r = anon.get("/api/auth/session")
+    assert r.status_code == 200 and r.json() == {"user": None}

@@ -31,9 +31,9 @@ export function SiteFooter({ compact = false, className }: { compact?: boolean; 
         </div>
       )}
       {compact && (
-        <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1 px-5 pt-5 sm:px-8">
+        <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-0.5 px-5 pt-5 sm:px-8">
           {COLS.flatMap((c) => c.links).map(([label, href]) => (
-            <a key={href} href={SITE + href} className="text-muted-foreground hover:text-foreground">
+            <a key={href} href={SITE + href} className="inline-flex min-h-7 items-center text-muted-foreground hover:text-foreground">
               {label}
             </a>
           ))}

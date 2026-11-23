@@ -25,8 +25,10 @@ const COLORS: { name: string; v: string; note?: string }[] = [
   { name: "foreground", v: "--foreground" },
   { name: "muted-foreground", v: "--muted-foreground" },
   { name: "subtle-foreground", v: "--subtle-foreground" },
-  { name: "brand-violet", v: "--brand-violet" },
-  { name: "brand-cyan", v: "--brand-cyan" },
+  { name: "Sky Blue", v: "--brand-sky", note: "gradient start, highlights" },
+  { name: "Royal Indigo", v: "--brand-indigo", note: "brand primary" },
+  { name: "Electric Violet", v: "--brand-violet", note: "gradient end, accents" },
+  { name: "primary (UI fills)", v: "--primary" },
   { name: "brand-text", v: "--brand-text" },
   { name: "danger", v: "--danger" },
   { name: "success", v: "--success" },
@@ -68,7 +70,9 @@ function Swatch({ name, v, note }: { name: string; v: string; note?: string }) {
         <p className="text-sm font-medium">{name}</p>
         <p className="font-mono text-xs text-muted-foreground">{hex}</p>
         <p className="text-xs text-subtle-foreground">
-          {note ?? (textual && ratio ? `${ratio.toFixed(1)}:1 on background${ratio >= 4.5 ? " · AA" : ""}` : " ")}
+          {[note, textual && ratio ? `${ratio.toFixed(1)}:1 on bg${ratio >= 4.5 ? " · AA text" : ratio >= 3 ? " · UI only" : " · decorative"}` : null]
+            .filter(Boolean)
+            .join(" · ") || "\u00a0"}
         </p>
       </div>
     </div>
@@ -99,7 +103,7 @@ export default function TokensPage() {
             <ArrowLeft />
           </Link>
         </Button>
-        <Logo />
+        <Logo width={128} />
         <span className="text-sm text-muted-foreground">/ Design tokens</span>
         <div className="ml-auto">
           <ThemeToggle />
@@ -107,7 +111,7 @@ export default function TokensPage() {
       </header>
 
       <div className="space-y-14">
-        <Section title="Color" desc="Neutral zinc base, one accent (violet → cyan) used sparingly. Toggle the theme to see light mode.">
+        <Section title="Color" desc="AiWazz Brand Kit v1.0: Ink / Cloud neutrals, Royal Indigo primary, one gradient (Sky Blue → Royal Indigo → Electric Violet) used sparingly. Toggle the theme to see light mode.">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {COLORS.map((c) => (
               <Swatch key={c.v} {...c} />
@@ -115,20 +119,22 @@ export default function TokensPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex h-20 items-end rounded-xl bg-brand-gradient p-3">
-              <span className="font-mono text-xs text-black/80">brand-gradient · decorative only</span>
+              <span className="font-mono text-xs text-[#070d25]">brand-gradient · decorative · #51B2F6 → #2D36DB → #7420DD</span>
             </div>
             <div className="flex h-20 items-end rounded-xl bg-brand-gradient-strong p-3">
-              <span className="font-mono text-xs text-white">brand-gradient-strong · behind white text (≥ 4.5:1)</span>
+              <span className="font-mono text-xs text-white">brand-gradient-strong · behind white text (≥ 5.8:1)</span>
             </div>
           </div>
         </Section>
 
-        <Section title="Typography" desc="Geist for UI, Geist Mono for numbers, codes and keys. Tight tracking on large headings.">
+        <Section title="Typography" desc="Poppins for headings, Inter for UI and body, Montserrat only for the tagline, Noto Sans Devanagari for Hindi. Mono for codes, keys and timecodes.">
           <div className="space-y-5 rounded-2xl border bg-surface p-6">
-            <p className="text-display font-semibold">AI voiceovers</p>
-            <p className="text-h1 font-semibold">Hindi, Hinglish &amp; English</p>
-            <p className="text-h2 font-semibold">Generate a voiceover</p>
-            <p className="text-h3 font-medium">Voice settings</p>
+            <p className="tagline text-[22px] text-muted-foreground">Type it, hear it.</p>
+            <p className="font-heading text-display font-semibold">AI voiceovers in seconds</p>
+            <p className="font-heading text-h1 font-semibold">Hindi, Hinglish &amp; English</p>
+            <p className="font-heading text-h2 font-semibold">Generate a voiceover</p>
+            <p className="font-heading text-h3 font-medium">Voice settings</p>
+            <p className="font-heading text-h2 font-semibold" lang="hi">हर शब्द को आवाज़</p>
             <p className="max-w-prose text-[15px] leading-7">
               Body 15/28. Pick a voice, paste your script, and get a clean, loudness-normalized file for your reel.
             </p>

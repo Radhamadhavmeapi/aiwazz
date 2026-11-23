@@ -415,8 +415,8 @@ function ResultPanel({ job, onRetry, reduce }: { job: Job; onRetry: () => void; 
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 font-medium">
                 <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-violet opacity-60" />
-                  <span className="relative inline-flex size-2 rounded-full bg-brand-violet" />
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-primary" />
                 </span>
                 {job.state === "queued" ? "Waiting in queue" : "Synthesizing voice"}
               </span>

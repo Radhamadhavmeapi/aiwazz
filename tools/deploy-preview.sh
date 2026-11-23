@@ -22,4 +22,16 @@ case "$DEST" in /www/wwwroot/login.aiwazz.in/preview) ;; *) echo "refusing DEST=
 mkdir -p "$DEST"
 rsync -a --delete "$OUT/" "$DEST/"
 chown -R www:www "$DEST"
+
+# Favicon set + OG image at the site root (brand kit: "copy all files to the site root").
+# Only these known brand files; never touches index.html or anything else in the web root.
+SITE="$(dirname "$DEST")"
+for f in "$ROOT"/design/assets/favicon/* "$ROOT"/design/assets/og-image.png; do
+  name="$(basename "$f")"
+  case "$name" in
+    favicon*|android-chrome-*|apple-touch-icon.png|maskable-icon-*|mstile-*|safari-pinned-tab.svg|site.webmanifest|og-image.png)
+      install -m 644 -o www -g www "$f" "$SITE/$name" ;;
+    *) echo "skip unexpected file: $name" >&2 ;;
+  esac
+done
 echo "deployed: $DEST ($(du -sh "$DEST" | cut -f1))"

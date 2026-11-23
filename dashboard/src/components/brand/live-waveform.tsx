@@ -28,8 +28,12 @@ export function LiveWaveform({ mode = "idle", bars = 48, className, progress = 1
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
     const css = getComputedStyle(document.documentElement);
-    const violet = css.getPropertyValue("--brand-violet").trim() || "#8b5cf6";
-    const cyan = css.getPropertyValue("--brand-cyan").trim() || "#22d3ee";
+    // Brand gradient: Sky Blue → Royal Indigo → Electric Violet
+    const stops = [
+      css.getPropertyValue("--brand-sky").trim() || "#51b2f6",
+      css.getPropertyValue("--brand-indigo").trim() || "#2d36db",
+      css.getPropertyValue("--brand-violet").trim() || "#7420dd",
+    ];
     const muted = css.getPropertyValue("--border-strong").trim() || "rgba(255,255,255,.14)";
     // Per-bar random phase/speed so it never looks like a loop.
     const seeds = Array.from({ length: bars }, (_, i) => ({
@@ -58,8 +62,7 @@ export function LiveWaveform({ mode = "idle", bars = 48, className, progress = 1
       const still = m === "static" || reducedMotion();
       ctx.clearRect(0, 0, w, h);
       const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, violet);
-      grad.addColorStop(1, cyan);
+      stops.forEach((c, i) => grad.addColorStop(i / (stops.length - 1), c));
       const gap = w / bars;
       const bw = Math.max(2, gap * 0.55);
       const time = t / 1000;

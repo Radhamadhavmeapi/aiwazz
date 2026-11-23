@@ -1,6 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { NavLink } from "react-router";
-import { Logo } from "@/components/brand/logo";
+import { BrandIcon, Logo } from "@/components/brand/logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { NAV } from "./nav";
@@ -57,7 +57,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       )}
     >
       <div className={cn("flex h-14 items-center px-4", collapsed && "justify-center px-0")}>
-        <Logo collapsed={collapsed} />
+        {collapsed ? <BrandIcon size={32} /> : <Logo width={124} />}
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-2">
         <SidebarNav collapsed={collapsed} />

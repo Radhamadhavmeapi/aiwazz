@@ -1,0 +1,15 @@
+// Copies shared brand assets (design/assets, built from brand/ by tools/brand_assets.py) into public/.
+// public/ is generated: favicon set at the site root, logos/icons under brand/, og-image.png.
+import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const src = join(here, "../../design/assets");
+const pub = join(here, "../public");
+rmSync(pub, { recursive: true, force: true });
+mkdirSync(join(pub, "brand"), { recursive: true });
+cpSync(join(src, "favicon"), pub, { recursive: true });
+cpSync(join(src, "og-image.png"), join(pub, "og-image.png"));
+for (const f of readdirSync(src)) if (f.endsWith(".webp")) cpSync(join(src, f), join(pub, "brand", f));
+console.log("brand assets synced to public/");

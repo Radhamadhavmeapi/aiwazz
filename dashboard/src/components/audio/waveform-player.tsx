@@ -35,7 +35,7 @@ export function WaveformPlayer({ url, className, label = "audio" }: { url: strin
       normalize: true,
       dragToSeek: true,
       waveColor: v("--border-strong"),
-      progressColor: [v("--brand-violet"), v("--brand-cyan")],
+      progressColor: [v("--brand-sky"), v("--brand-indigo"), v("--brand-violet")],
     });
     w.on("ready", (d) => {
       setDur(d);

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { LiveWaveform } from "@/components/brand/live-waveform";
-import { Logo } from "@/components/brand/logo";
+import { BrandIcon, Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/app-shell/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,14 +91,15 @@ function BrandPanel() {
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-40 -left-32 size-[520px] rounded-full opacity-[0.16] blur-3xl"
-        style={{ background: "var(--brand-violet)" }}
+        style={{ background: "var(--brand-sky)" }}
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-40 -bottom-48 size-[520px] rounded-full opacity-[0.12] blur-3xl"
-        style={{ background: "var(--brand-cyan)" }}
+        style={{ background: "var(--brand-violet)" }}
       />
       <div className="relative flex flex-1 flex-col justify-center px-12 xl:px-16">
+        <BrandIcon size={72} decorative className="mb-8" />
         <div className="glass rounded-2xl border p-6 shadow-lg">
           <div className="mb-5 flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">hf_alpha · Hindi · -14 LUFS</span>
@@ -117,10 +118,12 @@ function BrandPanel() {
             “रात ग्यारह बजे कस्टमर का फ़ोन आया। ऑर्डर अभी तक नहीं पहुँचा था…”
           </p>
         </div>
-        <h2 className="mt-10 text-h1 font-semibold text-balance">
-          Voiceovers that sound <span className="text-brand-gradient">human</span>.
-        </h2>
-        <p className="mt-3 max-w-md text-muted-foreground">Hindi, Hinglish &amp; English, ready for your next reel in about a minute.</p>
+        <p className="tagline mt-10 text-[28px] leading-tight text-foreground xl:text-[34px]">
+          Type it, <span className="text-brand-gradient">hear it.</span>
+        </p>
+        <p className="mt-3 max-w-md text-muted-foreground">
+          Natural AI voiceovers in Hindi, Hinglish &amp; English, ready for your next reel in about a minute.
+        </p>
       </div>
       <p className="relative px-12 pb-8 text-xs text-subtle-foreground xl:px-16">© 2026 AiWazz</p>
     </div>
@@ -174,13 +177,16 @@ export default function AuthPage({ mode }: { mode: Mode }) {
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col">
         <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-          <Logo />
+          <Logo width={136} priority />
           <ThemeToggle />
         </header>
 
         {/* compact brand strip on phones/tablets */}
         <div className="mx-5 rounded-2xl border bg-surface p-4 sm:mx-8 lg:hidden">
           <LiveWaveform mode="idle" bars={40} className="h-12" />
+          <p className="tagline mt-3 text-center text-lg">
+            Type it, <span className="text-brand-gradient">hear it.</span>
+          </p>
         </div>
 
         <main className="flex flex-1 items-start justify-center px-5 pt-8 pb-12 sm:px-8 lg:items-center lg:py-10">

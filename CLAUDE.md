@@ -113,15 +113,31 @@ and restarts `voice-api` with PM2.
 ## Design system (applies to landing + dashboard)
 Goal: a **modern, advanced, technology-focused SaaS** look. Clean, minimal, premium (think Linear, Vercel,
 ElevenLabs). Not a template look, no clutter, no stock photos, no random colors.
+**Brand:** AiWazz Brand Kit v1.0 in `brand/AiWazz-Brand-Kit/` (read `AiWazz-Brand-Guidelines.pdf`). Tagline **"Type it, hear it."**
+(sentence case, with the comma and full stop). Tokens: `design/tokens.css` + `design/theme.css`; web-sized logos, icon,
+favicon set and OG image in `design/assets/` (built from the kit by `tools/brand_assets.py`). Live reference:
+https://login.aiwazz.in/preview/tokens/
 
 - **Stack:** dashboard = Vite + React + TypeScript + Tailwind CSS + shadcn/ui + lucide-react icons +
   framer-motion (subtle only). Landing = Astro (static HTML output, best for SEO) + Tailwind, same tokens.
   Shared design tokens (colors, radius, fonts) in one place, used by both.
-- **Theme:** dark-first with a light-mode toggle (remember the choice). Neutral base (zinc/slate),
-  near-black background `#0A0A0B`, surfaces one step lighter, 1px subtle borders, soft shadows.
-  **One accent:** electric violet → cyan gradient, used sparingly (primary button, active states, waveform, key highlights).
-- **Typography:** Inter or Geist for UI, Geist Mono / JetBrains Mono for numbers, API keys and code.
-  Clear hierarchy, generous spacing, tight letter-spacing on large headings.
+- **Colours (brand kit):** Midnight Navy `#070D25` · Sky Blue `#51B2F6` · Royal Indigo `#2D36DB` (primary) ·
+  Electric Violet `#7420DD` · Ink `#0A0A0B` · Cloud `#F4F6FB` · Slate `#64748B`.
+  **Brand gradient** `#51B2F6 → #2D36DB → #7420DD` (135°), used sparingly (main button, active states, waveform, key
+  highlights); decorative only. Behind white text use the deeper `#1F6FD1 → #2D36DB → #7420DD` (≥ 5.8:1).
+- **Theme:** dark-first with a light-mode toggle (remember the choice). Dark: Ink background, cool surfaces one step
+  lighter, Cloud text. Light: Cloud background, white surfaces, Midnight Navy text. 1px subtle borders, soft shadows.
+- **AA contrast rule:** every text colour ≥ 4.5:1, focus rings/UI fills ≥ 3:1. Where a brand colour fails, use a tint
+  of the same hue: on Ink, primary fills `#4F58F0` and brand text `#8A90F7` (Royal Indigo is 2.5:1 on Ink), focus ring
+  Sky Blue; secondary text `#94A3B8` (dark) / `#475569` (light), since brand Slate is 4.4:1 on Cloud (icons/decor only).
+- **Typography (self-hosted, @fontsource):** **Poppins** headings (Latin subsets only), **Inter** UI/body,
+  **Montserrat only for the tagline** (`.tagline`), **Noto Sans Devanagari** for Hindi (always, also inside headings),
+  Geist Mono for codes, API keys and timecodes. Clear hierarchy, generous spacing, tight tracking on large headings.
+- **Logo:** never retype the wordmark, always the artwork. `for-dark` version on dark theme, full colour on light
+  (`<Logo>` switches automatically). Min width: with tagline 160 px, without tagline 120 px (use no-tagline in
+  headers/sidebar), icon 16 px. No recolouring, shadows or effects; keep clear space. A-Play **icon** in the collapsed
+  sidebar, mobile bars and the auth brand panel. **Favicon set** (`03_Favicon` + HTML snippet) at both site roots;
+  **OG image** `og-image-dark-1200x630.png`.
 - **Signature element:** a live **audio waveform** (wavesurfer.js) in the player and as the landing hero visual,
   animated while generating. Glassy cards with a faint grid/noise background in the hero only.
 - **Dashboard layout:** collapsible left sidebar (Generate, History, Voices, API keys, Settings), top bar with
@@ -131,7 +147,8 @@ ElevenLabs). Not a template look, no clutter, no stock photos, no random colors.
 - **States everywhere:** loading skeletons, progress while synthesizing (queue position), empty states with a hint,
   friendly error toasts (sonner). No blank screens.
 - **Auth pages (login.aiwazz.in):** split layout. Left: form (email, password, show/hide, invite code on signup).
-  Right: brand panel with animated waveform + one-line tagline. Inline validation, password strength meter.
+  Right: brand panel with icon, animated waveform + tagline "Type it, hear it." (Montserrat). Inline validation,
+  password strength meter.
 - **Quality bar:** fully responsive (I use my phone a lot), keyboard accessible, visible focus rings,
   WCAG AA contrast, `prefers-reduced-motion` respected. Lighthouse ≥ 90 on the landing page.
   Smooth but fast: animations 150–250 ms, no heavy libraries on the landing page.

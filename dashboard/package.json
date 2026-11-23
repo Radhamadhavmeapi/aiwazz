@@ -4,15 +4,21 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "sync-brand": "node scripts/sync-brand.mjs",
+    "predev": "npm run sync-brand",
+    "prebuild": "npm run sync-brand",
+    "prebuild:preview": "npm run sync-brand",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "build:preview": "tsc -b && vite build --base=/preview/ --outDir dist-preview",
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/montserrat": "5.3.0",
     "@fontsource-variable/noto-sans-devanagari": "5.3.0",
+    "@fontsource/poppins": "5.3.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",

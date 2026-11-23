@@ -1,37 +1,63 @@
-import { useId } from "react";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-export function LogoMark({ className }: { className?: string }) {
-  const id = useId();
+/*
+ * Brand artwork from the AiWazz Brand Kit (design/assets, built from brand/ by tools/brand_assets.py).
+ * Rules (brand guidelines): the wordmark is artwork, never retyped; "for-dark" version on dark,
+ * full colour on light; no recolouring or effects; minimum widths: with tagline 160 px,
+ * without tagline 120 px, icon 16 px.
+ */
+const base = `${import.meta.env.BASE_URL}brand/`;
+const srcset = (name: string, widths: number[]) => widths.map((w) => `${base}${name}-${w}.webp ${w}w`).join(", ");
+
+const RATIO = { full: 1024 / 248, "no-tagline": 1024 / 238 } as const;
+const MIN_WIDTH = { full: 160, "no-tagline": 120 } as const;
+
+export function Logo({
+  variant = "no-tagline",
+  width = variant === "full" ? 168 : 128,
+  className,
+  priority = false,
+}: {
+  variant?: "full" | "no-tagline";
+  /** CSS px; clamped to the brand minimum for the variant */
+  width?: number;
+  className?: string;
+  priority?: boolean;
+}) {
+  const { theme } = useTheme();
+  const w = Math.max(width, MIN_WIDTH[variant]);
+  const name = `${variant === "full" ? "logo" : "logo-nt"}-${theme === "dark" ? "for-dark" : "color"}`;
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={cn("size-7 shrink-0", className)}>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8b5cf6" />
-          <stop offset="1" stopColor="#22d3ee" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" className="fill-surface-2" />
-      <rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill="none" stroke="var(--border-strong)" />
-      <g fill={`url(#${id})`}>
-        <rect x="7" y="12" width="3" height="8" rx="1.5" />
-        <rect x="12" y="8" width="3" height="16" rx="1.5" />
-        <rect x="17" y="5" width="3" height="22" rx="1.5" />
-        <rect x="22" y="10" width="3" height="12" rx="1.5" />
-      </g>
-    </svg>
+    <img
+      src={`${base}${name}-320.webp`}
+      srcSet={srcset(name, [320, 640, 960])}
+      sizes={`${w}px`}
+      width={w}
+      height={Math.round(w / RATIO[variant])}
+      alt={variant === "full" ? "AiWazz: Type it, hear it." : "AiWazz"}
+      decoding="async"
+      fetchPriority={priority ? "high" : undefined}
+      className={cn("block h-auto shrink-0 select-none", className)}
+      draggable={false}
+    />
   );
 }
 
-export function Logo({ className, collapsed = false }: { className?: string; collapsed?: boolean }) {
+/** A-Play icon (sidebar, mobile bars, auth brand panel). */
+export function BrandIcon({ size = 32, className, decorative = false }: { size?: number; className?: string; decorative?: boolean }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <LogoMark />
-      {!collapsed && (
-        <span className="text-[15px] font-semibold tracking-[-0.02em]">
-          AiWazz <span className="text-muted-foreground font-medium">Voice</span>
-        </span>
-      )}
-    </span>
+    <img
+      src={`${base}icon-64.webp`}
+      srcSet={srcset("icon", [64, 128, 256])}
+      sizes={`${size}px`}
+      width={size}
+      height={size}
+      alt={decorative ? "" : "AiWazz"}
+      aria-hidden={decorative || undefined}
+      decoding="async"
+      className={cn("block shrink-0 select-none", className)}
+      draggable={false}
+    />
   );
 }

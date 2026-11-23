@@ -15,7 +15,7 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.classList.remove("dark", "light");
   root.classList.add(theme);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0a0a0b" : "#fafafa");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0a0a0b" : "#f4f6fb");
 }
 
 type Ctx = { theme: Theme; setTheme: (t: Theme) => void; toggle: () => void };

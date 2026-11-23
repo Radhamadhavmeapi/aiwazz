@@ -76,7 +76,7 @@ export function AppShell({
           <SheetHeader className="h-14 flex-row items-center border-b px-4">
             <SheetTitle asChild>
               <span>
-                <Logo />
+                <Logo width={124} />
               </span>
             </SheetTitle>
             <SheetDescription className="sr-only">Main navigation</SheetDescription>

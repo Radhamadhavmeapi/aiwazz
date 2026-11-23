@@ -1,6 +1,6 @@
 import { KeyRound, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router";
-import { Logo } from "@/components/brand/logo";
+import { BrandIcon } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: ()
       <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={onMenu} aria-label="Open menu">
         <Menu />
       </Button>
-      <Logo collapsed className="md:hidden" />
+      <BrandIcon size={28} className="md:hidden" />
       <h1 className="ml-1 text-sm font-medium md:ml-0">{title}</h1>
 
       <div className="ml-auto flex items-center gap-1.5">

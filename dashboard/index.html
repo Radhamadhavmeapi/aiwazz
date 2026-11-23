@@ -6,13 +6,37 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0a0a0b" />
     <meta name="robots" content="noindex" />
-    <title>AiWazz Voice</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>AiWazz: Type it, hear it.</title>
+    <meta name="description" content="AI voiceovers in Hindi, Hinglish & English. Type it, hear it." />
+
+    <!-- Favicon set: brand/AiWazz-Brand-Kit/03_Favicon (HTML-snippet.txt) -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2D36DB" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Link preview: 05_Social-Media/og-image-dark-1200x630.png -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AiWazz" />
+    <meta property="og:title" content="AiWazz: Type it, hear it." />
+    <meta property="og:description" content="AI voiceovers in Hindi, Hinglish & English." />
+    <meta property="og:url" content="https://login.aiwazz.in/" />
+    <meta property="og:image" content="https://login.aiwazz.in/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AiWazz logo: Type it, hear it. AI voiceovers in Hindi, Hinglish & English" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <script>
       // Apply the saved theme before first paint (no flash). Default: dark.
       try {
-        var t = localStorage.getItem("aiwazz-theme");
-        if (t === "light") { document.documentElement.classList.replace("dark", "light"); }
+        if (localStorage.getItem("aiwazz-theme") === "light") {
+          document.documentElement.classList.replace("dark", "light");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4f6fb");
+        }
       } catch (e) {}
     </script>
   </head>

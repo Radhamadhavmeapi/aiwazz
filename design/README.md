@@ -1,14 +1,19 @@
 # AiWazz design tokens
 
-Single source of truth for `landing/` (Astro) and `dashboard/` (Vite + React):
+Single source of truth for `landing/` (Astro) and `dashboard/` (Vite + React), based on the
+**AiWazz Brand Kit v1.0** (`brand/AiWazz-Brand-Kit/`, start with the guidelines PDF).
 
-- `tokens.css`: CSS custom properties: colors (dark default, `.light`), fonts, radius, shadows, motion.
-- `theme.css`: Tailwind v4 mapping (`bg-surface`, `text-muted-foreground`, `bg-brand-gradient`, …), shadcn/ui names.
+- `tokens.css`: CSS custom properties: colours (dark default, `.light`), fonts, radius, shadows, motion.
+- `theme.css`: Tailwind v4 mapping (`bg-surface`, `text-muted-foreground`, `bg-brand-gradient`, `.tagline`, …), shadcn/ui names.
+- `assets/`: web-sized brand artwork built from the kit masters by `tools/brand_assets.py` (needs Pillow):
+  logos (`logo-*`, with tagline; `logo-nt-*`, without), `icon-*`, `favicon/` (site root), `og-image.png`.
+  Never edit these by hand; never recolour or add effects to the logo.
 
-Rules: zinc neutrals, **one accent** (violet → cyan) used sparingly: primary button, active states, waveform.
-`--brand-gradient` is decorative only; behind white text use `--brand-gradient-strong` (≥ 4.5:1 everywhere a label sits).
-All text colors are ≥ 4.5:1 (WCAG AA) on their backgrounds in both themes: see the live table on
-https://login.aiwazz.in/preview/tokens/ (computed in the browser).
+Colours: Midnight Navy #070D25, Sky Blue #51B2F6, Royal Indigo #2D36DB (primary), Electric Violet #7420DD,
+Ink #0A0A0B, Cloud #F4F6FB, Slate #64748B. Gradient #51B2F6 → #2D36DB → #7420DD (decorative);
+behind white text `--brand-gradient-strong` (#1F6FD1 → #2D36DB → #7420DD, ≥ 5.8:1).
+All text ≥ 4.5:1 (WCAG AA) in both themes; where a brand colour fails, a tint of the same hue is used
+(see comments in tokens.css and the live table at https://login.aiwazz.in/preview/tokens/).
 
-Fonts (self-hosted via @fontsource, no Google requests): Geist (UI), Geist Mono (numbers, keys, code),
-Noto Sans Devanagari (Hindi; unicode-range split, only downloads when Devanagari is on the page).
+Fonts (self-hosted via @fontsource, no Google requests): Poppins (headings), Inter (UI/body),
+Montserrat (tagline only), Noto Sans Devanagari (Hindi), Geist Mono (codes, keys, timecodes).

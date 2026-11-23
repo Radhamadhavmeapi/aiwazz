@@ -1,8 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+/* Brand fonts, self-hosted (brand kit p.8). Poppins: Latin subsets only, so Hindi stays in Noto. */
+@import "@fontsource-variable/inter";
+@import "@fontsource/poppins/latin-500.css";
+@import "@fontsource/poppins/latin-600.css";
+@import "@fontsource/poppins/latin-700.css";
+@import "@fontsource/poppins/latin-ext-600.css";
+@import "@fontsource-variable/montserrat/wght.css";
 @import "@fontsource-variable/noto-sans-devanagari";
+@import "@fontsource-variable/geist-mono";
 @import "../../design/tokens.css";
 @import "../../design/theme.css";
 
@@ -16,15 +22,18 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "cv11";
     min-height: 100dvh;
+  }
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-heading);
   }
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
   ::selection {
-    background: rgb(139 92 246 / 0.35);
+    background: rgb(81 178 246 / 0.35);
   }
   .tabular {
     font-variant-numeric: tabular-nums;

@@ -11,12 +11,16 @@ import {
   Gauge,
   Info,
   Languages,
+  Pause,
+  Play,
   Sparkles,
   Wand2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell/app-shell";
+import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { VoiceCard } from "@/components/audio/voice-card";
 import { fmtTime, WaveformPlayer } from "@/components/audio/waveform-player";
 import { LiveWaveform } from "@/components/brand/live-waveform";
@@ -30,7 +34,22 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ApiError } from "@/lib/api";
 import { PREVIEW } from "@/lib/env";
+import { fmtDuration, timeAgo } from "@/lib/format";
+import {
+  createJob,
+  downloadUrl,
+  getHistory,
+  loadDraft,
+  pollJob,
+  rememberedJob,
+  rememberJob,
+  saveDraft,
+  type Format,
+  type HistoryItem,
+  type JobStatus,
+} from "@/lib/tts";
 import { cn } from "@/lib/utils";
 import { langLabel, LANGS, sampleUrl, VOICES, type Lang } from "@/lib/voices";
 
@@ -48,7 +67,7 @@ type Job =
   | { state: "idle" }
   | { state: "queued"; position: number }
   | { state: "running"; progress: number }
-  | { state: "done"; url: string; duration: number; voice: string; lufs: number | null; format: "mp3" | "wav" }
+  | { state: "done"; url: string; urls?: Record<Format, string>; duration: number; voice: string; lufs: number | null; format: Format }
   | { state: "error"; message: string };
 
 // ~14 chars/s of speech for Hindi, ~15 for English at speed 1.0
@@ -70,24 +89,91 @@ function Field({ label, htmlFor, hint, children }: { label: string; htmlFor?: st
 
 export default function GeneratePage() {
   const reduce = useReducedMotion();
-  const [text, setText] = useState(SAMPLE_TEXT);
-  const [lang, setLang] = useState<Lang>("h");
-  const [voice, setVoice] = useState("hf_alpha");
-  const [speed, setSpeed] = useState(1);
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const [draft] = useState(loadDraft);
+  const initialVoice = VOICES.find((v) => v.id === (params.get("voice") ?? draft.voice))?.id ?? "hf_alpha";
+  const [text, setText] = useState(draft.text ?? SAMPLE_TEXT);
+  const [lang, setLang] = useState<Lang>(VOICES.find((v) => v.id === initialVoice)!.lang);
+  const [voice, setVoice] = useState(initialVoice);
+  const [speed, setSpeed] = useState(draft.speed ?? 1);
   const [transliterate, setTransliterate] = useState(false);
-  const [format, setFormat] = useState<"mp3" | "wav">("mp3");
-  const [normalize, setNormalize] = useState(true);
-  const [lufs, setLufs] = useState(-14);
-  const [loadingVoices, setLoadingVoices] = useState(true);
+  const [format, setFormat] = useState<Format>(draft.format ?? "mp3");
+  const [normalize, setNormalize] = useState(draft.normalize ?? true);
+  const [lufs, setLufs] = useState(draft.loudness_lufs ?? -14);
+  const [loadingVoices, setLoadingVoices] = useState(PREVIEW);
   const [job, setJob] = useState<Job>({ state: "idle" });
+  const [recentKey, setRecentKey] = useState(0);
   const timers = useRef<number[]>([]);
   const editor = useRef<HTMLTextAreaElement>(null);
+  const poll = useRef<AbortController | null>(null);
+  const lastReq = useRef<{ voice: string; format: Format; lufs: number | null }>({ voice, format, lufs: normalize ? lufs : null });
 
   useEffect(() => {
+    if (!PREVIEW) return;
     const t = window.setTimeout(() => setLoadingVoices(false), 450); // preview: skeleton state
     return () => clearTimeout(t);
   }, []);
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => () => (timers.current.forEach(clearTimeout), poll.current?.abort()), []);
+
+  // Keep the draft (script + settings) in this browser between visits.
+  useEffect(() => {
+    const t = window.setTimeout(() => saveDraft({ text, voice, speed, format, normalize, loudness_lufs: lufs }), 400);
+    return () => clearTimeout(t);
+  }, [text, voice, speed, format, normalize, lufs]);
+
+  const toJob = useCallback((u: JobStatus): Job => {
+    if (u.status === "queued") return { state: "queued", position: u.position || 1 };
+    if (u.status === "running") return { state: "running", progress: u.progress };
+    if (u.status === "error") return { state: "error", message: u.error || "Something went wrong while generating." };
+    const r = lastReq.current;
+    return {
+      state: "done",
+      url: u.urls?.mp3 ?? u.url!,
+      urls: u.urls,
+      duration: u.duration_sec ?? 0,
+      voice: r.voice,
+      lufs: u.loudness?.target_lufs ?? r.lufs,
+      format: r.format,
+    };
+  }, []);
+
+  const authFailed = useCallback(() => {
+    toast.error("Your session ended", { description: "Please sign in again." });
+    navigate("/login?next=%2Fgenerate", { replace: true });
+  }, [navigate]);
+
+  // Follow a job until it finishes (also resumes after navigating away and back).
+  const track = useCallback(
+    async (id: string) => {
+      poll.current?.abort();
+      const ac = new AbortController();
+      poll.current = ac;
+      rememberJob(id);
+      try {
+        const s = await pollJob(id, (u) => setJob(toJob(u)), ac.signal);
+        rememberJob(null);
+        setRecentKey((k) => k + 1);
+        if (s.status === "done") toast.success("Voiceover ready", { description: "Saved to History for 7 days." });
+        else toast.error("Generation failed", { description: s.error });
+      } catch (e) {
+        if (ac.signal.aborted) return;
+        rememberJob(null);
+        if (e instanceof ApiError && e.status === 401) return authFailed();
+        setJob({ state: "error", message: e instanceof ApiError ? e.message : "Lost track of this voiceover. Check History." });
+      }
+    },
+    [toJob, authFailed],
+  );
+
+  useEffect(() => {
+    if (PREVIEW) return;
+    const id = rememberedJob();
+    if (id) {
+      setJob({ state: "queued", position: 1 });
+      void track(id);
+    }
+  }, [track]);
 
   const voices = useMemo(() => VOICES.filter((v) => v.lang === lang), [lang]);
   const current = VOICES.find((v) => v.id === voice)!;
@@ -107,12 +193,27 @@ export default function GeneratePage() {
     setVoice(id);
   }, []);
 
-  // Preview only: simulates the API job lifecycle (queued → running → done).
-  const generate = useCallback(() => {
+  const generate = useCallback(async () => {
     if (!canGenerate) {
       if (chars === 0) toast.error("Add some text first", { description: "Type or paste your script in the editor." });
       return;
     }
+    if (!PREVIEW) {
+      lastReq.current = { voice, format, lufs: normalize ? lufs : null };
+      setJob({ state: "queued", position: 1 });
+      try {
+        const s = await createJob({ text, voice, lang, speed, format, normalize, loudness_lufs: lufs });
+        setJob(toJob(s));
+        if (s.status === "queued" || s.status === "running") void track(s.id);
+      } catch (e) {
+        const err = e instanceof ApiError ? e : new ApiError(0, "Couldn't start this voiceover.");
+        if (err.status === 401) return authFailed();
+        setJob({ state: "error", message: err.message });
+        toast.error(err.status === 429 ? "Please wait a moment" : "Couldn't start this voiceover", { description: err.message });
+      }
+      return;
+    }
+    // Preview only: simulates the API job lifecycle (queued → running → done).
     timers.current.forEach(clearTimeout);
     const at = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
     setJob({ state: "queued", position: 2 });
@@ -130,12 +231,12 @@ export default function GeneratePage() {
       });
       toast.success("Voiceover ready", { description: "Saved to History for 7 days." });
     });
-  }, [canGenerate, chars, lang, normalize, lufs, format]);
+  }, [canGenerate, chars, lang, normalize, lufs, format, text, voice, speed, toJob, track, authFailed]);
 
   // ⌘/Ctrl + Enter generates from anywhere on the page.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") (e.preventDefault(), generate());
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") (e.preventDefault(), void generate());
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -160,12 +261,6 @@ export default function GeneratePage() {
       <div className="mx-auto grid max-w-[1400px] gap-5 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6 lg:p-6 lg:pb-24">
         {/* ── Editor + result ─────────────────────────────────────────── */}
         <section aria-label="Script" className="flex min-w-0 flex-col gap-5">
-          {!PREVIEW && (
-            <p className="flex items-center gap-2 rounded-xl border border-dashed bg-surface/60 px-4 py-2.5 text-xs text-muted-foreground">
-              <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true" />
-              You're signed in. Generating is being connected to the voice engine next; for now this screen plays a demo.
-            </p>
-          )}
           <div className="flex flex-col rounded-2xl border bg-surface shadow-md">
             <div className="flex items-center gap-2 border-b px-4 py-2.5">
               <span className="text-sm font-medium">Script</span>
@@ -235,7 +330,8 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          <ResultPanel job={job} onRetry={generate} reduce={!!reduce} />
+          <ResultPanel job={job} onRetry={() => void generate()} reduce={!!reduce} />
+          {!PREVIEW && <RecentList refreshKey={recentKey} />}
         </section>
 
         {/* ── Settings panel ─────────────────────────────────────────── */}
@@ -291,18 +387,21 @@ export default function GeneratePage() {
                 <Label htmlFor="translit" className="flex items-center gap-2 text-sm">
                   <Languages className="size-4 text-brand" aria-hidden="true" />
                   Transliterate Hinglish
+                  {!PREVIEW && <Badge variant="outline" className="font-normal">Soon</Badge>}
                 </Label>
                 <p id="translit-hint" className="text-xs leading-5 text-muted-foreground">
-                  {lang === "h"
-                    ? "“Raat 11 baje” → “रात 11 बजे”. English words stay as they are."
-                    : "Available for Hindi voices."}
+                  {!PREVIEW
+                    ? "Coming soon: type Hinglish in Roman letters (“Raat 11 baje”) and it's read as Hindi. For now, write Hindi in Devanagari."
+                    : lang === "h"
+                      ? "“Raat 11 baje” → “रात 11 बजे”. English words stay as they are."
+                      : "Available for Hindi voices."}
                 </p>
               </div>
               <Switch
                 id="translit"
                 checked={transliterate}
                 onCheckedChange={setTransliterate}
-                disabled={lang !== "h"}
+                disabled={lang !== "h" || !PREVIEW}
                 aria-describedby="translit-hint"
               />
             </div>
@@ -369,7 +468,7 @@ export default function GeneratePage() {
             </Collapsible>
 
             {/* Desktop generate button; mobile uses the sticky bar below */}
-            <Button variant="brand" size="xl" className={cn("hidden w-full lg:flex", busy && "disabled:opacity-100")} aria-busy={busy} onClick={generate} disabled={!canGenerate} aria-keyshortcuts="Control+Enter Meta+Enter">
+            <Button variant="brand" size="xl" className={cn("hidden w-full lg:flex", busy && "disabled:opacity-100")} aria-busy={busy} onClick={() => void generate()} disabled={!canGenerate} aria-keyshortcuts="Control+Enter Meta+Enter">
               {busy ? <AudioLines className="animate-pulse" /> : <Wand2 />}
               {busy ? "Generating…" : "Generate voiceover"}
             </Button>
@@ -388,7 +487,7 @@ export default function GeneratePage() {
               {chars.toLocaleString("en-IN")} chars · {speed.toFixed(2)}×
             </p>
           </div>
-          <Button variant="brand" size="xl" className={cn("ml-auto flex-1 sm:flex-none", busy && "disabled:opacity-100")} aria-busy={busy} onClick={generate} disabled={!canGenerate}>
+          <Button variant="brand" size="xl" className={cn("ml-auto flex-1 sm:flex-none", busy && "disabled:opacity-100")} aria-busy={busy} onClick={() => void generate()} disabled={!canGenerate}>
             {busy ? <AudioLines className="animate-pulse" /> : <Wand2 />}
             {busy ? "Generating…" : "Generate"}
           </Button>
@@ -492,16 +591,13 @@ function DoneView({ job, anim }: { job: Extract<Job, { state: "done" }>; anim: o
       </div>
       <WaveformPlayer url={job.url} label="voiceover" />
       <div className="flex flex-wrap gap-2">
-        <Button asChild variant={job.format === "mp3" ? "default" : "outline"} size="sm">
-          <a href={job.url} download>
-            <Download /> MP3
-          </a>
-        </Button>
-        <Button asChild variant={job.format === "wav" ? "default" : "outline"} size="sm">
-          <a href={job.url} download>
-            <Download /> WAV
-          </a>
-        </Button>
+        {(["mp3", "wav"] as const).map((f) => (
+          <Button key={f} asChild variant={job.format === f ? "default" : "outline"} size="sm">
+            <a href={job.urls ? downloadUrl(job.urls[f]) : job.url} download>
+              <Download /> {f.toUpperCase()}
+            </a>
+          </Button>
+        ))}
         <Button variant="ghost" size="sm" onClick={copy}>
           {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
         </Button>
@@ -530,5 +626,55 @@ function PreviewStateBar({ current, onPick }: { current: Job["state"]; onPick: (
         </button>
       ))}
     </div>
+  );
+}
+
+function RecentList({ refreshKey }: { refreshKey: number }) {
+  const [items, setItems] = useState<HistoryItem[] | null>(null);
+  const { playing, toggle } = usePreviewPlayer();
+  useEffect(() => {
+    getHistory(3).then(setItems, () => setItems([]));
+  }, [refreshKey]);
+  if (items && items.length === 0) return null;
+  return (
+    <section aria-labelledby="recent-title" className="rounded-2xl border bg-surface shadow-md">
+      <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <h2 id="recent-title" className="font-sans text-sm font-medium">Recent</h2>
+        <Link to="/history" className="text-xs text-muted-foreground hover:text-foreground">
+          View all
+        </Link>
+      </div>
+      <ul className="divide-y">
+        {items === null
+          ? Array.from({ length: 2 }, (_, i) => (
+              <li key={i} className="p-3">
+                <Skeleton className="h-9" />
+              </li>
+            ))
+          : items.map((it) => {
+              const v = VOICES.find((x) => x.id === it.voice);
+              const on = playing === it.id;
+              return (
+                <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <button
+                    type="button"
+                    disabled={!it.available}
+                    onClick={() => it.urls && toggle(it.id, it.urls.mp3)}
+                    aria-label={on ? "Pause" : `Play: ${it.text_excerpt}`}
+                    className="grid size-8 shrink-0 place-items-center rounded-full border bg-surface-2 text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground disabled:opacity-40"
+                  >
+                    {on ? <Pause className="size-3.5 fill-current" /> : <Play className="ml-0.5 size-3.5 fill-current" />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{it.text_excerpt}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {v?.name ?? it.voice} · {it.status === "done" ? fmtDuration(it.duration_sec) : it.status} · {timeAgo(it.created_at)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+      </ul>
+    </section>
   );
 }

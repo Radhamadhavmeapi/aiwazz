@@ -12,6 +12,12 @@ const TokensPage = lazy(() => import("@/pages/tokens"));
 const GeneratePage = lazy(() => import("@/pages/generate"));
 const AuthPage = lazy(() => import("@/pages/auth"));
 const Placeholder = lazy(() => import("@/pages/placeholder"));
+const HistoryPage = lazy(() => import("@/pages/history"));
+const VoicesPage = lazy(() => import("@/pages/voices"));
+const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+
+const PAGES = { history: HistoryPage, voices: VoicesPage, "api-keys": ApiKeysPage, settings: SettingsPage } as const;
 
 // Static hosting: deep links work because nginx falls back to index.html (production) or because
 // the preview build copies index.html into each route folder (tools/deploy-preview.sh).
@@ -34,9 +40,11 @@ export default function App() {
                   <Route path="/generate" element={guard(<GeneratePage />)} />
                   <Route path="/login" element={guest(<AuthPage mode="login" />)} />
                   <Route path="/signup" element={guest(<AuthPage mode="signup" />)} />
-                  {["history", "voices", "api-keys", "settings"].map((p) => (
-                    <Route key={p} path={`/${p}`} element={guard(<Placeholder page={p} />)} />
-                  ))}
+                  {(Object.keys(PAGES) as (keyof typeof PAGES)[]).map((p) => {
+                    const Page = PAGES[p];
+                    // The design preview has no backend: those pages show a placeholder there.
+                    return <Route key={p} path={`/${p}`} element={guard(PREVIEW && p !== "voices" ? <Placeholder page={p} /> : <Page />)} />;
+                  })}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>

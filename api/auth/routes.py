@@ -213,3 +213,90 @@ async def revoke_key(key_id: int, p: Principal = Depends(_session_only), db: Asy
     key.revoked_at = utcnow()
     await db.commit()
     return {"ok": True}
+
+
+# ── Account: change password, sign out other devices ─────────────────────────
+class PasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=1, max_length=256)
+
+
+async def _drop_other_sessions(db: AsyncSession, p: Principal) -> int:
+    from sqlalchemy import delete
+    q = delete(UserSession).where(UserSession.user_id == p.user.id)
+    if p.session is not None:
+        q = q.where(UserSession.id != p.session.id)
+    return (await db.execute(q)).rowcount or 0
+
+
+@router.post("/auth/password", dependencies=[Depends(csrf_protect)])
+async def change_password(body: PasswordIn, request: Request, p: Principal = Depends(_session_only), db: AsyncSession = Depends(get_db)):
+    s = get_settings()
+    lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"pw:user:{p.user.id}", 5, WINDOW_LOGIN)
+    if not lim.allowed:
+        raise _too_many(lim.retry_after)
+    user = await db.get(User, p.user.id)
+    if not verify_password(user.password_hash, body.current_password):
+        raise HTTPException(422, "Your current password is incorrect")
+    if problem := password_problem(body.new_password, user.email, s.password_min_length):
+        raise HTTPException(422, problem)
+    if body.new_password == body.current_password:
+        raise HTTPException(422, "Choose a password you haven't used here")
+    user.password_hash = hash_password(body.new_password)
+    signed_out = await _drop_other_sessions(db, p)
+    await db.commit()
+    return {"ok": True, "signed_out_sessions": signed_out}
+
+
+@router.post("/auth/logout-others", dependencies=[Depends(csrf_protect)])
+async def logout_others(p: Principal = Depends(_session_only), db: AsyncSession = Depends(get_db)):
+    n = await _drop_other_sessions(db, p)
+    await db.commit()
+    return {"ok": True, "signed_out_sessions": n}
+
+
+# ── Account deletion ─────────────────────────────────────────────────────────
+class DeleteAccountIn(BaseModel):
+    password: str = Field(min_length=1, max_length=256)
+    confirm: str = Field(min_length=1, max_length=16)  # must be "DELETE"
+
+
+@router.post("/auth/delete-account", dependencies=[Depends(csrf_protect)])
+async def delete_account(body: DeleteAccountIn, request: Request, p: Principal = Depends(_session_only),
+                         db: AsyncSession = Depends(get_db)):
+    """Permanently deletes the account, its sessions, API keys, history and audio files."""
+    from sqlalchemy import delete, func
+
+    from models import Generation
+
+    s = get_settings()
+    lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"del:user:{p.user.id}", 5, WINDOW_LOGIN)
+    if not lim.allowed:
+        raise _too_many(lim.retry_after)
+    if body.confirm != "DELETE":
+        raise HTTPException(422, 'Type DELETE to confirm')
+    user = await db.get(User, p.user.id)
+    if not verify_password(user.password_hash, body.password):
+        raise HTTPException(422, "Your password is incorrect")
+    if user.role == "admin":
+        admins = (await db.execute(select(func.count()).select_from(User)
+                                   .where(User.role == "admin", User.is_active.is_(True)))).scalar_one()
+        if admins <= 1:
+            raise HTTPException(422, "You're the only admin. Make another admin first, so nobody gets locked out.")
+
+    gen_ids = (await db.execute(select(Generation.id).where(Generation.user_id == user.id))).scalars().all()
+    audio_dir = request.app.state.jobs.s.audio_dir
+    for gid in gen_ids:
+        for ext in ("mp3", "wav", "json"):
+            (audio_dir / f"{gid}.{ext}").unlink(missing_ok=True)
+    # Explicit deletes (portable; doesn't rely on FK cascades)
+    await db.execute(delete(Generation).where(Generation.user_id == user.id))
+    await db.execute(delete(ApiKey).where(ApiKey.user_id == user.id))
+    await db.execute(delete(UserSession).where(UserSession.user_id == user.id))
+    await db.execute(update(Invite).where(Invite.created_by == user.id).values(created_by=None))
+    await db.delete(user)
+    await db.commit()
+
+    resp = JSONResponse({"ok": True, "deleted_generations": len(gen_ids)})
+    resp.delete_cookie(s.session_cookie, path="/", secure=s.cookie_secure, httponly=True, samesite="lax")
+    return resp

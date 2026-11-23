@@ -137,3 +137,43 @@ def test_per_user_pending_limit(client):
     jm.engine.synthesize = lambda *a: (time.sleep(0.4), orig(*a))[1]       # slow down the worker
     codes = [client.post("/api/tts", json={"text": f"Line {i}.", "voice": "af_heart"}).status_code for i in range(6)]
     assert 429 in codes and codes[0] == 202
+
+
+def test_change_password_and_logout_others(client):
+    # second device
+    with identity(client, keep_origin=True) as other:
+        other.headers["X-CSRF-Token"] = other.get("/api/auth/csrf").json()["csrf_token"]
+        assert other.post("/api/auth/login", json={"email": "me@example.com", "password": "correct horse battery"}).status_code == 200
+
+    assert client.post("/api/auth/password", json={"current_password": "nope-nope-nope", "new_password": "a brand new secret"}).status_code == 422
+    assert client.post("/api/auth/password", json={"current_password": "correct horse battery", "new_password": "short"}).status_code == 422
+    r = client.post("/api/auth/password", json={"current_password": "correct horse battery", "new_password": "a brand new secret"})
+    assert r.status_code == 200 and r.json()["signed_out_sessions"] == 1          # the other device
+    assert client.get("/api/auth/me").status_code == 200                          # this one stays
+
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={"email": "me@example.com", "password": "correct horse battery"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "me@example.com", "password": "a brand new secret"}).status_code == 200
+    client.headers["X-CSRF-Token"] = client.cookies.get("__Host-aiwazz_csrf")   # login rotates the CSRF token
+    assert client.post("/api/auth/logout-others").json()["signed_out_sessions"] == 0
+
+
+def test_delete_account(client, make_invite):
+    r = client.post("/api/tts?wait=true", json={"text": "Delete me later.", "voice": "af_heart"}).json()
+    files = list(client.app.state.jobs.s.audio_dir.glob(f"{r['id']}.*"))
+    assert files
+    client.post("/api/keys", json={"name": "k"})
+    assert client.post("/api/auth/delete-account", json={"password": "correct horse battery", "confirm": "nope"}).status_code == 422
+    assert client.post("/api/auth/delete-account", json={"password": "wrong password!", "confirm": "DELETE"}).status_code == 422
+    r2 = client.post("/api/auth/delete-account", json={"password": "correct horse battery", "confirm": "DELETE"})
+    assert r2.status_code == 200 and r2.json()["deleted_generations"] == 1
+    assert not any(f.exists() for f in files)
+    assert client.get("/api/auth/me").status_code == 401
+    assert client.post("/api/auth/login", json={"email": "me@example.com", "password": "correct horse battery"}).status_code == 401
+
+
+def test_last_admin_cannot_delete_self(anon, make_invite):
+    make_invite("ADMN-ONLY", role="admin")
+    assert signup(anon, code="ADMN-ONLY").json()["role"] == "admin"
+    r = anon.post("/api/auth/delete-account", json={"password": "correct horse battery", "confirm": "DELETE"})
+    assert r.status_code == 422 and "only admin" in r.json()["detail"]

@@ -129,6 +129,11 @@ password only in `api/.env`). Migrations: Alembic (`api/migrations`). Redis **db
   its linear mode silently falls back to dynamic (AGC) on peaky TTS audio and misses the target on clips < 3 s.
   Output: WAV 16-bit + MP3 192 kbps, both 48 kHz mono, always both files.
 - `GET  /api/history` (last 50 for the user), `GET /api/audio/{id}` (only the owner can download)
+- Account (built, step 4): `POST /api/auth/password` (current + new; signs out other devices), `POST /api/auth/logout-others`,
+  `POST /api/auth/delete-account` (password + confirm "DELETE"; removes sessions, keys, history and audio files; the last
+  active admin can't delete themselves). Keys: `GET/POST /api/keys`, `DELETE /api/keys/{id}` (session only).
+- Dashboard (built, step 4): Generate (real jobs, live queue/progress, resume after navigation, draft kept in localStorage,
+  Recent list), History, Voices (`/generate?voice=…`), API keys (shown once), Settings (theme, password, sessions, delete).
 
 ## Design system (applies to landing + dashboard)
 Goal: a **modern, advanced, technology-focused SaaS** look. Clean, minimal, premium (think Linear, Vercel,

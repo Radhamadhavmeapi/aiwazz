@@ -127,7 +127,7 @@ class identity:
         self.c, self.keep_origin = c, keep_origin
 
     def __enter__(self):
-        self.cookies = dict(self.c.cookies)
+        self.cookies = list(self.c.cookies.jar)  # full Cookie objects (keep domain/path)
         self.headers = dict(self.c.headers)
         self.c.cookies.clear()
         for h in ("x-csrf-token",) + (() if self.keep_origin else ("origin",)):
@@ -136,7 +136,7 @@ class identity:
 
     def __exit__(self, *exc):
         self.c.cookies.clear()
-        for k, v in self.cookies.items():
-            self.c.cookies.set(k, v)
+        for ck in self.cookies:
+            self.c.cookies.jar.set_cookie(ck)
         self.c.headers.clear()
         self.c.headers.update(self.headers)

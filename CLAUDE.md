@@ -115,7 +115,9 @@ and restarts `voice-api` with PM2.
 
 ## Design system (applies to landing + dashboard)
 Goal: a **modern, advanced, technology-focused SaaS** look. Clean, minimal, premium (think Linear, Vercel,
-ElevenLabs). Not a template look, no clutter, no stock photos, no random colors.
+ElevenLabs). Not a template look, no clutter, no random colors. Real product screenshots first; free-licence photos
+(Unsplash/Pexels) only in landing mood/use-case sections, credited and optimised (rules in `content/LANDING-V2.md`).
+**Never** fake testimonials, ratings, logos or user counts.
 **Brand:** AiWazz Brand Kit v1.0 in `brand/AiWazz-Brand-Kit/` (read `AiWazz-Brand-Guidelines.pdf`). Tagline **"Type it, hear it."**
 (sentence case, with the comma and full stop). Tokens: `design/tokens.css` + `design/theme.css`; web-sized logos, icon,
 favicon set and OG image in `design/assets/` (built from the kit by `tools/brand_assets.py`). Live reference:
@@ -184,6 +186,8 @@ SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`
 5. aiwazz.in: back up the folder, deploy the landing page + SEO pages.
 6. Hinglish transliteration toggle, edge-tts (admin only), `tools/tts.sh` for the Remotion video pipeline.
 7. Legal, pricing and compliance pages (Razorpay + Meta + SEO): `legal/IMPLEMENT.md`.
+8. Landing page v2 (more content, visuals, use cases, new SEO pages): `content/LANDING-V2.md`.
+9. Learn / docs section at aiwazz.in/learn/ (12 guides): `content/IMPLEMENT-LEARN.md`, content in `content/learn/`.
 
 ## Company
 AiWazz by TheWebStore028, a brand of **RADHAMADHAV WEBSTORE LLP**, GSTIN 27ABJFR6148J1ZO,

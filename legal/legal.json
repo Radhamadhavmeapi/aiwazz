@@ -8,8 +8,7 @@
   "llpin": "",
   "llpin_CONFIRM": "Add the LLPIN from the MCA certificate (format AAA-1234).",
   "gstin": "27ABJFR6148J1ZO",
-  "address": "A-1903, Exotica, Casa Rio Gold, Palava City, Dombivli, Thane, Maharashtra 421204, India",
-  "address_CONFIRM": "Must match the address on the LLP / GST certificate exactly (Razorpay and Meta compare them).",
+  "address": "EXOTICA, Casa Rio Main Road, Lotus Pond, Palava City Phase 1, Kalyan, Thane, Maharashtra 421204, India",
   "supportEmail": "support@thewebstore028.com",
   "legalEmail": "info@radhamadhavwebstore.com",
   "privacyEmail": "support@thewebstore028.com",
@@ -17,8 +16,7 @@
   "whatsapp": "https://wa.me/919167696213",
   "supportHours": "Monday to Saturday, 10:00 am to 6:30 pm IST (closed Sundays and public holidays)",
   "grievanceOfficer": {
-    "name": "",
-    "name_CONFIRM": "Name of a designated partner/person acting as Grievance Officer (required under the IT Rules, 2021).",
+    "name": "Ankit Panchal",
     "email": "support@thewebstore028.com",
     "phone": "+91 91676 96213"
   },
@@ -35,12 +33,57 @@
   "currency": "INR",
   "gstRatePercent": 18,
   "pricesIncludeGst": false,
-  "plans_CONFIRM": "Suggested launch prices. Change freely before going live; every page reads them from here.",
+  "plans_CONFIRM": "Launch prices set below the market (Nov 2026): ElevenLabs Starter is about Rs 528/month for 30k characters and Creator about Rs 1,848 for 100k; Speakatoo starts at Rs 399. Change here only; every page reads these.",
   "plans": [
-    {"id": "free", "name": "Free", "priceMonthly": 0, "characters": 5000, "features": ["All 14 voices", "MP3 and WAV download", "Personal use only", "Audio kept for 7 days"]},
-    {"id": "creator", "name": "Creator", "priceMonthly": 299, "characters": 100000, "features": ["Everything in Free", "Commercial use (ads, client work, monetised videos)", "Loudness presets for reels and podcasts", "Email support"]},
-    {"id": "pro", "name": "Pro", "priceMonthly": 799, "characters": 400000, "features": ["Everything in Creator", "API access with API keys", "Priority queue", "Priority support"]},
-    {"id": "business", "name": "Business", "priceMonthly": 1999, "characters": 1200000, "features": ["Everything in Pro", "Team seats (up to 5)", "GST invoice for input credit", "WhatsApp support"]}
+    {
+      "id": "free",
+      "name": "Free",
+      "priceMonthly": 0,
+      "characters": 5000,
+      "features": [
+        "All 14 voices (Hindi, US and UK English)",
+        "MP3 and WAV download, 48 kHz",
+        "Personal, non-commercial use",
+        "Audio kept for 7 days"
+      ]
+    },
+    {
+      "id": "starter",
+      "name": "Starter",
+      "priceMonthly": 199,
+      "characters": 50000,
+      "features": [
+        "Everything in Free",
+        "Commercial use: ads, client work, monetised videos",
+        "Loudness presets for reels and podcasts",
+        "Email support"
+      ]
+    },
+    {
+      "id": "creator",
+      "name": "Creator",
+      "priceMonthly": 499,
+      "characters": 200000,
+      "features": [
+        "Everything in Starter",
+        "API access with API keys",
+        "Faster queue than Free and Starter",
+        "Email and WhatsApp support"
+      ]
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "priceMonthly": 1499,
+      "characters": 750000,
+      "features": [
+        "Everything in Creator",
+        "Highest queue priority",
+        "Bulk generation through the API",
+        "Priority support"
+      ]
+    }
   ],
-  "yearlyDiscountPercent": 20
+  "yearlyDiscountPercent": 20,
+  "defaultTheme": "light"
 }

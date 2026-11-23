@@ -128,8 +128,9 @@ https://login.aiwazz.in/preview/tokens/
   Electric Violet `#7420DD` · Ink `#0A0A0B` · Cloud `#F4F6FB` · Slate `#64748B`.
   **Brand gradient** `#51B2F6 → #2D36DB → #7420DD` (135°), used sparingly (main button, active states, waveform, key
   highlights); decorative only. Behind white text use the deeper `#1F6FD1 → #2D36DB → #7420DD` (≥ 5.8:1).
-- **Theme:** dark-first with a light-mode toggle (remember the choice). Dark: Ink background, cool surfaces one step
-  lighter, Cloud text. Light: Cloud background, white surfaces, Midnight Navy text. 1px subtle borders, soft shadows.
+- **Theme:** **light by default** on every page of both sites (first visit is always light, not OS-based); dark is optional
+  via the toggle and remembered. Light: Cloud background, white surfaces, Midnight Navy text. Dark: Ink background, cool
+  surfaces one step lighter, Cloud text. 1px subtle borders, soft shadows.
 - **AA contrast rule:** every text colour ≥ 4.5:1, focus rings/UI fills ≥ 3:1. Where a brand colour fails, use a tint
   of the same hue: on Ink, primary fills `#4F58F0` and brand text `#8A90F7` (Royal Indigo is 2.5:1 on Ink), focus ring
   Sky Blue; secondary text `#94A3B8` (dark) / `#475569` (light), since brand Slate is 4.4:1 on Cloud (icons/decor only).
@@ -140,7 +141,7 @@ https://login.aiwazz.in/preview/tokens/
   (`<Logo>` switches automatically). Min width: with tagline 160 px, without tagline 120 px (use no-tagline in
   headers/sidebar), icon 16 px. No recolouring, shadows or effects; keep clear space. A-Play **icon** in the collapsed
   sidebar, mobile bars and the auth brand panel. **Favicon set** (`03_Favicon` + HTML snippet) at both site roots;
-  **OG image** `og-image-dark-1200x630.png`.
+  **OG image** `og-image-light-1200x630.png`.
 - **Signature element:** a live **audio waveform** (wavesurfer.js) in the player and as the landing hero visual,
   animated while generating. Glassy cards with a faint grid/noise background in the hero only.
 - **Dashboard layout:** collapsible left sidebar (Generate, History, Voices, API keys, Settings), top bar with
@@ -165,7 +166,8 @@ Voice samples: `tools/make_samples.py` → `landing/samples/` (committed). Light
 Fast static page following the design system above, mobile-first. Hero ("AI voiceovers in Hindi, Hinglish & English"),
 audio samples, features, how it works, FAQ, "Sign in / Get invite" buttons → login.aiwazz.in.
 SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`, `/hindi-text-to-speech`,
-`/ai-voiceover-for-reels`. No pricing yet.
+`/ai-voiceover-for-reels`. Pricing, About, Contact and all policy pages: see `legal/IMPLEMENT.md`
+(content in `legal/pages/`, company data and plans in `legal/legal.json`, the single source of truth).
 
 ## Build phases
 -1. **Repo setup:** create the deploy key, show me the public key so I add it in GitHub
@@ -181,6 +183,12 @@ SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`
 4. login.aiwazz.in: back up the folder, nginx proxy `/api/` → 8100, deploy the dashboard (login, signup, TTS tool, history).
 5. aiwazz.in: back up the folder, deploy the landing page + SEO pages.
 6. Hinglish transliteration toggle, edge-tts (admin only), `tools/tts.sh` for the Remotion video pipeline.
+7. Legal, pricing and compliance pages (Razorpay + Meta + SEO): `legal/IMPLEMENT.md`.
+
+## Company
+AiWazz by TheWebStore028, a brand of **RADHAMADHAV WEBSTORE LLP**, GSTIN 27ABJFR6148J1ZO,
+EXOTICA, Casa Rio Main Road, Lotus Pond, Palava City Phase 1, Kalyan, Thane, Maharashtra 421204, India.
+Grievance Officer: Ankit Panchal. All of this lives in `legal/legal.json`; never hardcode it elsewhere.
 
 ## Later (SaaS, don't build yet)
 Credits + Razorpay, public signup with email verification, rented GPU for bigger models (Indic Parler-TTS,

@@ -87,7 +87,7 @@ and restarts `voice-api` with PM2.
   - English `lang_code='a'` (US) / `'b'` (UK).
   - Load pipelines once at startup, **sharing one `KModel`** (`KPipeline(..., model=m)`: 1.3 GB vs 2.7 GB). **One synthesis at a time** (6 GB RAM, no swap) with a simple queue.
   - Apache-2.0, so it's OK for the future SaaS.
-  - Measured (phase 1, 4 threads): ~1.35x realtime (60 s of audio ≈ 45 s compute), peak RSS ~1.6 GB during synthesis with shared model.
+  - Measured (phase 1, 4 threads): ~1.35x realtime (60 s of audio ≈ 45 s compute), peak RSS ~1.6 GB during synthesis with shared model. End-to-end in the API (phase 2): ≈1.0x of *final* audio (Kokoro pads ~20% silence that gets trimmed; post-processing ≈1 s per job), so a 60 s voiceover ≈ 60 s.
 - **Hinglish:** Kokoro's Hindi voices read Devanagari; Roman Hinglish ("Raat 11 baje customer ne...") sounds wrong.
   Add a "Transliterate Hinglish" toggle: Roman Hindi → Devanagari before synthesis, English words kept as-is.
 - **edge-tts** (optional): `hi-IN-MadhurNeural`, `hi-IN-SwaraNeural`. Unofficial Microsoft service:
@@ -96,8 +96,15 @@ and restarts `voice-api` with PM2.
 ## API (v1)
 - `POST /api/auth/signup`, `/api/auth/login`, `/api/auth/logout`, `GET /api/auth/me`
 - `GET  /api/health`, `GET /api/voices`
-- `POST /api/tts` `{text, engine, voice, lang, speed 0.7–1.3, format mp3|wav, transliterate}` → `{id, url, duration_sec}`
-  (split into sentences, join with short pauses, max 5,000 chars)
+- `POST /api/tts` `{text, engine, voice, lang, speed 0.7–1.3, format mp3|wav, transliterate, normalize, loudness_lufs}`
+  → 202 `{id, status, position}` (queued job); poll `GET /api/tts/jobs/{id}`. `?wait=true` blocks (≤290 s) and returns
+  200 `{id, url, urls{mp3,wav}, duration_sec, loudness{…}, timing{…}}`. Split into sentences, join with short pauses, max 5,000 chars.
+- **Post-processing (always):** trim silence per sentence, 250 ms pause between sentences / 600 ms between paragraphs,
+  10 ms fades + digital silence so each edge ≈ 100 ms. Loudness (default on): two-pass, pass 1 = EBU R128 measure,
+  pass 2 = exact linear gain + 4x-oversampled true-peak limiter, re-measured until within 0.2 LU of target
+  (default **-14 LUFS / -1 dBTP**; per request `loudness_lufs` -30..-8 or `normalize:false`). Not ffmpeg `loudnorm`:
+  its linear mode silently falls back to dynamic (AGC) on peaky TTS audio and misses the target on clips < 3 s.
+  Output: WAV 16-bit + MP3 192 kbps, both 48 kHz mono, always both files.
 - `GET  /api/history` (last 50 for the user), `GET /api/audio/{id}` (only the owner can download)
 
 ## Design system (applies to landing + dashboard)

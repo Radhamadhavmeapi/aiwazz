@@ -205,6 +205,7 @@ SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`
 7. Legal, pricing and compliance pages (Razorpay + Meta + SEO): `legal/IMPLEMENT.md`.
 8. Landing page v2 (more content, visuals, use cases, new SEO pages): `content/LANDING-V2.md`.
 9. Learn / docs section at aiwazz.in/learn/ (12 guides): `content/IMPLEMENT-LEARN.md`, content in `content/learn/`.
+10. Voice Lab: more Indian voices, Indian-English accent, Hinglish tones (research + samples, owner approves before shipping): `content/VOICE-LAB.md`.
 
 ## Company
 AiWazz by TheWebStore028, a brand of **RADHAMADHAV WEBSTORE LLP**, GSTIN 27ABJFR6148J1ZO,

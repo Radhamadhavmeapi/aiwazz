@@ -144,7 +144,9 @@ class JobManager:
 
         base = s.audio_dir / job.id
         loud = audio.export(joined, sr, base, sample_rate=s.sample_rate, mp3_bitrate=s.mp3_bitrate,
-                            target_lufs=r.loudness_lufs, true_peak=s.true_peak_db)
+                            target_lufs=r.loudness_lufs, true_peak=s.true_peak_db,
+                            compressor=audio.Compressor(s.compressor_threshold_rel_db, s.compressor_ratio)
+                            if s.compressor else None)
         duration = round(sf.info(str(base.with_suffix(".wav"))).duration, 2)
         job.progress = 1.0
         result = {

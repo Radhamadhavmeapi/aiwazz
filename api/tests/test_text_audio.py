@@ -100,3 +100,15 @@ def test_short_clip_hits_target(tmp_path):
     loud = audio.export(speechlike(1.5, amp=0.05), SR, tmp_path / "s", sample_rate=48000,
                         mp3_bitrate="192k", target_lufs=-16.0, true_peak=-1.0)
     assert abs(loud.output_lufs - -16.0) < 0.5 and loud.output_true_peak <= -1.0
+
+
+def test_compressor_reduces_limiter_work_and_hits_target(tmp_path):
+    a = speechlike(6.0, amp=0.02)
+    a[::4800] = 0.9
+    plain = audio.export(a, SR, tmp_path / "a", sample_rate=48000, mp3_bitrate="192k",
+                         target_lufs=-14.0, true_peak=-1.0)
+    comp = audio.export(a, SR, tmp_path / "b", sample_rate=48000, mp3_bitrate="192k",
+                        target_lufs=-14.0, true_peak=-1.0, compressor=audio.Compressor())
+    assert comp.compressor and not plain.compressor
+    assert abs(comp.output_lufs - -14.0) < 0.3 and comp.output_true_peak <= -1.0
+    assert comp.limiter_reduction_db <= plain.limiter_reduction_db

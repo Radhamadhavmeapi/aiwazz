@@ -9,7 +9,9 @@ API_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=API_DIR / ".env", env_file_encoding="utf-8", extra="ignore")
+    # Prefix: PM2 injects its own config keys (env, name, args, ...) as env vars; never read those.
+    model_config = SettingsConfigDict(env_prefix="AIWAZZ_", env_file=API_DIR / ".env",
+                                      env_file_encoding="utf-8", extra="ignore")
 
     env: str = "production"
     host: str = "127.0.0.1"
@@ -32,6 +34,14 @@ class Settings(BaseSettings):
     silence_threshold_db: float = -45.0       # below this (dBFS RMS) counts as silence
     loudness_lufs: float = Field(-14.0, ge=-30.0, le=-8.0)
     true_peak_db: float = Field(-1.0, ge=-9.0, le=0.0)
+    compressor: bool = True                   # gentle 2:1 compressor before gain/limiter
+    compressor_threshold_rel_db: float = 0.0  # relative to the clip's measured loudness
+    compressor_ratio: float = Field(2.0, ge=1.0, le=8.0)
+
+    @property
+    def debug(self) -> bool:
+        """Fail-closed: API docs etc. only for an explicit dev/test env."""
+        return self.env in ("development", "test")
 
     @property
     def audio_dir(self) -> Path:

@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     s = get_settings()
-    dev = s.env != "production"
+    dev = s.debug
     app = FastAPI(
         title="AiWazz Voice API",
         lifespan=lifespan,

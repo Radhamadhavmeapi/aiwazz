@@ -12,10 +12,14 @@ def test_docs_hidden_in_production(monkeypatch):
     import main
     from settings import get_settings
     get_settings.cache_clear()
-    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("AIWAZZ_ENV", "production")
+    monkeypatch.setenv("env", "[object Object]")       # what PM2 injects; must be ignored
     try:
         app = main.create_app()
         assert app.docs_url is None and app.openapi_url is None
+        monkeypatch.setenv("AIWAZZ_ENV", "staging")       # unknown value → still hidden (fail-closed)
+        get_settings.cache_clear()
+        assert main.create_app().docs_url is None
     finally:
         get_settings.cache_clear()
 
@@ -74,3 +78,15 @@ def test_audio_path_traversal(client):
         assert client.get(f"/api/audio/{bad}").status_code == 404
     assert client.get("/api/audio/" + "0" * 32 + "?format=py").status_code == 422
     assert client.get("/api/tts/jobs/" + "0" * 32).status_code == 404
+
+
+def test_env_example_keys_are_real_settings(monkeypatch):
+    monkeypatch.delenv("AIWAZZ_ENV")
+    monkeypatch.delenv("AIWAZZ_STORAGE_DIR")
+    from dotenv import dotenv_values
+    from settings import API_DIR, Settings
+    keys = dotenv_values(API_DIR / ".env.example").keys()
+    fields = {f"AIWAZZ_{k.upper()}" for k in Settings.model_fields}
+    assert keys and set(keys) <= fields, set(keys) - fields
+    s = Settings(_env_file=API_DIR / ".env.example")
+    assert s.env == "production" and not s.debug and s.mp3_bitrate == "192k" and s.compressor

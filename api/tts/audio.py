@@ -103,46 +103,78 @@ class Loudness:
     output_lufs: float | None
     output_true_peak: float | None
     gain_db: float | None
-    mode: str  # "linear", "linear+limiter" or "skipped"
+    compressor: bool = False
+    limiter_reduction_db: float | None = None  # how much the limiter had to take off the peaks
+    mode: str = "skipped"  # "linear", "linear+limiter" or "skipped"
 
 
-def _gain_chain(gain_db: float, ceiling_db: float, sample_rate: int) -> str:
-    # Linear gain, then a lookahead limiter at 4x oversampling so *true* peaks stay under the ceiling.
-    limit = max(0.0625, 10 ** (ceiling_db / 20))
-    return (f"volume={gain_db:.3f}dB,aresample={sample_rate * 4}:resampler=soxr,"
-            f"alimiter=limit={limit:.5f}:attack=1:release=60:level=0:latency=1,"
-            f"aresample={sample_rate}:resampler=soxr")
+@dataclass(frozen=True)
+class Compressor:
+    """Gentle RMS compressor applied *before* the gain stage, threshold relative to the clip's loudness.
+
+    Being before the (linear) gain, the gain search stays linear and converges; being relative,
+    it acts the same on quiet and loud voices. Takes the bulk off loud syllables so the
+    limiter only has to catch fast transients (≈ halves limiter work on quiet voices).
+    """
+    threshold_rel_db: float = 0.0
+    ratio: float = 2.0
+    attack_ms: float = 10.0
+    release_ms: float = 150.0
+    knee: float = 6.0
+
+    def filter(self, input_lufs: float) -> str:
+        th = min(0.0, input_lufs + self.threshold_rel_db)
+        return (f"acompressor=threshold={th:.2f}dB:ratio={self.ratio}:attack={self.attack_ms}"
+                f":release={self.release_ms}:knee={self.knee}:detection=rms:makeup=1")
+
+
+def _gain_chain(pre: str | None, gain_db: float, ceiling_db: float | None, sample_rate: int) -> str:
+    # [compressor] → linear gain → lookahead limiter at 4x oversampling so *true* peaks stay under the ceiling.
+    parts = [pre] if pre else []
+    parts.append(f"volume={gain_db:.3f}dB")
+    if ceiling_db is not None:
+        limit = max(0.0625, 10 ** (ceiling_db / 20))
+        parts += [f"aresample={sample_rate * 4}:resampler=soxr",
+                  f"alimiter=limit={limit:.5f}:attack=1:release=60:level=0:latency=1",
+                  f"aresample={sample_rate}:resampler=soxr"]
+    return ",".join(parts)
 
 
 def normalize_plan(src: Path, sample_rate: int, target_lufs: float, true_peak: float,
-                   margin_db: float = 0.3, tolerance: float = 0.2, max_iter: int = 4) -> tuple[str | None, Loudness]:
+                   compressor: Compressor | None = None, margin_db: float = 0.3,
+                   tolerance: float = 0.2, max_iter: int = 4) -> tuple[str | None, Loudness]:
     """Two-pass loudness normalisation.
 
-    Pass 1 measures integrated loudness + true peak. Pass 2 applies the exact linear gain to reach
-    the target; if that would push true peak above the ceiling, a true-peak limiter catches the peaks.
-    Limiting lowers loudness slightly, so the gain is re-measured and corrected (usually 1-2 rounds).
-    Unlike ffmpeg loudnorm, this never falls back to dynamic (AGC) mode and works on clips < 3 s.
+    Pass 1 measures integrated loudness + true peak. Pass 2 applies an optional gentle compressor,
+    the exact linear gain to reach the target and, if peaks would exceed the ceiling, a true-peak
+    limiter. Compression/limiting change loudness slightly, so the gain is re-measured and corrected
+    (usually 1-2 rounds). Unlike ffmpeg loudnorm, this never falls back to dynamic (AGC) mode and
+    works on clips < 3 s.
     """
     i0, tp0 = measure(src)
-    loud = Loudness(target_lufs, i0, tp0, None, None, None, "skipped")
+    loud = Loudness(target_lufs, i0, tp0, None, None, None)
     if i0 is None:  # silent / too short to measure
         return None, loud
     ceiling = true_peak - margin_db  # headroom for 16-bit + MP3 encoding overs
+    pre = compressor.filter(i0) if compressor else None
     gain = target_lufs - i0
-    af, i, tp = None, None, None
+    af = None
     for _ in range(max_iter):
-        af = _gain_chain(gain, ceiling, sample_rate)
-        i, tp = measure(src, af)
+        af = _gain_chain(pre, gain, ceiling, sample_rate)
+        i, _tp = measure(src, af)
         if i is None or abs(target_lufs - i) <= tolerance:
             break
         gain += target_lufs - i
-    limited = tp0 is not None and tp0 + gain > ceiling
-    loud.gain_db, loud.mode = round(gain, 2), "linear+limiter" if limited else "linear"
+    _, tp_pre = measure(src, _gain_chain(pre, gain, None, sample_rate))  # peaks before the limiter
+    reduction = max(0.0, tp_pre - ceiling) if tp_pre is not None else 0.0
+    loud.gain_db, loud.compressor = round(gain, 2), compressor is not None
+    loud.limiter_reduction_db = round(reduction, 1)
+    loud.mode = "linear+limiter" if reduction > 0.05 else "linear"
     return af, loud
 
 
 def export(audio: np.ndarray, sr: int, out_base: Path, *, sample_rate: int, mp3_bitrate: str,
-           target_lufs: float | None, true_peak: float) -> Loudness:
+           target_lufs: float | None, true_peak: float, compressor: Compressor | None = None) -> Loudness:
     """Write <out_base>.wav (16-bit PCM, mono) and <out_base>.mp3 at `sample_rate`.
 
     With `target_lufs` set, normalises loudness to it with true peak ≤ `true_peak` dBTP.
@@ -154,9 +186,9 @@ def export(audio: np.ndarray, sr: int, out_base: Path, *, sample_rate: int, mp3_
         # Resample once to the output rate (float, no clipping); all loudness work happens at that rate.
         _run(["-y", "-i", str(raw), "-af", f"aresample={sample_rate}:resampler=soxr", "-ac", "1",
               "-c:a", "pcm_f32le", str(up)])
-        af, loud = (None, Loudness(None, None, None, None, None, None, "skipped"))
+        af, loud = None, Loudness(None, None, None, None, None, None)
         if target_lufs is not None:
-            af, loud = normalize_plan(up, sample_rate, target_lufs, true_peak)
+            af, loud = normalize_plan(up, sample_rate, target_lufs, true_peak, compressor)
         args = ["-y", "-i", str(up)] + (["-af", af] if af else [])
         _run(args + ["-ar", str(sample_rate), "-ac", "1", "-c:a", "pcm_s16le", str(wav_out)])
 

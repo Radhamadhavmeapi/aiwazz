@@ -8,8 +8,8 @@ import pytest
 
 API_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(API_DIR))
-os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="aiwazz-test-")
-os.environ["ENV"] = "test"
+os.environ["AIWAZZ_STORAGE_DIR"] = tempfile.mkdtemp(prefix="aiwazz-test-")
+os.environ["AIWAZZ_ENV"] = "test"
 
 
 def speechlike(seconds: float, sr: int = 24000, amp: float = 0.3, seed: int = 0) -> np.ndarray:

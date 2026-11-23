@@ -69,6 +69,8 @@ aiwazz/
   tools/       tts.sh for the video pipeline
   ecosystem.config.js   PM2 config
 ```
+API settings: env vars / `api/.env` with prefix **`AIWAZZ_`** (PM2 injects keys like `env`, `name` into the app's
+environment; unprefixed names would collide). PM2 starts the API via `env -i` with an explicit env (no inherited shell vars).
 The API runs from `/www/aiwazz/api` with its venv, `.env` and `storage/` there, outside the public web root,
 so nginx never serves them directly. `tools/deploy.sh` builds and copies `landing/` and `dashboard/` into the web roots
 and restarts `voice-api` with PM2.
@@ -101,7 +103,8 @@ and restarts `voice-api` with PM2.
   200 `{id, url, urls{mp3,wav}, duration_sec, loudness{…}, timing{…}}`. Split into sentences, join with short pauses, max 5,000 chars.
 - **Post-processing (always):** trim silence per sentence, 250 ms pause between sentences / 600 ms between paragraphs,
   10 ms fades + digital silence so each edge ≈ 100 ms. Loudness (default on): two-pass, pass 1 = EBU R128 measure,
-  pass 2 = exact linear gain + 4x-oversampled true-peak limiter, re-measured until within 0.2 LU of target
+  pass 2 = gentle 2:1 RMS compressor (threshold = clip's own loudness, before the gain) + exact linear gain
+  + 4x-oversampled true-peak limiter, re-measured until within 0.2 LU of target
   (default **-14 LUFS / -1 dBTP**; per request `loudness_lufs` -30..-8 or `normalize:false`). Not ffmpeg `loudnorm`:
   its linear mode silently falls back to dynamic (AGC) on peaky TTS audio and misses the target on clips < 3 s.
   Output: WAV 16-bit + MP3 192 kbps, both 48 kHz mono, always both files.

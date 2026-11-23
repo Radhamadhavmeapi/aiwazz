@@ -14,8 +14,17 @@ Personal use first; it will become a SaaS later, so keep the code clean, modular
   `/root/project-backups/aiwazz-pre-voice-<date>/` and show me what was there.
 - **No other domains.** Do not create voice.aiwazz.in or any other site.
 
+## How to start
+```
+tmux attach -t aiwazz
+cd /www/aiwazz
+claude --continue
+```
+
 ## Server facts
-- Server: cloudwablaster (104.237.6.214), Ubuntu 24.04, **OpenVZ container**: no GPU, no Docker, no swap.
+- Server: **aiwazz-server** (was cloudwablaster) (104.237.6.214), Ubuntu 24.04, **OpenVZ container**: no GPU, no Docker, no swap.
+- tmux session: `aiwazz`.
+- pure-ftpd is stopped, disabled at boot and removed from aaPanel's service keep-alive list. Keep it off (use SFTP).
 - Checked: 6 GB RAM (~4.5 GB free), 4 threads (Xeon E5-2697 v2), 16 GB disk free, Python 3.12.3.
 - Missing: python3-venv, espeak-ng, ffmpeg, dnsutils (install in phase 1, ask first).
 - **Install CPU-only PyTorch** (the default CUDA build is several GB).

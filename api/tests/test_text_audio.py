@@ -112,3 +112,12 @@ def test_compressor_reduces_limiter_work_and_hits_target(tmp_path):
     assert comp.compressor and not plain.compressor
     assert abs(comp.output_lufs - -14.0) < 0.3 and comp.output_true_peak <= -1.0
     assert comp.limiter_reduction_db <= plain.limiter_reduction_db
+
+
+def test_normalize_numbers_and_rupees():
+    from tts.text import normalize
+    assert normalize("यह प्लान सिर्फ़ ₹499 प्रति महीना है", "h") == "यह प्लान सिर्फ़ 499 रुपये प्रति महीना है"
+    assert normalize("आप 2,00,000 characters तक", "h") == "आप 200000 characters तक"
+    assert normalize("Only ₹1,499 a month, Rs. 50 off", "a") == "Only 1499 rupees a month, 50 rupees off"
+    assert normalize("12.5 प्रतिशत", "h") == "12 दशमलव 5 प्रतिशत"
+    assert normalize("Version 2.5 is out. Next.", "a") == "Version 2.5 is out. Next."

@@ -16,7 +16,7 @@ from settings import Settings
 
 from . import audio
 from .kokoro_engine import KokoroEngine
-from .text import split_text
+from .text import normalize, split_text
 
 log = logging.getLogger(__name__)
 ID_RE = re.compile(r"^[0-9a-f]{32}$")
@@ -147,7 +147,7 @@ class JobManager:
     def _process(self, job: Job) -> dict:
         r, s, sr = job.req, self.s, self.engine.sample_rate
         t0 = time.perf_counter()
-        paragraphs = split_text(r.text)
+        paragraphs = split_text(normalize(r.text, r.lang))
         total = sum(len(p) for p in paragraphs) or 1
         done, clips = 0, []
         for para in paragraphs:

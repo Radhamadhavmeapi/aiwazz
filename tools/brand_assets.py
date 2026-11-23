@@ -6,7 +6,7 @@ Output: design/assets/ (committed, shared by dashboard + landing)
   logo-nt-{color,for-dark}-{w}.webp         logo without tagline     (use at ≥ 120 px CSS width)
   icon-{w}.webp                             A-Play icon, transparent (≥ 16 px)
   favicon/*                                 03_Favicon set, unchanged (goes to each site root)
-  og-image.png                              05_Social-Media/og-image-dark-1200x630.png, unchanged
+  og-image.png                              05_Social-Media/og-image-light-1200x630.png, unchanged
 The masters are never modified: no recolouring, effects or cropping (brand guidelines p.9).
 Usage: python3 tools/brand_assets.py
 """
@@ -45,7 +45,7 @@ def main() -> None:
     for f in (KIT / "03_Favicon").iterdir():
         if f.name != "HTML-snippet.txt":
             shutil.copy2(f, fav / f.name)
-    shutil.copy2(KIT / "05_Social-Media/og-image-dark-1200x630.png", OUT / "og-image.png")
+    shutil.copy2(KIT / "05_Social-Media/og-image-light-1200x630.png", OUT / "og-image.png")
     print(f"favicon set: {len(list(fav.iterdir()))} files; og-image.png copied")
 
 

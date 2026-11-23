@@ -27,7 +27,7 @@ const ld = [
 ];
 ---
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -35,12 +35,13 @@ const ld = [
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="theme-color" content="#f4f6fb" />
     <script is:inline>
       try {
-        if (localStorage.getItem("aiwazz-theme") === "light") {
-          document.documentElement.classList.replace("dark", "light");
-          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4f6fb");
+        // Light by default (CLAUDE.md); dark only when the visitor chose it.
+        if (localStorage.getItem("aiwazz-theme") === "dark") {
+          document.documentElement.classList.replace("light", "dark");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#0a0a0b");
         }
       } catch (e) {}
     </script>

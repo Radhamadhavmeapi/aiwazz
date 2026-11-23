@@ -5,9 +5,9 @@ const KEY = "aiwazz-theme";
 
 function readTheme(): Theme {
   try {
-    return localStorage.getItem(KEY) === "light" ? "light" : "dark";
+    return localStorage.getItem(KEY) === "dark" ? "dark" : "light"; // light by default
   } catch {
-    return "dark";
+    return "light";
   }
 }
 

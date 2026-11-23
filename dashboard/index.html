@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="theme-color" content="#f4f6fb" />
     <meta name="robots" content="noindex" />
     <title>AiWazz: Type it, hear it.</title>
     <meta name="description" content="AI voiceovers in Hindi, Hinglish & English. Type it, hear it." />
@@ -18,7 +18,7 @@
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2D36DB" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Link preview: 05_Social-Media/og-image-dark-1200x630.png -->
+    <!-- Link preview: 05_Social-Media/og-image-light-1200x630.png -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AiWazz" />
     <meta property="og:title" content="AiWazz: Type it, hear it." />
@@ -31,11 +31,11 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <script>
-      // Apply the saved theme before first paint (no flash). Default: dark.
+      // Apply the saved theme before first paint (no flash). Default: light (CLAUDE.md), dark only if chosen.
       try {
-        if (localStorage.getItem("aiwazz-theme") === "light") {
-          document.documentElement.classList.replace("dark", "light");
-          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4f6fb");
+        if (localStorage.getItem("aiwazz-theme") === "dark") {
+          document.documentElement.classList.replace("light", "dark");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#0a0a0b");
         }
       } catch (e) {}
     </script>

@@ -16,7 +16,7 @@ const nav = [
       {nav.map((n) => <a href={n.href} class="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{n.label}</a>)}
     </nav>
     <div class="ml-auto flex items-center gap-1.5">
-      <button type="button" data-theme-toggle aria-label="Switch to light theme" class="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground">
+      <button type="button" data-theme-toggle aria-label="Switch to dark theme" class="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground">
         <Icon name="sun" class="hidden size-[18px] [:root:not(.light)_&]:inline-block" />
         <Icon name="moon" class="hidden size-[18px] [.light_&]:inline-block" />
       </button>

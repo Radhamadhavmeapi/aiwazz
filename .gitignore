@@ -46,3 +46,5 @@ Thumbs.db
 
 # Generated from design/assets by dashboard/scripts/sync-brand.mjs
 dashboard/public/
+landing/public/
+landing/.astro/

@@ -1,0 +1,89 @@
+---
+import { SITE } from "../data/site";
+import Base from "../layouts/Base.astro";
+import CtaBand from "./CtaBand.astro";
+import Faq, { type QA } from "./Faq.astro";
+import Icon from "./Icon.astro";
+import Samples from "./Samples.astro";
+
+export type Block = { h2: string; p: string[]; list?: string[] };
+interface Props {
+  title: string;
+  description: string;
+  eyebrow: string;
+  h1: string;
+  lead: string;
+  blocks: Block[];
+  faq: QA[];
+  langs?: ("h" | "a" | "b")[];
+  samplesHeading?: string;
+  cta?: string;
+}
+const { title, description, eyebrow, h1, lead, blocks, faq, langs, samplesHeading, cta } = Astro.props;
+const path = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "AiWazz", item: SITE.url },
+      { "@type": "ListItem", position: 2, name: eyebrow, item: `${SITE.url}${path}` },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  },
+];
+---
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section class="relative overflow-hidden border-b">
+    <div aria-hidden="true" class="hero-grid absolute inset-0"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute -top-48 left-1/2 h-[360px] w-[760px] -translate-x-1/2 rounded-full opacity-15 blur-3xl" style="background: var(--brand-gradient)"></div>
+    <div class="relative mx-auto max-w-3xl px-4 pt-14 pb-16 text-center sm:px-6 sm:pt-20 sm:pb-20">
+      <nav aria-label="Breadcrumb" class="text-xs text-subtle-foreground">
+        <a href="/" class="hover:text-foreground">AiWazz</a> <span aria-hidden="true">/</span> <span aria-current="page">{eyebrow}</span>
+      </nav>
+      <h1 class="mt-5 text-[2.25rem] leading-[1.1] font-bold tracking-[-0.03em] sm:text-[3rem]">{h1}</h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">{lead}</p>
+      <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <a href={SITE.getInvite} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong px-6 text-[15px] font-semibold text-white shadow-brand-glow transition-[filter] hover:brightness-110">
+          Get an invite <Icon name="arrow-right" class="size-[18px]" />
+        </a>
+        <a href="#samples" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-input bg-surface/80 px-6 text-[15px] font-medium transition-colors hover:bg-surface-2">
+          <Icon name="audio-lines" class="size-[18px] text-brand" /> Hear samples
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <article class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
+    {blocks.map((b) => (
+      <section class="mt-12 first:mt-0">
+        <h2 class="text-h2 font-semibold">{b.h2}</h2>
+        {b.p.map((t) => <p class="mt-4 text-[16px] leading-8 text-muted-foreground">{t}</p>)}
+        {b.list && (
+          <ul class="mt-5 space-y-3">
+            {b.list.map((li) => (
+              <li class="flex gap-3 text-[16px] leading-7">
+                <span class="mt-2.5 size-1.5 shrink-0 rounded-full bg-brand-gradient" aria-hidden="true" />
+                <span class="text-muted-foreground">{li}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    ))}
+  </article>
+
+  <div class="border-y bg-surface/40">
+    <Samples only={langs} heading={samplesHeading} />
+  </div>
+  <Faq items={faq} title="Frequently asked questions" />
+  <CtaBand heading={cta} />
+</Base>
+
+<script>
+  import "../scripts/player";
+</script>

@@ -1,0 +1,14 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="Page not found | AiWazz" description="This page doesn't exist.">
+  <section class="mx-auto flex max-w-xl flex-col items-center px-4 py-28 text-center">
+    <aiwazz-wave bars="32" mode="static" class="block h-12 w-56 opacity-60"></aiwazz-wave>
+    <h1 class="mt-8 text-h1 font-semibold">This page went quiet</h1>
+    <p class="mt-3 text-muted-foreground">The page you're looking for doesn't exist or has moved.</p>
+    <a href="/" class="mt-8 inline-flex h-11 items-center rounded-xl border border-input bg-surface-2 px-5 text-sm font-medium hover:bg-surface-3">Back to home</a>
+  </section>
+</Base>
+<script>
+  import "../scripts/waveform";
+</script>

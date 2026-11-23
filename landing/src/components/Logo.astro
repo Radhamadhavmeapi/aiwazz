@@ -1,0 +1,16 @@
+---
+// Brand artwork (never retype the wordmark). Both theme variants are rendered; CSS shows the right one.
+// Min widths (brand guidelines): with tagline 160 px, without tagline 120 px.
+interface Props { variant?: "full" | "no-tagline"; width?: number; class?: string; eager?: boolean }
+const { variant = "no-tagline", width = variant === "full" ? 200 : 128, class: cls, eager = false } = Astro.props;
+const w = Math.max(width, variant === "full" ? 160 : 120);
+const h = Math.round(w / (variant === "full" ? 1024 / 248 : 1024 / 238));
+const stem = variant === "full" ? "logo" : "logo-nt";
+const set = (v: string) => [320, 640, 960].map((x) => `/brand/${stem}-${v}-${x}.webp ${x}w`).join(", ");
+const alt = variant === "full" ? "AiWazz: Type it, hear it." : "AiWazz";
+const loading = eager ? "eager" : "lazy";
+---
+<span class:list={["inline-flex", cls]}>
+  <img class="logo-for-dark block h-auto" src={`/brand/${stem}-for-dark-320.webp`} srcset={set("for-dark")} sizes={`${w}px`} width={w} height={h} alt={alt} loading={loading} decoding="async" />
+  <img class="logo-color block h-auto" src={`/brand/${stem}-color-320.webp`} srcset={set("color")} sizes={`${w}px`} width={w} height={h} alt={alt} loading={loading} decoding="async" />
+</span>

@@ -1,0 +1,19 @@
+---
+import { SITE } from "../data/site";
+import Icon from "./Icon.astro";
+interface Props { heading?: string }
+const { heading = "Your next reel deserves a better voice." } = Astro.props;
+---
+<section class="px-4 pb-20 sm:px-6 sm:pb-28">
+  <div class="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border bg-surface px-6 py-14 text-center shadow-lg sm:px-12 sm:py-20">
+    <div aria-hidden="true" class="pointer-events-none absolute -top-32 left-1/2 h-64 w-[640px] -translate-x-1/2 rounded-full opacity-25 blur-3xl" style="background: var(--brand-gradient)"></div>
+    <p class="tagline relative text-lg text-muted-foreground">Type it, hear it.</p>
+    <h2 class="relative mx-auto mt-3 max-w-2xl text-h1 font-semibold sm:text-[2.75rem] sm:leading-[1.1]">{heading}</h2>
+    <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+      <a href={SITE.getInvite} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong px-6 text-[15px] font-semibold text-white shadow-brand-glow transition-[filter] hover:brightness-110">
+        Get an invite <Icon name="arrow-right" class="size-[18px]" />
+      </a>
+      <a href={SITE.signIn} class="inline-flex h-12 items-center justify-center rounded-xl border border-input bg-surface-2 px-6 text-[15px] font-medium transition-colors hover:bg-surface-3">Sign in</a>
+    </div>
+  </div>
+</section>

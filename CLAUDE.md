@@ -26,6 +26,9 @@ claude --continue
 - tmux session: `aiwazz`.
 - pure-ftpd is stopped, disabled at boot and removed from aaPanel's service keep-alive list. Keep it off (use SFTP).
 - Checked: 6 GB RAM (~4.5 GB free), 4 threads (Xeon E5-2697 v2), 16 GB disk free, Python 3.12.3.
+- **CPU has AVX but no AVX2** (Ivy Bridge): some new native binaries crash with "Illegal instruction".
+  Example: Astro 7's Rust compiler binding, so `landing/` is pinned to **Astro 6.4.8** (WASM compiler) + **Vite 7**.
+  Test new native deps (`node -e "require('x.node')"`) before relying on them.
 - Missing: python3-venv, espeak-ng, ffmpeg, dnsutils (install in phase 1, ask first).
 - **Install CPU-only PyTorch** (the default CUDA build is several GB).
 - aaPanel stack: nginx 1.24, PHP 8.3, MariaDB 10.11, PM2 (+pm2-logrotate), Redis 127.0.0.1:6379, Node 22/24.
@@ -155,6 +158,10 @@ https://login.aiwazz.in/preview/tokens/
 - Before building screens, show me the design tokens + one screen (Generate page) for approval first.
 
 ## Landing page (aiwazz.in)
+Built (step 2): `landing/` (Astro 6.4.8 + Tailwind v4, same tokens, vanilla JS only: waveform custom element +
+one shared audio player). Deploy: `tools/deploy-landing.sh` (keeps `.user.ini`, `.htaccess`, `.well-known/`, `502.html`).
+URLs are directory-style with a trailing slash (`/text-to-speech/`); nginx 301s the slashless form, no nginx change needed.
+Voice samples: `tools/make_samples.py` → `landing/samples/` (committed). Lighthouse (live): 100/100/100/100.
 Fast static page following the design system above, mobile-first. Hero ("AI voiceovers in Hindi, Hinglish & English"),
 audio samples, features, how it works, FAQ, "Sign in / Get invite" buttons → login.aiwazz.in.
 SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`, `/hindi-text-to-speech`,

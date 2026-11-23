@@ -39,3 +39,14 @@ curl -s -o out.mp3 'localhost:8100/api/audio/<id>?format=mp3'
 
 Setup from scratch: `python3 -m venv api/.venv`, install CPU torch (see `api/requirements.txt`), then
 `pip install -r api/requirements-dev.txt`.
+
+## Frontends
+
+| Folder | Stack | Deploy | Live |
+|---|---|---|---|
+| `landing/` | Astro 6.4.8 + Tailwind v4 (static) | `tools/deploy-landing.sh` | https://aiwazz.in |
+| `dashboard/` | Vite + React + TS + Tailwind v4 + shadcn/ui | `tools/deploy-preview.sh` (design preview) | https://login.aiwazz.in/preview/ |
+
+Shared design tokens and brand assets live in `design/` (see `design/README.md`); the brand kit masters in `brand/`.
+`public/` in both apps is generated from `design/assets` at build time. Regenerate voice samples with
+`python3 tools/make_samples.py` (needs `voice-api` running).

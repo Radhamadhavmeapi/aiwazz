@@ -1,0 +1,37 @@
+---
+import { LANG_LABEL, VOICE_SAMPLES, fmt } from "../data/site";
+import PlayButton from "./PlayButton.astro";
+interface Props { only?: ("h" | "a" | "b")[] ; heading?: string; intro?: string }
+const { only = ["h", "a", "b"], heading = "Hear every voice", intro = "Real, unedited output from AiWazz, levelled to -14 LUFS like every file you download." } = Astro.props;
+---
+<section id="samples" aria-labelledby="samples-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+  <div class="max-w-2xl">
+    <p class="font-mono text-xs tracking-wider text-brand uppercase">Voice samples</p>
+    <h2 id="samples-title" class="mt-3 text-h1 font-semibold">{heading}</h2>
+    <p class="mt-3 text-muted-foreground">{intro}</p>
+  </div>
+  <div class="mt-10 space-y-10">
+    {only.map((lang) => (
+      <div>
+        <h3 class="text-sm font-medium text-muted-foreground">{LANG_LABEL[lang]}</h3>
+        <ul class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {VOICE_SAMPLES.filter((v) => v.lang === lang).map((v) => (
+            <li data-sample-card={v.id} class="flex items-center gap-3 rounded-xl border bg-surface p-3 transition-[border-color,box-shadow] data-[playing=true]:border-transparent data-[playing=true]:shadow-brand-glow">
+              <PlayButton id={v.id} name={`${v.name}, ${LANG_LABEL[lang]} ${v.gender} voice`} />
+              <div class="min-w-0 flex-1">
+                <p class="flex items-center gap-2 text-sm font-medium">
+                  {v.name}
+                  <span class="eq flex h-3 items-end gap-[2px]" aria-hidden="true">
+                    {[0.55, 1, 0.7].map((h, i) => <span class="w-[3px] rounded-full bg-brand-gradient" style={`height:${h * 100}%;animation-delay:${i * 120}ms`} />)}
+                  </span>
+                </p>
+                <p class="truncate text-xs text-muted-foreground">{v.gender === "female" ? "Female" : "Male"} · {v.tone}</p>
+              </div>
+              <span class="font-mono text-[11px] text-subtle-foreground">{fmt(v.duration)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

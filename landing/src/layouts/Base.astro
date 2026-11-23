@@ -1,0 +1,88 @@
+---
+import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import poppins600 from "@fontsource/poppins/files/poppins-latin-600-normal.woff2?url";
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
+import { SITE } from "../data/site";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+  /** structured data objects (JSON-LD) */
+  jsonLd?: object[];
+}
+const { title, description, jsonLd = [] } = Astro.props;
+const canonical = new URL(Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`, SITE.url).href;
+const ld = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    url: SITE.url,
+    logo: `${SITE.url}/android-chrome-512x512.png`,
+    slogan: SITE.tagline,
+  },
+  ...jsonLd,
+];
+---
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <script is:inline>
+      try {
+        if (localStorage.getItem("aiwazz-theme") === "light") {
+          document.documentElement.classList.replace("dark", "light");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4f6fb");
+        }
+      } catch (e) {}
+    </script>
+
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={poppins600} as="font" type="font/woff2" crossorigin />
+
+    <!-- Favicon set: brand/AiWazz-Brand-Kit/03_Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2D36DB" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={SITE.ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AiWazz: Type it, hear it. AI voiceovers in Hindi, Hinglish & English" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={SITE.ogImage} />
+
+    {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
+  </head>
+  <body class="min-h-dvh">
+    <a href="#main" class="sr-only z-50 rounded-lg bg-foreground px-3 py-2 text-sm text-background focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import "../scripts/theme";
+    </script>
+  </body>
+</html>

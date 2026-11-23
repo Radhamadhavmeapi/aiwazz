@@ -1,0 +1,19 @@
+---
+import Icon from "./Icon.astro";
+interface Props { id: string; name: string; size?: "sm" | "lg" }
+const { id, name, size = "sm" } = Astro.props;
+---
+<button
+  type="button"
+  data-play={id}
+  data-name={name}
+  aria-pressed="false"
+  aria-label={`Play ${name}`}
+  class:list={[
+    "group/play relative grid shrink-0 place-items-center rounded-full transition-[transform,background-color] duration-150 active:scale-95",
+    size === "lg" ? "size-12 bg-foreground text-background shadow-md hover:scale-105" : "size-9 border bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground aria-pressed:border-transparent aria-pressed:bg-foreground aria-pressed:text-background",
+  ]}
+>
+  <Icon name="play" class:list={[size === "lg" ? "size-5" : "size-3.5", "ml-0.5 fill-current group-aria-pressed/play:hidden"]} />
+  <Icon name="pause" class:list={[size === "lg" ? "size-5" : "size-3.5", "hidden fill-current group-aria-pressed/play:inline-block"]} />
+</button>

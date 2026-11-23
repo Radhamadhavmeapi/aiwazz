@@ -1,0 +1,55 @@
+---
+import SeoPage, { type Block } from "../components/SeoPage.astro";
+import type { QA } from "../components/Faq.astro";
+
+const blocks: Block[] = [
+  {
+    h2: "Voiceovers that keep people watching",
+    p: [
+      "Most reels lose viewers in the first two seconds. A clear, confident voice explaining what's on screen keeps them watching, and it works with the sound off too when you add captions. AiWazz gives you that voice without a mic, a quiet room or ten retakes.",
+      "Write the script, choose a voice in Hindi, Hinglish or English, and download a voiceover sized for short video in about a minute.",
+    ],
+  },
+  {
+    h2: "Built for 9:16 short video",
+    list: [
+      "Levelled to -14 LUFS, the loudness Instagram Reels, YouTube Shorts and TikTok play at, so you never need to boost the voice in your editor.",
+      "Silence trimmed to about 100 ms, so the voice starts right on your first frame.",
+      "Speed from 0.7× to 1.3×: slow for explainers, fast for hooks and trends.",
+      "48 kHz MP3 or WAV that drops straight into CapCut, InShot, Premiere, DaVinci Resolve or Remotion.",
+    ],
+    p: [],
+  },
+  {
+    h2: "A reel voiceover workflow in three steps",
+    p: [
+      "1. Write a 20 to 60 second script: hook in the first line, one idea, a clear call to action. 2. Paste it into AiWazz, preview a couple of voices and generate. 3. Drop the file under your clips, add captions and post.",
+      "Posting every day? Use the AiWazz API to generate voiceovers straight from your scripts or video templates, so a whole week of reels can be voiced in one go.",
+    ],
+  },
+  {
+    h2: "Hindi, Hinglish and English",
+    p: [
+      "Reach your audience in the language they scroll in. Four Hindi voices, six US English and four UK English voices let you run the same reel in Hindi for India and in English for everyone else.",
+    ],
+  },
+];
+
+const faq: QA[] = [
+  { q: "What is the best length for a reel voiceover?", a: "Most performing reels are 15 to 60 seconds. At normal speed that is roughly 40 to 150 words. AiWazz shows an estimated duration as you type." },
+  { q: "Will the voiceover be loud enough on Instagram?", a: "Yes. Every file is normalised to -14 LUFS with peaks under -1 dBTP, which matches how Instagram, YouTube Shorts and TikTok play audio." },
+  { q: "Can I use AiWazz voiceovers in sponsored reels?", a: "Yes. The voices are licensed for commercial use, including sponsored content, ads and client work." },
+  { q: "Does it work with CapCut and other editors?", a: "Yes. Download MP3 or WAV at 48 kHz and import it like any other audio file." },
+];
+---
+<SeoPage
+  title="AI voiceover for reels: Hindi & English voices for Instagram | AiWazz"
+  description="Create AI voiceovers for Instagram Reels, YouTube Shorts and TikTok in Hindi, Hinglish & English. Loudness-ready at -14 LUFS, MP3 or WAV in about a minute."
+  eyebrow="AI voiceover for reels"
+  h1="AI voiceover for reels, shorts and ads"
+  lead="Type your reel script, pick a voice and get a voiceover that's loud, clean and ready for your timeline in about a minute."
+  blocks={blocks}
+  faq={faq}
+  samplesHeading="Voices made for short video"
+  cta="Voice a week of reels in one sitting."
+/>

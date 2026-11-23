@@ -2,7 +2,7 @@
 import { LANG_LABEL, VOICE_SAMPLES, fmt } from "../data/site";
 import PlayButton from "./PlayButton.astro";
 interface Props { only?: ("h" | "a" | "b")[] ; heading?: string; intro?: string }
-const { only = ["h", "a", "b"], heading = "Hear every voice", intro = "Real, unedited output from AiWazz, levelled to -14 LUFS like every file you download." } = Astro.props;
+const { only = ["h", "a", "b"], heading = "Hear every voice", intro = "Real output from AiWazz, only loudness-levelled to -14 LUFS like every file you download." } = Astro.props;
 ---
 <section id="samples" aria-labelledby="samples-title" class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
   <div class="max-w-2xl">

@@ -5,11 +5,12 @@ import Icon from "../components/Icon.astro";
 import PlayButton from "../components/PlayButton.astro";
 import Samples from "../components/Samples.astro";
 import { DEMOS, SITE, fmt } from "../data/site";
+import { fmtINR, LEGAL } from "../lib/legal";
 import Base from "../layouts/Base.astro";
 
 const features = [
   { icon: "languages", title: "Hindi & Hinglish first", text: "Natural Hindi voices that read Devanagari properly, plus US and UK English. Mix Hindi and English the way you actually talk." },
-  { icon: "gauge", title: "Reel-ready loudness", text: "Every file is levelled to -14 LUFS with peaks under -1 dBTP: loud and clean on Instagram, YouTube Shorts and TikTok." },
+  { icon: "gauge", title: "Reel-ready loudness", text: "Every file is levelled to -14 LUFS, the loudness most short-video platforms target, with peaks under -1 dBTP." },
   { icon: "scissors", title: "Clean edges, natural pauses", text: "Silence is trimmed to a tidy 100 ms, with short breaths between sentences, so it drops straight onto your timeline." },
   { icon: "file-audio", title: "MP3 or WAV, 48 kHz", text: "192 kbps MP3 for quick posts, 16-bit WAV for editing. Both at 48 kHz, the video standard." },
   { icon: "code-xml", title: "API for your pipeline", text: "Generate voiceovers from scripts and video tools with an API key. Same voices, same quality, no clicking." },
@@ -23,9 +24,9 @@ const steps = [
 ];
 
 const faq: QA[] = [
-  { q: "Which languages does AiWazz support?", a: "Hindi (4 voices), US English (6 voices) and UK English (4 voices). Hindi voices read Devanagari script. Hinglish scripts work best with Hindi words in Devanagari and English words as they are; automatic conversion of Roman Hinglish (\"Raat 11 baje...\") is rolling out next." },
+  { q: "Which languages does AiWazz support?", a: "Hindi (4 voices), US English (6 voices) and UK English (4 voices). Hindi voices read Devanagari script. Hinglish works too: write Hindi in Devanagari, or type it in Roman letters (\"Raat 11 baje...\") and turn on Transliterate Hinglish, which converts it to Devanagari and keeps English words as they are." },
   { q: "How long does a voiceover take?", a: "About as long as the audio itself: a 60-second voiceover is usually ready in around a minute. Short lines take a few seconds." },
-  { q: "Can I use the voiceovers in monetised reels and ads?", a: "Yes. The voices are licensed for commercial use, so you can use what you generate in reels, shorts, ads and client work." },
+  { q: "Can I use the voiceovers in monetised reels and ads?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use. See our Terms at aiwazz.in/terms/." },
   { q: "What audio format do I get?", a: "MP3 at 192 kbps or 16-bit WAV, both 48 kHz, loudness-normalised to -14 LUFS (you can choose other targets like -16 or -23) with silence trimmed at the start and end." },
   { q: "Why is it invite-only?", a: "Voices are rendered on our own servers, one at a time, so we keep the queue short by inviting people in batches during early access." },
   { q: "Is there an API?", a: "Yes. Create an API key in your dashboard and send your script to the API from any tool or video pipeline. You get back a link to the finished file." },
@@ -147,6 +148,32 @@ const jsonLd = [
         </li>
       ))}
     </ol>
+  </section>
+
+  <!-- Pricing teaser -->
+  <section aria-labelledby="pricing-title" class="border-y bg-surface/40">
+    <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+      <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div class="max-w-xl">
+          <p class="font-mono text-xs tracking-wider text-brand uppercase">Pricing</p>
+          <h2 id="pricing-title" class="mt-3 text-h1 font-semibold">Simple plans, billed in rupees</h2>
+          <p class="mt-3 text-muted-foreground">Start free, upgrade when your channel grows. GST invoice with every payment.</p>
+        </div>
+        <a href="/pricing/" class="inline-flex h-11 items-center gap-2 self-start rounded-xl border border-input bg-surface px-5 text-[15px] font-medium hover:bg-surface-2 md:self-auto">
+          See all plans <Icon name="arrow-right" class="size-[18px]" />
+        </a>
+      </div>
+      <ul class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {LEGAL.plans.map((p) => (
+          <li class:list={["rounded-2xl border bg-surface p-5", p.id === "creator" && "border-transparent shadow-brand-glow"]}>
+            <p class="flex items-center justify-between text-sm font-semibold">{p.name}{p.id === "creator" && <span class="rounded-full bg-brand-gradient-strong px-2 py-0.5 text-[11px] text-white">Most popular</span>}</p>
+            <p class="mt-3 font-heading text-[1.75rem] leading-none font-bold">{fmtINR(p.priceMonthly)}<span class="ml-1 font-sans text-sm font-normal text-muted-foreground">/month</span></p>
+            <p class="mt-2 text-sm text-muted-foreground">{p.characters.toLocaleString("en-IN")} characters · ≈ {Math.round(p.characters / 800)} min</p>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-4 text-xs text-subtle-foreground">Paid prices exclude {LEGAL.gstRatePercent}% GST.</p>
+    </div>
   </section>
 
   <Faq items={faq} />

@@ -1,4 +1,5 @@
 """App settings, read from environment / api/.env (see .env.example)."""
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -51,6 +52,10 @@ class Settings(BaseSettings):
     login_max_per_ip: int = 20                # per 15 minutes
     signup_max_per_ip: int = 10               # per hour
     password_min_length: int = Field(10, ge=8)
+    terms_version: str = json.load(open(API_DIR.parent / "legal" / "legal.json"))["lastUpdated"] \
+        if (API_DIR.parent / "legal" / "legal.json").exists() else "unknown"
+    contact_origins: list[str] = ["https://aiwazz.in"]     # the contact form lives on the landing site
+    contact_max_per_ip: int = 5                            # per hour
 
     @property
     def session_cookie(self) -> str:

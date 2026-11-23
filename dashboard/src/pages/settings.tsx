@@ -111,10 +111,15 @@ function DeleteAccount() {
     setBusy(true);
     setError(null);
     try {
-      await api("/api/auth/delete-account", { json: { password: pw, confirm } });
+      const r = await api<{ reference: string }>("/api/auth/delete-account", { json: { password: pw, confirm } });
+      try {
+        sessionStorage.setItem("aiwazz-deleted-ref", r.reference); // shown on the login page (survives the auth redirect)
+      } catch {
+        /* toast still shows it */
+      }
       await logout().catch(() => undefined);
-      toast.success("Your account was deleted", { description: "All voiceovers, API keys and sessions are gone." });
-      navigate("/login", { replace: true });
+      toast.success("Your account was deleted", { description: `Reference ${r.reference}. All voiceovers, API keys and sessions are gone.`, duration: 15000 });
+      navigate("/login", { replace: true, state: { deletedRef: r.reference } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't delete the account");
       setBusy(false);
@@ -155,7 +160,7 @@ function DeleteAccount() {
                 Cancel
               </Button>
               <Button type="submit" variant="destructive" disabled={busy || !pw || confirm !== "DELETE"}>
-                {busy ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete forever
+                {busy ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete permanently
               </Button>
             </DialogFooter>
           </form>
@@ -203,6 +208,24 @@ export default function SettingsPage() {
               <dd className="mt-1 font-medium">{user?.created_at ? new Date(user.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "–"}</dd>
             </div>
           </dl>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+            <p className="max-w-md text-sm text-muted-foreground">Delete your account and everything in it: voiceovers, audio files and API keys.</p>
+            <DeleteAccount />
+          </div>
+        </Card>
+
+        <Card title="Billing">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Free plan · early access</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Paid plans, invoices and cancellation will be managed here once online payments open.</p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <a href="https://aiwazz.in/pricing/" target="_blank" rel="noopener">
+                See plans
+              </a>
+            </Button>
+          </div>
         </Card>
 
         <Card title="Appearance" desc="Light is the default. Your choice is remembered on this device.">
@@ -218,10 +241,6 @@ export default function SettingsPage() {
 
         <Card title="Password">
           <PasswordForm />
-        </Card>
-
-        <Card title="Delete account" desc="Permanently delete your account and everything in it: voiceovers, audio files and API keys.">
-          <DeleteAccount />
         </Card>
 
         <Card title="Sessions" desc="Signed in on a shared or lost device? Sign it out from here.">

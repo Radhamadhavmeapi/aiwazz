@@ -111,7 +111,7 @@ export default function TokensPage() {
       </header>
 
       <div className="space-y-14">
-        <Section title="Color" desc="AiWazz Brand Kit v1.0: Ink / Cloud neutrals, Royal Indigo primary, one gradient (Sky Blue → Royal Indigo → Electric Violet) used sparingly. Toggle the theme to see light mode.">
+        <Section title="Color" desc="AiWazz Brand Kit v1.0: Ink / Cloud neutrals, Royal Indigo primary, one gradient (Sky Blue → Royal Indigo → Electric Violet) used sparingly. Light is the default theme on both sites; toggle to see dark.">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {COLORS.map((c) => (
               <Swatch key={c.v} {...c} />

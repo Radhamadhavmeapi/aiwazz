@@ -20,6 +20,8 @@ interface Props {
   cta?: string;
 }
 const { title, description, eyebrow, h1, lead, blocks, faq, langs, samplesHeading, cta } = Astro.props;
+// Mostly-Devanagari text gets lang="hi" (screen readers switch voice)
+const hi = (t: string) => ((t.match(/[\u0900-\u097F]/g) ?? []).length > (t.match(/[A-Za-z]/g) ?? []).length ? "hi" : undefined);
 const path = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const jsonLd = [
   {
@@ -61,8 +63,8 @@ const jsonLd = [
   <article class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
     {blocks.map((b) => (
       <section class="mt-12 first:mt-0">
-        <h2 class="text-h2 font-semibold">{b.h2}</h2>
-        {b.p.map((t) => <p class="mt-4 text-[16px] leading-8 text-muted-foreground">{t}</p>)}
+        <h2 class="text-h2 font-semibold" lang={hi(b.h2)}>{b.h2}</h2>
+        {b.p.map((t) => <p class="mt-4 text-[16px] leading-8 text-muted-foreground" lang={hi(t)}>{t}</p>)}
         {b.list && (
           <ul class="mt-5 space-y-3">
             {b.list.map((li) => (

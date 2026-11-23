@@ -52,6 +52,28 @@ export const LANG_LABEL = { h: "Hindi", a: "English (US)", b: "English (UK)" } a
 
 export const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
+export const FOOTER = {
+  product: [
+    { href: "/pricing/", label: "Pricing" },
+    { href: "/text-to-speech/", label: "Text to speech" },
+    { href: "/hindi-text-to-speech/", label: "Hindi text to speech" },
+    { href: "/ai-voiceover-for-reels/", label: "AI voiceover for reels" },
+  ],
+  company: [
+    { href: "/about/", label: "About" },
+    { href: "/contact/", label: "Contact" },
+    { href: "/grievance/", label: "Grievance" },
+  ],
+  legal: [
+    { href: "/terms/", label: "Terms" },
+    { href: "/privacy/", label: "Privacy" },
+    { href: "/refund-policy/", label: "Refund policy" },
+    { href: "/shipping-policy/", label: "Shipping & delivery" },
+    { href: "/acceptable-use/", label: "Acceptable use" },
+    { href: "/data-deletion/", label: "Data deletion" },
+  ],
+};
+
 export const SEO_PAGES = [
   { href: "/text-to-speech/", label: "Text to speech" },
   { href: "/hindi-text-to-speech/", label: "Hindi text to speech" },

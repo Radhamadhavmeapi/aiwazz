@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { Logo } from "@/components/brand/logo";
+import { SiteFooter } from "@/components/site-footer";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CommandPalette } from "./command-palette";
 import { NAV } from "./nav";
@@ -92,6 +93,7 @@ export function AppShell({
         <main id="main" className="flex-1">
           {children}
         </main>
+        <SiteFooter compact className="mt-8 pb-24 lg:pb-0" />
       </div>
 
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} onPickVoice={onPickVoice} />

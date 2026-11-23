@@ -198,6 +198,13 @@ audio samples, features, how it works, FAQ, "Sign in / Get invite" buttons → l
 SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`, `/hindi-text-to-speech`,
 `/ai-voiceover-for-reels`. Pricing, About, Contact and all policy pages: see `legal/IMPLEMENT.md`
 (content in `legal/pages/`, company data and plans in `legal/legal.json`, the single source of truth).
+**Built (phase 7):** `landing/src/lib/legal.ts` renders `legal/pages/*.md` at build time ({{tokens}} from legal.json,
+unknown token = build error, empty values like `llpin` removed with their fragment/line, `Implementation:` comments
+stripped) via `src/pages/[legal].astro` + `LegalLayout`; `/pricing/` has plan cards (monthly/yearly) + JSON-LD offers.
+Footer (company line) on both sites. Contact form → `POST /api/contact` (proxied same-origin on aiwazz.in; stored in
+`contact_messages`, read with `manage.py list-messages`; no email sending yet). Signup stores consent (`consent_at`,
+`terms_version`, `consent_ip`, `marketing_opt_in`); account deletion logs a reference in `deletion_log`.
+Policy aliases (301) in `deploy/nginx/aiwazz.in.conf`.
 
 ## Build phases
 -1. **Repo setup:** create the deploy key, show me the public key so I add it in GitHub

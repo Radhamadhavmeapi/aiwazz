@@ -15,5 +15,8 @@ behind white text `--brand-gradient-strong` (#1F6FD1 → #2D36DB → #7420DD, �
 All text ≥ 4.5:1 (WCAG AA) in both themes; where a brand colour fails, a tint of the same hue is used
 (see comments in tokens.css and the live table at https://login.aiwazz.in/preview/tokens/).
 
+Theme: **light by default** on every page of both sites (not OS-based); dark is optional via the toggle and remembered
+(localStorage key `aiwazz-theme`), applied before first paint by an inline script.
+
 Fonts (self-hosted via @fontsource, no Google requests): Poppins (headings), Inter (UI/body),
 Montserrat (tagline only), Noto Sans Devanagari (Hindi), Geist Mono (codes, keys, timecodes).

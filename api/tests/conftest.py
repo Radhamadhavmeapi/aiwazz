@@ -105,7 +105,7 @@ def anon(app_env, monkeypatch):
 
 
 def signup(c, email="me@example.com", password="correct horse battery", code="ABCD-EFGH"):
-    r = c.post("/api/auth/signup", json={"email": email, "password": password, "invite_code": code})
+    r = c.post("/api/auth/signup", json={"email": email, "password": password, "invite_code": code, "accept_terms": True})
     if r.status_code == 201:  # CSRF cookie rotates with the new session
         c.headers["X-CSRF-Token"] = c.cookies.get("__Host-aiwazz_csrf")
     return r

@@ -9,7 +9,7 @@ type Ctx = {
   state: State;
   user: User | null;
   login: (email: string, password: string) => Promise<User>;
-  signup: (email: string, password: string, inviteCode: string) => Promise<User>;
+  signup: (email: string, password: string, inviteCode: string, marketing?: boolean) => Promise<User>;
   logout: () => Promise<void>;
 };
 
@@ -34,9 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: "authed", user });
     return user;
   }, []);
-  const signup = useCallback(async (email: string, password: string, invite_code: string) => {
+  const signup = useCallback(async (email: string, password: string, invite_code: string, marketing = false) => {
     if (PREVIEW) return mockDelay(PREVIEW_USER);
-    const user = await api<User>("/api/auth/signup", { json: { email, password, invite_code } });
+    const user = await api<User>("/api/auth/signup", { json: { email, password, invite_code, accept_terms: true, marketing_opt_in: marketing } });
     setState({ status: "authed", user });
     return user;
   }, []);

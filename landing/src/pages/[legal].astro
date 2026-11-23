@@ -1,0 +1,16 @@
+---
+import ContactForm from "../components/ContactForm.astro";
+import LegalLayout from "../layouts/LegalLayout.astro";
+import { loadLegalPages, type LegalPage } from "../lib/legal";
+
+export function getStaticPaths() {
+  // pricing has its own page (plan cards); every other legal/pages/*.md is rendered here
+  return loadLegalPages()
+    .filter((p) => p.slug !== "pricing")
+    .map((page) => ({ params: { legal: page.slug }, props: { page } }));
+}
+const { page } = Astro.props as { page: LegalPage };
+---
+<LegalLayout page={page}>
+  {page.slug === "contact" && <ContactForm />}
+</LegalLayout>

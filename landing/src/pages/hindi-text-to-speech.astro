@@ -6,21 +6,28 @@ const blocks: Block[] = [
   {
     h2: "Hindi text to speech that actually sounds Hindi",
     p: [
-      "Many text-to-speech tools treat Hindi as an extra language and it shows: wrong stress, English-style vowels, awkward pauses. AiWazz was built for Hindi first. Its four Hindi voices (two female, two male) read Devanagari with natural rhythm, so your voiceover sounds like someone from India recorded it.",
+      "AiWazz was built for Hindi first. Its four Hindi voices (two female, two male) read Devanagari with natural rhythm, so your voiceover sounds like someone from India recorded it.",
       "Write your script in Devanagari (हिंदी), paste it in, choose Alpha, Beta, Omega or Psi, and download the audio in about a minute.",
+    ],
+  },
+  {
+    h2: "हिंदी टेक्स्ट टू स्पीच",
+    p: [
+      "अपनी स्क्रिप्ट हिंदी में लिखें या पेस्ट करें, आवाज़ चुनें और लगभग एक मिनट में अपना वॉइसओवर डाउनलोड करें। AiWazz की चार हिंदी आवाज़ें देवनागरी को स्वाभाविक लय के साथ पढ़ती हैं, ताकि आपकी रील, विज्ञापन या वीडियो सुनने में अपनापन लगे।",
+      "रोमन अक्षरों में लिखी हिंग्लिश भी चलेगी: “Transliterate Hinglish” चालू करें, और “Raat 11 baje” जैसी पंक्तियाँ अपने-आप “रात 11 बजे” बन जाती हैं। अंग्रेज़ी शब्द वैसे ही रहते हैं।",
     ],
   },
   {
     h2: "Made for Hinglish, the way people really speak",
     p: [
       "Most reels and ads in India are in Hinglish: Hindi sentences with English words like order, customer or offer. Keep the Hindi parts in Devanagari and the English words in English, and the Hindi voices handle the mix naturally.",
-      "Typing Hindi in Roman letters (\"Raat 11 baje customer ne call kiya\")? Automatic Roman-to-Devanagari conversion is rolling out next, so you can paste Hinglish exactly as you type it in WhatsApp.",
+      "Typing Hindi in Roman letters (\"Raat 11 baje customer ne call kiya\")? Turn on Transliterate Hinglish and paste it exactly as you type it in WhatsApp: it becomes \"रात 11 बजे customer ने call किया\", and you can see the converted text before you generate.",
     ],
   },
   {
     h2: "Ready for Instagram, YouTube and WhatsApp",
     list: [
-      "Loudness set to -14 LUFS, the level Instagram Reels, YouTube Shorts and TikTok play at, so your voice never sounds quiet next to other videos.",
+      "Loudness set to -14 LUFS, the loudness most short-video platforms target, so your voice never sounds quiet next to other videos.",
       "Peaks kept under -1 dBTP so the audio doesn't distort when platforms compress it.",
       "Clean starts and ends: silence trimmed to about 100 ms, even pauses between sentences.",
       "MP3 for quick sharing, WAV for editing in CapCut, Premiere, DaVinci Resolve or Remotion.",
@@ -36,10 +43,10 @@ const blocks: Block[] = [
 ];
 
 const faq: QA[] = [
-  { q: "Can AiWazz read Hindi written in English letters?", a: "Hindi voices read Devanagari today. Automatic conversion of Roman Hindi (Hinglish) to Devanagari is rolling out next; until then, typing Hindi in Devanagari gives the best result." },
+  { q: "Can AiWazz read Hindi written in English letters?", a: "Yes. Turn on Transliterate Hinglish and Roman Hindi is converted to Devanagari before the voice reads it; English words stay in English. The dashboard shows the converted text so you can check it first." },
   { q: "How many Hindi voices are there?", a: "Four: Alpha and Beta (female), Omega and Psi (male). You can preview all of them on this page." },
   { q: "Can I mix Hindi and English in one script?", a: "Yes. Keep the Hindi words in Devanagari and English words in English, and the Hindi voices read the mix naturally." },
-  { q: "Is the Hindi voiceover allowed in paid ads?", a: "Yes. The voices are licensed for commercial use, including ads and client work." },
+  { q: "Is the Hindi voiceover allowed in paid ads?", a: "Yes, on a paid plan. Paid plans include commercial rights (ads, client work, monetised videos); the Free plan is for personal use. See our Terms at aiwazz.in/terms/." },
 ];
 ---
 <SeoPage

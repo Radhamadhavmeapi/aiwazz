@@ -88,6 +88,8 @@ class SignupIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=256)
     invite_code: str = Field(min_length=4, max_length=32)
+    accept_terms: bool = False          # Terms, Privacy Policy and Acceptable Use Policy (required)
+    marketing_opt_in: bool = False      # product updates (optional)
 
 
 @router.post("/auth/signup", status_code=201, dependencies=[Depends(csrf_protect)])
@@ -97,6 +99,8 @@ async def signup(body: SignupIn, request: Request, response: Response, db: Async
     if not lim.allowed:
         raise _too_many(lim.retry_after)
 
+    if not body.accept_terms:
+        raise HTTPException(422, "Please accept the Terms, Privacy Policy and Acceptable Use Policy to continue")
     email = body.email.lower().strip()
     if problem := password_problem(body.password, email, s.password_min_length):
         raise HTTPException(422, problem)
@@ -115,7 +119,9 @@ async def signup(body: SignupIn, request: Request, response: Response, db: Async
     if claimed.rowcount != 1:
         await db.rollback()
         raise HTTPException(422, "This invite code isn't valid or has already been used")
-    user = User(email=email, password_hash=hash_password(body.password), role=invite.role)
+    user = User(email=email, password_hash=hash_password(body.password), role=invite.role,
+                consent_at=now, terms_version=s.terms_version, consent_ip=client_ip(request)[:45],
+                marketing_opt_in=body.marketing_opt_in)
     db.add(user)
     await db.flush()
     await _start_session(db, request, response, user)
@@ -267,7 +273,9 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Principal =
     """Permanently deletes the account, its sessions, API keys, history and audio files."""
     from sqlalchemy import delete, func
 
-    from models import Generation
+    import secrets as _secrets
+
+    from models import DeletionLog, Generation
 
     s = get_settings()
     lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"del:user:{p.user.id}", 5, WINDOW_LOGIN)
@@ -294,9 +302,42 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Principal =
     await db.execute(delete(ApiKey).where(ApiKey.user_id == user.id))
     await db.execute(delete(UserSession).where(UserSession.user_id == user.id))
     await db.execute(update(Invite).where(Invite.created_by == user.id).values(created_by=None))
+    reference = f"DEL-{utcnow():%Y%m%d}-{_secrets.token_hex(3).upper()}"
+    db.add(DeletionLog(reference=reference, email_hash=sha256(user.email), generations_deleted=len(gen_ids)))
     await db.delete(user)
     await db.commit()
 
-    resp = JSONResponse({"ok": True, "deleted_generations": len(gen_ids)})
+    resp = JSONResponse({"ok": True, "deleted_generations": len(gen_ids), "reference": reference})
     resp.delete_cookie(s.session_cookie, path="/", secure=s.cookie_secure, httponly=True, samesite="lax")
     return resp
+
+
+
+# ── Contact form (aiwazz.in/contact/, proxied same-origin by nginx) ────────────
+class ContactIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+    subject: str = Field(min_length=1, max_length=150)
+    message: str = Field(min_length=10, max_length=4000)
+    consent: bool = False
+    website: str = ""   # honeypot: real people never fill this hidden field
+
+
+@router.post("/contact", status_code=201)
+async def contact(body: ContactIn, request: Request, db: AsyncSession = Depends(get_db)):
+    from models import ContactMessage
+
+    s = get_settings()
+    if (request.headers.get("origin") or "") not in s.contact_origins:
+        raise HTTPException(403, "Request blocked (origin)")
+    if body.website:                       # bot: pretend success, store nothing
+        return {"ok": True}
+    if not body.consent:
+        raise HTTPException(422, "Please allow us to use your details to reply")
+    lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"contact:ip:{client_ip(request)}", s.contact_max_per_ip, 3600)
+    if not lim.allowed:
+        raise _too_many(lim.retry_after)
+    db.add(ContactMessage(name=body.name.strip(), email=body.email.lower(), subject=body.subject.strip(),
+                          message=body.message.strip(), ip=client_ip(request)[:45]))
+    await db.commit()
+    return {"ok": True}

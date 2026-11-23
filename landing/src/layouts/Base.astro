@@ -4,6 +4,7 @@ import poppins600 from "@fontsource/poppins/files/poppins-latin-600-normal.woff2
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import { SITE } from "../data/site";
+import { LEGAL } from "../lib/legal";
 import "../styles/global.css";
 
 interface Props {
@@ -19,15 +20,36 @@ const ld = [
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE.name,
+    legalName: LEGAL.legalName,
     url: SITE.url,
     logo: `${SITE.url}/android-chrome-512x512.png`,
     slogan: SITE.tagline,
+    email: LEGAL.supportEmail,
+    telephone: LEGAL.phone.replace(/\s+/g, ""),
+    taxID: LEGAL.gstin,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "EXOTICA, Casa Rio Main Road, Lotus Pond, Palava City Phase 1",
+      addressLocality: "Kalyan",
+      addressRegion: "Maharashtra",
+      postalCode: "421204",
+      addressCountry: "IN",
+    },
+    sameAs: [LEGAL.websites.brand, LEGAL.websites.company],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: LEGAL.supportEmail,
+      telephone: LEGAL.phone.replace(/\s+/g, ""),
+      availableLanguage: ["en", "hi"],
+      areaServed: "IN",
+    },
   },
   ...jsonLd,
 ];
 ---
 <!doctype html>
-<html lang="en" class="light">
+<html lang="en-IN" class="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

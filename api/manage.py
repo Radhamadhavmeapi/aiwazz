@@ -7,6 +7,8 @@
   create-invite [--uses N] [--role user|admin] [--days D] [--label TEXT]   prints the code once
   list-invites
   revoke-invite --id N
+  list-messages [--all]                        contact form messages (unhandled only unless --all)
+  mark-handled --id N
 """
 import argparse
 import asyncio
@@ -49,6 +51,8 @@ async def main(argv: list[str]) -> None:
     p.add_argument("--days", type=int, default=14); p.add_argument("--label", default="")
     sub.add_parser("list-invites")
     p = sub.add_parser("revoke-invite"); p.add_argument("--id", type=int, required=True)
+    p = sub.add_parser("list-messages"); p.add_argument("--all", action="store_true")
+    p = sub.add_parser("mark-handled"); p.add_argument("--id", type=int, required=True)
     a = ap.parse_args(argv)
 
     engine = make_engine(get_settings().database_url)
@@ -99,6 +103,24 @@ async def main(argv: list[str]) -> None:
             inv.revoked = True
             await db.commit()
             print(f"Revoked invite {a.id}")
+
+        elif a.cmd == "list-messages":
+            from models import ContactMessage
+            q = select(ContactMessage).order_by(ContactMessage.id)
+            if not a.all:
+                q = q.where(ContactMessage.handled.is_(False))
+            for m in (await db.execute(q)).scalars():
+                print(f"#{m.id} {m.created_at:%Y-%m-%d %H:%M} UTC  {m.name} <{m.email}>  [{m.subject}]{'  (handled)' if m.handled else ''}")
+                print("   " + m.message.replace("\n", "\n   "))
+
+        elif a.cmd == "mark-handled":
+            from models import ContactMessage
+            m = await db.get(ContactMessage, a.id)
+            if not m:
+                sys.exit("No such message")
+            m.handled = True
+            await db.commit()
+            print(f"Marked message {a.id} handled")
     await engine.dispose()
 
 

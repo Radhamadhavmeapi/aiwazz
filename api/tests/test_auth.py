@@ -177,3 +177,44 @@ def test_last_admin_cannot_delete_self(anon, make_invite):
     assert signup(anon, code="ADMN-ONLY").json()["role"] == "admin"
     r = anon.post("/api/auth/delete-account", json={"password": "correct horse battery", "confirm": "DELETE"})
     assert r.status_code == 422 and "only admin" in r.json()["detail"]
+
+
+
+def test_signup_requires_consent_and_stores_it(anon, make_invite):
+    make_invite()
+    r = anon.post("/api/auth/signup", json={"email": "c@example.com", "password": "correct horse battery", "invite_code": "ABCD-EFGH"})
+    assert r.status_code == 422 and "Terms" in r.json()["detail"]
+    r = anon.post("/api/auth/signup", json={"email": "c@example.com", "password": "correct horse battery",
+                                            "invite_code": "ABCD-EFGH", "accept_terms": True, "marketing_opt_in": True})
+    assert r.status_code == 201
+    import asyncio
+    from sqlalchemy import select
+    from db import make_engine, make_sessionmaker
+    from models import User
+    from settings import get_settings
+
+    async def check():
+        eng = make_engine(get_settings().database_url)
+        async with make_sessionmaker(eng)() as db:
+            u = (await db.execute(select(User).where(User.email == "c@example.com"))).scalar_one()
+        await eng.dispose()
+        return u
+    u = asyncio.run(check())
+    assert u.consent_at and u.terms_version and u.consent_ip and u.marketing_opt_in is True
+
+
+def test_delete_returns_reference(client):
+    r = client.post("/api/auth/delete-account", json={"password": "correct horse battery", "confirm": "DELETE"})
+    assert r.status_code == 200 and r.json()["reference"].startswith("DEL-")
+
+
+def test_contact_form(anon):
+    ok = {"name": "Asha", "email": "asha@example.com", "subject": "Hi", "message": "Do you have a Marathi voice?", "consent": True}
+    with identity(anon) as c:   # no CSRF cookie needed; Origin must be the landing site
+        assert c.post("/api/contact", json=ok).status_code == 403
+        h = {"Origin": "https://aiwazz.in"}
+        assert c.post("/api/contact", json=ok | {"consent": False}, headers=h).status_code == 422
+        assert c.post("/api/contact", json=ok | {"message": "short"}, headers=h).status_code == 422
+        assert c.post("/api/contact", json=ok | {"website": "http://spam"}, headers=h).status_code == 201  # honeypot: silently dropped
+        codes = [c.post("/api/contact", json=ok, headers=h).status_code for _ in range(6)]
+        assert codes[:5] == [201] * 5 and codes[5] == 429

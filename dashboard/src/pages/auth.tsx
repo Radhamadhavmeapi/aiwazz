@@ -1,6 +1,7 @@
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Pause, Play, Ticket } from "lucide-react";
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
+import { SiteFooter } from "@/components/site-footer";
 import { toast } from "sonner";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { LiveWaveform } from "@/components/brand/live-waveform";
@@ -130,10 +131,25 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [invite, setInvite] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [marketing, setMarketing] = useState(false);
+  const location = useLocation();
+  const [deletedRef] = useState(() => {
+    let ref = (location.state as { deletedRef?: string } | null)?.deletedRef ?? null;
+    try {
+      ref = ref ?? sessionStorage.getItem("aiwazz-deleted-ref");
+      sessionStorage.removeItem("aiwazz-deleted-ref");
+    } catch {
+      /* ignore */
+    }
+    return ref;
+  });
+  const plan = params.get("plan");
+  const planName = plan && ["starter", "creator", "pro"].includes(plan) ? plan[0].toUpperCase() + plan.slice(1) : null;
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [server, setServer] = useState<{ email?: string; pw?: string; invite?: string; form?: string }>({});
+  const [server, setServer] = useState<{ email?: string; pw?: string; invite?: string; consent?: string; form?: string }>({});
   const signup = mode === "signup";
   const score = useMemo(() => passwordScore(pw), [pw]);
 
@@ -147,6 +163,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
           ? "Too easy to guess. Add length or mix in numbers and symbols."
           : undefined,
     invite: signup ? (!invite ? "An invite code is required for now" : !INVITE_RE.test(invite) ? "Format: XXXX-XXXX" : undefined) : undefined,
+    consent: signup && !consent ? "Please accept the Terms, Privacy Policy and Acceptable Use Policy" : undefined,
   };
   // Client-side checks first; server messages (invalid invite, email taken, ...) override until edited.
   const show = (k: keyof typeof errors) => server[k] ?? (touched[k] ? errors[k] : undefined);
@@ -155,16 +172,16 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setTouched({ email: true, pw: true, invite: true });
+    setTouched({ email: true, pw: true, invite: true, consent: true });
     if (Object.values(errors).some(Boolean)) {
-      const first = errors.email ? ids.email : errors.pw ? ids.pw : ids.invite;
+      const first = errors.email ? ids.email : errors.pw ? ids.pw : errors.invite ? ids.invite : "consent";
       document.getElementById(first)?.focus();
       return;
     }
     setSubmitting(true);
     setServer({});
     try {
-      const user = signup ? await auth.signup(email, pw, invite) : await auth.login(email, pw);
+      const user = signup ? await auth.signup(email, pw, invite, marketing) : await auth.login(email, pw);
       toast.success(signup ? "Account created" : "Welcome back", {
         description: PREVIEW ? "Preview only: no account was created." : user.email,
       });
@@ -175,6 +192,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
       if (e.status === 409) setServer({ email: m });
       else if (signup && e.status === 422 && /invite/i.test(m)) setServer({ invite: m });
       else if (signup && e.status === 422 && /password|characters|guess/i.test(m)) setServer({ pw: m });
+      else if (signup && e.status === 422 && /Terms/i.test(m)) setServer({ consent: m });
       else if (e.status === 422 && /email/i.test(m)) setServer({ email: "That doesn't look like an email address" });
       else setServer({ form: m });
       setSubmitting(false);
@@ -199,10 +217,21 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 
         <main className="flex flex-1 items-start justify-center px-5 pt-8 pb-12 sm:px-8 lg:items-center lg:py-10">
           <div className="w-full max-w-[380px]">
+            {deletedRef && !signup && (
+              <div role="status" className="mb-6 rounded-xl border bg-surface px-4 py-3 text-sm">
+                Your account was deleted. Reference: <span className="font-mono font-medium">{deletedRef}</span>
+              </div>
+            )}
             <h1 className="text-h2 font-semibold">{signup ? "Create your account" : "Welcome back"}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               {signup ? "AiWazz is invite-only while we're in early access." : "Sign in to generate voiceovers."}
             </p>
+            {signup && planName && (
+              <p className="mt-3 rounded-xl border bg-surface px-3.5 py-2.5 text-xs leading-5 text-muted-foreground">
+                You picked the <strong className="text-foreground">{planName}</strong> plan. Online payments aren't open yet, so your account starts on the
+                Free plan; you can upgrade from Settings once billing is live.
+              </p>
+            )}
 
             <form onSubmit={submit} noValidate className="mt-8 space-y-5">
               <FieldRow label="Email" id={ids.email} error={show("email")}>
@@ -280,6 +309,45 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                 </FieldRow>
               )}
 
+              {signup && (
+                <div className="space-y-3">
+                  <label className="flex items-start gap-2.5 text-sm leading-6 text-muted-foreground">
+                    <input
+                      id="consent"
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => (setConsent(e.target.checked), setTouched((t) => ({ ...t, consent: true })))}
+                      aria-invalid={!!show("consent")}
+                      aria-describedby={show("consent") ? "consent-err" : undefined}
+                      className="mt-1 size-4 shrink-0 accent-[var(--primary)]"
+                    />
+                    <span>
+                      I agree to the{" "}
+                      <a href="https://aiwazz.in/terms/" target="_blank" rel="noopener" className="font-medium text-foreground underline underline-offset-2">
+                        Terms and Conditions
+                      </a>
+                      ,{" "}
+                      <a href="https://aiwazz.in/privacy/" target="_blank" rel="noopener" className="font-medium text-foreground underline underline-offset-2">
+                        Privacy Policy
+                      </a>{" "}
+                      and{" "}
+                      <a href="https://aiwazz.in/acceptable-use/" target="_blank" rel="noopener" className="font-medium text-foreground underline underline-offset-2">
+                        Acceptable Use Policy
+                      </a>
+                      .
+                    </span>
+                  </label>
+                  {show("consent") && (
+                    <p id="consent-err" role="alert" className="-mt-1 pl-6.5 text-xs text-danger">
+                      {show("consent")}
+                    </p>
+                  )}
+                  <label className="flex items-start gap-2.5 text-sm leading-6 text-muted-foreground">
+                    <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} className="mt-1 size-4 shrink-0 accent-[var(--primary)]" />
+                    <span>Send me product updates (optional)</span>
+                  </label>
+                </div>
+              )}
               {server.form && (
                 <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -301,6 +369,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             </p>
           </div>
         </main>
+        <SiteFooter compact />
       </div>
       <BrandPanel />
     </div>

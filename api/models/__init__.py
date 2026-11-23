@@ -18,6 +18,11 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Consent at signup (Terms, Privacy, Acceptable Use) + optional marketing
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    consent_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
 
     @property
     def is_admin(self) -> bool:
@@ -89,3 +94,26 @@ class Generation(Base):
     error: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class DeletionLog(Base):
+    """Proof that an account was deleted (reference ID shown to the user). No email in clear text."""
+    __tablename__ = "deletion_log"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reference: Mapped[str] = mapped_column(String(32), unique=True)
+    email_hash: Mapped[str] = mapped_column(String(64), index=True)   # SHA-256 of the lowercase email
+    generations_deleted: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ContactMessage(Base):
+    """Contact form on aiwazz.in/contact/ (read with manage.py list-messages)."""
+    __tablename__ = "contact_messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str] = mapped_column(String(254))
+    subject: Mapped[str] = mapped_column(String(150))
+    message: Mapped[str] = mapped_column(String(4000))
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    handled: Mapped[bool] = mapped_column(Boolean, default=False)

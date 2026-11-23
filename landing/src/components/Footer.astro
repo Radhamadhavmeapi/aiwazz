@@ -1,9 +1,16 @@
 ---
-import { SEO_PAGES, SITE } from "../data/site";
+import { LEGAL } from "../lib/legal";
+import { FOOTER } from "../data/site";
 import Logo from "./Logo.astro";
+const cols = [
+  { title: "Product", links: FOOTER.product },
+  { title: "Company", links: FOOTER.company },
+  { title: "Legal", links: FOOTER.legal },
+];
+const tel = LEGAL.phone.replace(/\s+/g, "");
 ---
 <footer class="border-t">
-  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
     <div>
       <Logo variant="full" width={180} />
       <p class="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
@@ -11,23 +18,20 @@ import Logo from "./Logo.astro";
       </p>
       <p class="mt-2 text-sm text-subtle-foreground">Har shabd ko awaaz.</p>
     </div>
-    <nav aria-label="Use cases">
-      <p class="text-sm font-semibold">Use cases</p>
-      <ul class="mt-3 space-y-2 text-sm">
-        {SEO_PAGES.map((p) => <li><a href={p.href} class="text-muted-foreground transition-colors hover:text-foreground">{p.label}</a></li>)}
-      </ul>
-    </nav>
-    <nav aria-label="Product">
-      <p class="text-sm font-semibold">Product</p>
-      <ul class="mt-3 space-y-2 text-sm">
-        <li><a href="/#samples" class="text-muted-foreground transition-colors hover:text-foreground">Voice samples</a></li>
-        <li><a href="/#faq" class="text-muted-foreground transition-colors hover:text-foreground">FAQ</a></li>
-        <li><a href={SITE.signIn} class="text-muted-foreground transition-colors hover:text-foreground">Sign in</a></li>
-        <li><a href={SITE.getInvite} class="text-muted-foreground transition-colors hover:text-foreground">Get an invite</a></li>
-      </ul>
-    </nav>
+    {cols.map((c) => (
+      <nav aria-label={c.title}>
+        <p class="text-sm font-semibold">{c.title}</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          {c.links.map((l) => <li><a href={l.href} class="text-muted-foreground transition-colors hover:text-foreground">{l.label}</a></li>)}
+        </ul>
+      </nav>
+    ))}
   </div>
   <div class="border-t">
-    <p class="mx-auto max-w-6xl px-4 py-6 text-xs text-subtle-foreground sm:px-6">© 2026 AiWazz. <span class="tagline">Type it, hear it.</span></p>
+    <p class="mx-auto max-w-6xl px-4 py-6 text-xs leading-6 text-subtle-foreground sm:px-6">
+      © 2026 {LEGAL.legalName} · AiWazz is a brand of {LEGAL.parentBrand} · GSTIN {LEGAL.gstin} · {LEGAL.address} ·
+      <a href={`mailto:${LEGAL.supportEmail}`} class="underline-offset-2 hover:text-foreground hover:underline">{LEGAL.supportEmail}</a> ·
+      <a href={`tel:${tel}`} class="underline-offset-2 hover:text-foreground hover:underline">{LEGAL.phone}</a>
+    </p>
   </div>
 </footer>

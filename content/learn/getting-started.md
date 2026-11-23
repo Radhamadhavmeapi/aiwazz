@@ -13,15 +13,15 @@ Make your first voiceover in about 3 minutes.
 
 ## 1. Create your account
 1. Go to [login.aiwazz.in/signup](https://login.aiwazz.in/signup).
-2. Enter your name, email and a strong password (at least 10 characters).
-3. If you have an invite code, enter it. During early access, signups are reviewed.
-4. Accept the Terms and Privacy Policy and click **Create account**.
+2. Enter your email and a strong password (at least 10 characters).
+3. Enter your invite code. During early access, AiWazz is invite-only.
+4. Tick the box to accept the Terms and Conditions, Privacy Policy and Acceptable Use Policy, then click **Create account**.
 
 ## 2. Open the Generate screen
 After signing in you land on **Generate**. It has three parts:
 - **Script editor** (left): where you type or paste text. The counter shows characters used.
 - **Voice panel** (right): voices, language, speed and options.
-- **Result** (bottom): appears after generation, with a player and download buttons.
+- **Result** (below the editor): appears after generation, with a player and download buttons.
 
 ## 3. Paste your script
 Start small, 2 or 3 sentences, to hear how a voice sounds. Example:
@@ -36,7 +36,7 @@ or
 Click the ▶ button on any voice card to hear a preview, then click the card to select it. Hindi scripts need a **Hindi** voice; English scripts need a **US** or **UK English** voice.
 
 ## 5. Generate
-Click **Generate**. You'll see your place in the queue and a progress bar. A 60-second voiceover usually takes about a minute.
+Click **Generate voiceover** (on a phone: **Generate**, at the bottom of the screen). You'll see your place in the queue and a progress bar. A 60-second voiceover usually takes about a minute.
 
 ## 6. Listen and download
 Play the result. If you like it, click **MP3** (smaller, good for most editors) or **WAV** (best quality for professional editing). Files stay in [History](https://login.aiwazz.in/history) for 7 days, so download what you need.

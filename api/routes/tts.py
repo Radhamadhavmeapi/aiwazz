@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.deps import Principal, csrf_protect, current_principal
 from db import get_db, utcnow
 from models import Generation
+from usage import get_usage
 from settings import get_settings
 from tts.hinglish import latin_share, to_devanagari
 from tts.jobs import ID_RE, Job, JobManager, QueueFull, TooManyPending, TTSRequest
@@ -117,6 +118,11 @@ async def create_tts(
     except TooManyPending:
         raise HTTPException(429, "You already have 3 voiceovers waiting. Let one finish first.")
 
+    usage = await get_usage(db, p.user)
+    if usage.remaining is not None and len(body.text) > usage.remaining:
+        raise HTTPException(402, f"Not enough characters left this month: {usage.remaining:,} left, this script needs "
+                                 f"{len(body.text):,}. Shorten the script, or upgrade your plan.")
+
     gen = Generation(
         id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
         engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
@@ -196,6 +202,25 @@ async def history(request: Request, limit: int = Query(50, ge=1, le=50), p: Prin
             "urls": audio_urls(g.id) if available else None,
         })
     return {"items": items}
+
+
+@router.get("/usage")
+async def usage(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_db)):
+    """Plan, monthly character allowance and what's used (successful jobs only) / reserved (queued)."""
+    return (await get_usage(db, p.user)).to_dict()
+
+
+@router.delete("/history/{gen_id}", dependencies=[Depends(csrf_protect)])
+async def delete_history_item(gen_id: str, request: Request, p: Principal = Depends(current_principal),
+                              db: AsyncSession = Depends(get_db)):
+    gen = await _owned_generation(db, gen_id, p)
+    if gen.status in ("queued", "running"):
+        raise HTTPException(409, "This voiceover is still being generated")
+    for ext in ("mp3", "wav", "json"):
+        (manager(request).s.audio_dir / f"{gen.id}.{ext}").unlink(missing_ok=True)
+    await db.delete(gen)
+    await db.commit()
+    return {"ok": True}
 
 
 # ── Job → DB hooks (wired in main.py) ─────────────────────────────────────────

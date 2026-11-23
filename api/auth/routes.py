@@ -34,7 +34,9 @@ def _redis(request: Request):
 
 
 def me_payload(u: User, via: str = "session") -> dict:
-    return {"id": u.id, "email": u.email, "role": u.role, "created_at": u.created_at.isoformat() + "Z", "via": via}
+    from usage import has_api_access
+    return {"id": u.id, "email": u.email, "role": u.role, "plan": u.plan or "free", "api_access": has_api_access(u),
+            "created_at": u.created_at.isoformat() + "Z", "via": via}
 
 
 def _set_cookie(resp: Response, name: str, value: str, max_age: int, http_only: bool) -> None:
@@ -201,6 +203,9 @@ async def list_keys(p: Principal = Depends(_session_only), db: AsyncSession = De
 
 @router.post("/keys", status_code=201, dependencies=[Depends(csrf_protect)])
 async def create_key(body: KeyIn, p: Principal = Depends(_session_only), db: AsyncSession = Depends(get_db)):
+    from usage import has_api_access
+    if not has_api_access(p.user):
+        raise HTTPException(403, "API access is included in the Creator and Pro plans")
     active = (await db.execute(select(ApiKey.id).where(ApiKey.user_id == p.user.id, ApiKey.revoked_at.is_(None)))).all()
     if len(active) >= 10:
         raise HTTPException(422, "You can have up to 10 active API keys. Revoke one first.")

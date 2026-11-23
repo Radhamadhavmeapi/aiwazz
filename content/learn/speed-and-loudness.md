@@ -20,7 +20,7 @@ Every file is levelled to a consistent loudness so it doesn't sound quiet next t
 - **Default: -14 LUFS**, the loudness most short-video platforms and YouTube target.
 - **-16 LUFS** is common for podcasts and long YouTube videos.
 - Peaks are kept below **-1 dBTP** (true peak), so the audio won't distort after upload.
-- You can switch loudness levelling off in Advanced options if you want to master the audio yourself.
+- Other targets: **-16**, **-18** or **-23 LUFS**, under **Output & loudness** in the voice panel. You can also switch **Loudness normalization** off there if you want to master the audio yourself.
 
 **Tip:** if you add background music in your editor, keep the music about 15–20 dB quieter than the voice, or use your editor's "ducking" feature.
 

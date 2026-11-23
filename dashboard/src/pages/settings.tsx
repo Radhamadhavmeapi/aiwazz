@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type Theme } from "@/lib/theme";
+import { fmtChars, useUsage } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 import { passwordScore } from "@/lib/password";
 
@@ -175,6 +176,8 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const usage = useUsage();
+  const pct = usage && usage.allowance ? Math.min(100, Math.round(((usage.used + usage.reserved) / usage.allowance) * 100)) : 0;
 
   const signOutOthers = async () => {
     setBusy(true);
@@ -216,9 +219,23 @@ export default function SettingsPage() {
 
         <Card title="Billing">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">Free plan · early access</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Paid plans, invoices and cancellation will be managed here once online payments open.</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                {usage ? `${usage.plan_name} plan` : "Plan"}
+                {usage?.unlimited && <span className="text-muted-foreground"> · unlimited (admin)</span>}
+              </p>
+              {usage && !usage.unlimited && usage.allowance !== null && (
+                <div className="mt-2 max-w-sm">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Characters used this month">
+                    <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="mt-1.5 font-mono text-xs text-muted-foreground tabular">
+                    {fmtChars(usage.used)} / {fmtChars(usage.allowance)} characters used · resets{" "}
+                    {new Date(usage.period_end).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </p>
+                </div>
+              )}
+              <p className="mt-2 text-sm text-muted-foreground">Online upgrades, invoices and cancellation will be managed here once payments open.</p>
             </div>
             <Button asChild variant="outline" size="sm">
               <a href="https://aiwazz.in/pricing/" target="_blank" rel="noopener">

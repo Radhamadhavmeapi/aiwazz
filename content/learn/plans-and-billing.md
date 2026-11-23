@@ -12,16 +12,16 @@ category: Account and billing
 ## How characters work
 Every letter, number, space and punctuation mark in your script counts as one character, in any language. Roughly **800 characters ≈ 1 minute** of speech. Characters are only used when a generation succeeds.
 
-Your plan's characters reset at the start of each billing period. Unused characters don't roll over. See current plans on the [Pricing page](/pricing/).
+Your plan's characters reset at the start of each billing period (during early access: on the 1st of every month, India time). Your balance is shown in the dashboard's top bar and in **Settings → Billing**. Unused characters don't roll over. See current plans on the [Pricing page](/pricing/).
 
 ## Upgrade
-Dashboard → **Settings → Billing → Change plan**. Pay securely with UPI, cards, net banking or wallets through Razorpay. Your new plan starts immediately.
+**Coming soon:** online upgrades from **Settings → Billing**, paid securely with UPI, cards, net banking or wallets through Razorpay. During early access, [contact us](/contact/) to change your plan.
 
 ## GST invoice
-A GST invoice is emailed after every payment and is available in **Settings → Billing → Invoices**. To claim input tax credit, add your business name and GSTIN in **Settings → Billing details** before paying.
+A GST invoice is issued for every payment. **Coming soon:** invoices in **Settings → Billing → Invoices**, and your business name and GSTIN in **Settings → Billing details** for input tax credit.
 
 ## Cancel
-**Settings → Billing → Cancel plan.** Your plan stays active until the end of the period you paid for, then moves to Free. No cancellation fee.
+**Coming soon:** **Settings → Billing → Cancel plan.** Your plan stays active until the end of the period you paid for, then moves to Free. No cancellation fee.
 
 ## Refunds
 See our [Cancellation and Refund Policy](/refund-policy/). In short: first purchases within 7 days with less than 10% used, duplicate charges and failed-but-charged payments are refunded to your original payment method within 5–7 business days.

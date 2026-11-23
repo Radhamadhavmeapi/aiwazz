@@ -61,16 +61,19 @@ await import("node:fs").then(fs => fs.promises.writeFile("voice.mp3", Buffer.fro
 |---|---|---|---|
 | `text` | string | required | up to 5,000 characters |
 | `voice` | string | required | from `/api/voices` |
+| `format` | string | `mp3` | `mp3` or `wav` (both files are always created; this sets `url`) |
 | `speed` | number | 1.0 | 0.7 – 1.3 |
 | `normalize` | boolean | true | loudness levelling on/off |
 | `loudness_lufs` | number | -14 | -30 to -8 |
+| `transliterate` | boolean | false | Roman Hindi → Devanagari before synthesis (Hindi voices only) |
 
 ## Errors and limits
 | Code | Meaning |
 |---|---|
 | 401 | missing or wrong API key |
+| 403 | your plan doesn't include API access (Creator and Pro do) |
 | 402 | not enough characters left in your plan |
-| 413 / 422 | text too long or invalid field |
+| 422 | text too long (over 5,000 characters) or an invalid field; the message says which |
 | 429 | queue full or too many requests: retry after a few seconds |
 
-Characters are deducted when a job succeeds; failed jobs are not charged. Audio files are deleted after 7 days.
+Characters are deducted when a job succeeds; failed jobs are not charged. Check your balance with `GET /api/usage` (`allowance`, `used`, `remaining`). Audio files are deleted after 7 days.

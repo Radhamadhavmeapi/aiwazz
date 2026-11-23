@@ -20,12 +20,14 @@ category: Account and billing
 
 ## What happens to your data
 - **Audio files** are deleted automatically after 7 days.
-- **Scripts** stay in your history until you delete them.
+- **Scripts:** History keeps the first 160 characters of each script so you can find it; the full script isn't stored. Delete any item from **History** at any time.
 - **We never use your scripts or audio to train AI models**, and we never sell your data.
 - Full details: [Privacy Policy](/privacy/).
 
-## Change your email or password
-**Settings → Account.** You'll need your current password.
+## Change your password
+**Settings → Password.** You'll need your current password; other devices are signed out.
+
+**Coming soon:** changing your email address. Until then, [contact us](/contact/) from your registered email.
 
 ## Delete your account
 **Settings → Account → Delete account**, or follow the [Data Deletion instructions](/data-deletion/). Deletion is permanent.

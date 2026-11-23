@@ -82,3 +82,14 @@ details > summary::-webkit-details-marker { display: none; }
   .prose-legal { color: #000; font-size: 11pt; }
   .prose-legal a { color: #000; }
 }
+
+/* Learn: code blocks (Shiki dual theme via CSS variables) */
+.prose-legal .code-block { margin: 1.25rem 0; border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; background: var(--surface-2); }
+.prose-legal .code-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0.6rem 0.35rem 0.9rem; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.75rem; color: var(--subtle-foreground); }
+.prose-legal .copy-code { font-family: var(--font-sans); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--foreground); }
+.prose-legal .copy-code:hover { background: var(--surface-3); }
+.prose-legal pre.shiki { margin: 0; padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.7; background: transparent !important; }
+.prose-legal pre.shiki code { background: none; border: 0; padding: 0; font-size: inherit; }
+.shiki, .shiki span { color: var(--shiki-light); }
+.dark .shiki, .dark .shiki span { color: var(--shiki-dark); }
+.prose-legal blockquote { color: var(--foreground); background: var(--surface); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; padding: 0.6rem 1rem; }

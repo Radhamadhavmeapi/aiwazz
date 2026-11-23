@@ -34,6 +34,9 @@ async def _from_api_key(db: AsyncSession, raw: str) -> Principal | None:
     key = (await db.execute(select(ApiKey).where(ApiKey.key_hash == sha256(raw)))).scalar_one_or_none()
     if not key or key.revoked_at or not key.user.is_active:
         return None
+    from usage import has_api_access
+    if not has_api_access(key.user):
+        raise HTTPException(403, "API access is included in the Creator and Pro plans")
     now = utcnow()
     if not key.last_used_at or now - key.last_used_at > timedelta(minutes=5):
         key.last_used_at = now

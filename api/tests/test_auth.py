@@ -79,7 +79,9 @@ def test_tts_requires_auth(anon):
     assert anon.get("/api/voices").status_code == 200 and anon.get("/api/health").status_code == 200
 
 
-def test_api_keys_lifecycle(client, anon):
+def test_api_keys_lifecycle(client, anon, set_plan):
+    assert client.post("/api/keys", json={"name": "free plan"}).status_code == 403   # API = Creator/Pro
+    set_plan("creator")
     r = client.post("/api/keys", json={"name": "video pipeline"})
     assert r.status_code == 201
     key = r.json()["key"]
@@ -218,3 +220,12 @@ def test_contact_form(anon):
         assert c.post("/api/contact", json=ok | {"website": "http://spam"}, headers=h).status_code == 201  # honeypot: silently dropped
         codes = [c.post("/api/contact", json=ok, headers=h).status_code for _ in range(6)]
         assert codes[:5] == [201] * 5 and codes[5] == 429
+
+
+
+def test_api_key_stops_working_after_downgrade(client, set_plan):
+    set_plan("pro")
+    key = client.post("/api/keys", json={"name": "k"}).json()["key"]
+    set_plan("free")
+    with identity(client) as bare:
+        assert bare.get("/api/auth/me", headers={"X-API-Key": key}).status_code == 403

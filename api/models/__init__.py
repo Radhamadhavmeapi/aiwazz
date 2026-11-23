@@ -23,6 +23,8 @@ class User(Base):
     terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     consent_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Plan (legal/legal.json "plans"): free | starter | creator | pro. Set by billing later; for now manage.py set-plan.
+    plan: Mapped[str] = mapped_column(String(16), default="free")
 
     @property
     def is_admin(self) -> bool:

@@ -37,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ApiError } from "@/lib/api";
 import { PREVIEW } from "@/lib/env";
 import { fmtDuration, timeAgo } from "@/lib/format";
+import { refreshUsage } from "@/lib/usage";
 import {
   createJob,
   downloadUrl,
@@ -168,6 +169,7 @@ export default function GeneratePage() {
         const s = await pollJob(id, (u) => setJob(toJob(u)), ac.signal);
         rememberJob(null);
         setRecentKey((k) => k + 1);
+        refreshUsage();
         if (s.status === "done") toast.success("Voiceover ready", { description: "Saved to History for 7 days." });
         else toast.error("Generation failed", { description: s.error });
       } catch (e) {
@@ -337,6 +339,14 @@ export default function GeneratePage() {
                   {(chars - MAX_CHARS).toLocaleString("en-IN")} characters over the limit
                 </span>
               )}
+              <span className="flex items-center gap-3">
+                <a href="https://aiwazz.in/learn/writing-scripts/" target="_blank" rel="noopener" className="underline-offset-2 hover:text-foreground hover:underline">
+                  Script tips
+                </a>
+                <a href="https://aiwazz.in/learn/hindi-and-hinglish/" target="_blank" rel="noopener" className="underline-offset-2 hover:text-foreground hover:underline">
+                  Hindi guide
+                </a>
+              </span>
               <span className="ml-auto hidden items-center gap-1 sm:flex">
                 <kbd className="rounded border bg-surface-2 px-1.5 font-mono text-[10px]">⌘</kbd>
                 <kbd className="rounded border bg-surface-2 px-1.5 font-mono text-[10px]">↵</kbd> to generate

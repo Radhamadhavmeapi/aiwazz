@@ -11,13 +11,13 @@ category: Start here
 
 AiWazz has four Hindi voices: Alpha and Beta (female), Omega and Psi (male). They sound best when Hindi is written in **Devanagari** (हिंदी लिपि).
 
-## Rule 1: Hindi words in Devanagari
+## Rule 1: Hindi words in Devanagari (or turn on Transliterate Hinglish)
 | ❌ Sounds wrong | ✅ Sounds right |
 |---|---|
 | Raat 11 baje customer ne message kiya | रात 11 बजे customer ने message किया |
 | Aaj hum seekhenge | आज हम सीखेंगे |
 
-Roman Hindi ("aaj hum…") is read as if it were English, so it sounds unnatural. An automatic **Roman → Devanagari** option is coming soon. Until then, convert your script first.
+Roman Hindi ("aaj hum…") is read as if it were English, so it sounds unnatural. The easy fix: turn on **Transliterate Hinglish** in the voice panel (Hindi voices only). AiWazz converts Hindi words to Devanagari, keeps English words as they are, and shows the result in a **Will be read as** box before you generate. If a word comes out wrong, use its most common spelling or type just that word in Devanagari.
 
 ## Rule 2: English words can stay in English
 Hinglish works well when Hindi is in Devanagari and English words stay in English letters:
@@ -29,7 +29,7 @@ If an English word sounds odd inside a Hindi sentence, write it in Devanagari th
 ## How to type Devanagari quickly
 - **Phone:** add the Hindi keyboard in Gboard or SwiftKey and use transliteration: type "namaste", get "नमस्ते".
 - **Computer:** Google Input Tools (Chrome extension) or Windows/macOS Hindi phonetic keyboard.
-- **Already have a Roman Hinglish script?** Paste it into Google Translate's Hindi transliteration, check the result, then paste it into AiWazz.
+- **Already have a Roman Hinglish script?** Paste it as it is and turn on **Transliterate Hinglish**. AiWazz suggests this automatically when it sees Roman text with a Hindi voice.
 
 ## Common fixes
 | Problem | Fix |

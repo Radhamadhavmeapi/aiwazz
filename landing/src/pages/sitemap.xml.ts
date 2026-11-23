@@ -10,6 +10,9 @@ const PAGES = [
     priority: "0.8",
   })),
   { path: "/pricing/", priority: "0.8" },
+  { path: "/learn/", priority: "0.6" },
+  ...["getting-started", "writing-scripts", "hindi-and-hinglish", "choosing-a-voice", "speed-and-loudness", "using-audio-in-editors",
+    "api-quickstart", "plans-and-billing", "account-and-security", "troubleshooting", "glossary"].map((p) => ({ path: `/learn/${p}/`, priority: "0.6" })),
   { path: "/about/", priority: "0.5" },
   { path: "/contact/", priority: "0.5" },
   ...["terms", "privacy", "refund-policy", "shipping-policy", "acceptable-use", "data-deletion", "grievance"].map((p) => ({

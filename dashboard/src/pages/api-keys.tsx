@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { timeAgo } from "@/lib/format";
 
 type Key = { id: number; name: string; prefix: string; created_at: string; last_used_at: string | null; revoked: boolean };
@@ -50,6 +51,8 @@ export default function ApiKeysPage() {
   const [created, setCreated] = useState<string | null>(null);
   const [revoke, setRevoke] = useState<Key | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const { user } = useAuth();
+  const allowed = user?.api_access ?? true;
 
   const load = useCallback(() => {
     api<{ keys: Key[] }>("/api/keys").then(
@@ -97,11 +100,26 @@ export default function ApiKeysPage() {
           <h2 className="text-h2 font-semibold">API keys</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Generate voiceovers from scripts and video pipelines. Send the key in the <code className="font-mono text-xs">X-API-Key</code> header. Keys act as
-            you, so keep them secret.
+            you, so keep them secret.{" "}
+            <a href="https://aiwazz.in/learn/api-quickstart/" target="_blank" rel="noopener" className="text-brand underline underline-offset-2">
+              API quickstart
+            </a>
           </p>
         </div>
 
-        <form onSubmit={create} className="flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-md sm:flex-row sm:items-end">
+        {!allowed && (
+          <div className="rounded-2xl border border-brand/30 bg-brand/5 p-4 text-sm">
+            <p className="font-medium">API access is included in the Creator and Pro plans.</p>
+            <p className="mt-1 text-muted-foreground">
+              Online upgrades open soon. During early access,{" "}
+              <a href="https://aiwazz.in/contact/" target="_blank" rel="noopener" className="text-brand underline underline-offset-2">
+                contact us
+              </a>{" "}
+              to change your plan.
+            </p>
+          </div>
+        )}
+        <form onSubmit={create} hidden={!allowed} className="flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-md sm:flex-row sm:items-end">
           <div className="flex-1 space-y-2">
             <Label htmlFor="key-name">New key name</Label>
             <Input id="key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="e.g. Remotion pipeline" />

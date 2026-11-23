@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react";
+import { CircleHelp, KeyRound, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { BrandIcon } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth";
+import { fmtChars, useUsage } from "@/lib/usage";
 import { useTheme } from "@/lib/theme";
 
 export function ThemeToggle() {
@@ -32,6 +33,8 @@ export function ThemeToggle() {
 export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: () => void; onCommand: () => void }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const usage = useUsage();
+  const low = usage && usage.remaining !== null && usage.allowance ? usage.remaining / usage.allowance < 0.1 : false;
   const initial = (user?.email[0] ?? "?").toUpperCase();
   const signOut = async () => {
     await logout();
@@ -59,15 +62,37 @@ export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: ()
           <Search />
         </Button>
 
-        <div
-          className="hidden items-center gap-2 rounded-lg border px-2.5 py-1 sm:flex"
-          title="Usage placeholder: credits arrive with the SaaS plan"
+        <a
+          href="/settings"
+          className="hidden items-center gap-2 rounded-lg border px-2.5 py-1 transition-colors hover:bg-surface-2 sm:flex"
+          title={usage ? `${usage.plan_name} plan · characters this month` : "Characters this month"}
         >
-          <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+          <span className={`size-1.5 rounded-full ${low ? "bg-warning" : "bg-success"}`} aria-hidden="true" />
           <span className="font-mono text-xs tabular">
-            ∞ <span className="text-muted-foreground">credits</span>
+            {!usage ? (
+              <span className="text-muted-foreground">…</span>
+            ) : usage.unlimited ? (
+              <>
+                ∞ <span className="text-muted-foreground">characters</span>
+              </>
+            ) : (
+              <>
+                {fmtChars(usage.remaining ?? 0)} <span className="text-muted-foreground">characters left</span>
+              </>
+            )}
           </span>
-        </div>
+        </a>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="ghost" size="icon-sm">
+              <a href="https://aiwazz.in/learn/" target="_blank" rel="noopener" aria-label="Help and guides">
+                <CircleHelp />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Help and guides</TooltipContent>
+        </Tooltip>
 
         <ThemeToggle />
 

@@ -64,6 +64,24 @@ async def _add_invite(url: str, code: str, **kw) -> None:
     await eng.dispose()
 
 
+async def _set_plan(url: str, email: str, plan: str) -> None:
+    from sqlalchemy import update
+    from db import make_engine, make_sessionmaker
+    from models import User
+    eng = make_engine(url)
+    async with make_sessionmaker(eng)() as db:
+        await db.execute(update(User).where(User.email == email).values(plan=plan))
+        await db.commit()
+    await eng.dispose()
+
+
+@pytest.fixture
+def set_plan(app_env):
+    def do(plan: str, email: str = "me@example.com"):
+        _run(_set_plan(app_env, email, plan))
+    return do
+
+
 @pytest.fixture
 def app_env(monkeypatch, tmp_path):
     from settings import get_settings

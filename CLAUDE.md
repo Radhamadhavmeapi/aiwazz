@@ -211,6 +211,14 @@ security, 13 FAQs). New SEO pages: /hindi-voice-generator/, /hinglish-text-to-sp
 /ai-voice-for-instagram-reels/, /text-to-speech-for-ads/, /text-to-speech-for-teachers/ (english-indian-accent skipped:
 no Indian-English voice). Before/after audio section skipped (no real phone recording). Fonts: Poppins 600+700 preloaded
 (CLS 0). Lighthouse mobile 100/100/100/100 on home, pricing, SEO page.
+**Built (phase 9, Learn):** `/learn/` hub (client-side search, `?q=`), 11 guides from `content/learn/*.md` via
+`landing/src/lib/learn.ts` (Shiki code highlighting, copy buttons, sidebar by category: categories must match
+`CATEGORIES` or the build fails, TOC, prev/next, BreadcrumbList + TechArticle, FAQPage on troubleshooting).
+Plans + quota (API): `users.plan` (free|starter|creator|pro, set with `manage.py set-plan` until billing exists),
+monthly allowance from legal.json (IST calendar month), only successful jobs count, queued jobs reserved, 402 when
+over; admins unlimited; API keys need Creator/Pro (403 otherwise); `GET /api/usage`; `DELETE /api/history/{id}`.
+Not built yet (marked "Coming soon" in guides): online upgrade/cancel, invoices, billing details, forgot password,
+change email.
 
 ## Build phases
 -1. **Repo setup:** create the deploy key, show me the public key so I add it in GitHub

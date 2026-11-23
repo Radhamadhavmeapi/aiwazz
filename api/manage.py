@@ -4,6 +4,7 @@
   set-password --email E                       prompts for the new password; signs the user out everywhere
   set-active   --email E --active yes|no       disable/enable an account (disabling signs them out)
   list-users
+  set-plan     --email E --plan free|starter|creator|pro   (until online billing exists)
   create-invite [--uses N] [--role user|admin] [--days D] [--label TEXT]   prints the code once
   list-invites
   revoke-invite --id N
@@ -46,6 +47,7 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("set-password"); p.add_argument("--email", required=True)
     p = sub.add_parser("set-active"); p.add_argument("--email", required=True); p.add_argument("--active", choices=("yes", "no"), required=True)
     sub.add_parser("list-users")
+    p = sub.add_parser("set-plan"); p.add_argument("--email", required=True); p.add_argument("--plan", choices=("free", "starter", "creator", "pro"), required=True)
     p = sub.add_parser("create-invite")
     p.add_argument("--uses", type=int, default=1); p.add_argument("--role", choices=ROLES, default="user")
     p.add_argument("--days", type=int, default=14); p.add_argument("--label", default="")
@@ -81,7 +83,15 @@ async def main(argv: list[str]) -> None:
 
         elif a.cmd == "list-users":
             for u in (await db.execute(select(User).order_by(User.id))).scalars():
-                print(f"{u.id:>4}  {u.role:<5}  {'active  ' if u.is_active else 'DISABLED'}  {u.email}  last login: {u.last_login_at or '-'}")
+                print(f"{u.id:>4}  {u.role:<5}  {u.plan:<7}  {'active  ' if u.is_active else 'DISABLED'}  {u.email}  last login: {u.last_login_at or '-'}")
+
+        elif a.cmd == "set-plan":
+            u = (await db.execute(select(User).where(User.email == a.email.lower().strip()))).scalar_one_or_none()
+            if not u:
+                sys.exit(f"No user {a.email}")
+            u.plan = a.plan
+            await db.commit()
+            print(f"{u.email} is now on the {a.plan} plan")
 
         elif a.cmd == "create-invite":
             code = new_invite_code()

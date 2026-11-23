@@ -1,0 +1,11 @@
+---
+import LearnLayout from "../../layouts/LearnLayout.astro";
+import { loadGuides, type Guide } from "../../lib/learn";
+
+export async function getStaticPaths() {
+  const guides = await loadGuides();
+  return guides.filter((g) => g.slug).map((guide) => ({ params: { slug: guide.slug }, props: { guide, guides } }));
+}
+const { guide, guides } = Astro.props as { guide: Guide; guides: Guide[] };
+---
+<LearnLayout guide={guide} guides={guides} />

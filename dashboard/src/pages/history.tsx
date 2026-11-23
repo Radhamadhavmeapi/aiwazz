@@ -1,4 +1,5 @@
-import { AlertCircle, Clock, Code2, Download, History as HistoryIcon, Pause, Play, RefreshCw, Search, Wand2 } from "lucide-react";
+import { AlertCircle, Clock, Code2, Download, History as HistoryIcon, Pause, Play, RefreshCw, Search, Trash2, Wand2 } from "lucide-react";
+import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AppShell } from "@/components/app-shell/app-shell";
@@ -7,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { daysLeft, fmtDuration, timeAgo } from "@/lib/format";
 import { downloadUrl, getHistory, type HistoryItem } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 import { langLabel, VOICES, type Lang } from "@/lib/voices";
 
-function Row({ it }: { it: HistoryItem }) {
+function Row({ it, onDeleted }: { it: HistoryItem; onDeleted: (id: string) => void }) {
   const { playing, toggle } = usePreviewPlayer();
   const v = VOICES.find((x) => x.id === it.voice);
   const on = playing === it.id;
@@ -73,6 +74,26 @@ function Row({ it }: { it: HistoryItem }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 pl-[52px] sm:pl-0">
+        {!busy && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete from history"
+            title="Delete from history"
+            onClick={async () => {
+              if (!window.confirm("Delete this voiceover and its audio files?")) return;
+              try {
+                await api(`/api/history/${it.id}`, { method: "DELETE" });
+                onDeleted(it.id);
+                toast.success("Deleted from history");
+              } catch (e) {
+                toast.error("Couldn't delete", { description: e instanceof ApiError ? e.message : undefined });
+              }
+            }}
+          >
+            <Trash2 />
+          </Button>
+        )}
         {busy && <Badge variant="secondary">In progress</Badge>}
         {it.status === "done" && !it.available && (
           <Badge variant="outline" className="font-normal text-muted-foreground">
@@ -168,7 +189,7 @@ export default function HistoryPage() {
           ) : (
             <ul className="divide-y">
               {shown.map((it) => (
-                <Row key={it.id} it={it} />
+                <Row key={it.id} it={it} onDeleted={(id) => setItems((xs) => (xs ?? []).filter((x) => x.id !== id))} />
               ))}
             </ul>
           )}

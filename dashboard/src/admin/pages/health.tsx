@@ -59,10 +59,17 @@ export default function HealthPage() {
         </>} />
       {error ? <ErrorState message={error} onRetry={load} /> : !h ? <LoadingRows rows={8} /> : (
         <div className="space-y-4">
+          {!h.mail.enabled && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm">
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden="true" />
+              <p><strong className="text-danger">Email alerts are not being sent.</strong> Mail is disabled on the server
+                (AIWAZZ_MAIL_ENABLED), so alerts only show here and in the bell. They go to the owner once mail is on.</p>
+            </div>
+          )}
           {h.alerts.length > 0 ? (
             <div role="alert" className="space-y-1 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm">
               {h.alerts.map((a) => <p key={a.key}><strong>{a.title}</strong> · {a.detail}</p>)}
-              <p className="text-xs text-muted-foreground">Owner and admins get an email when an alert starts or clears (once mail is on).</p>
+              <p className="text-xs text-muted-foreground">The owner gets an email when an alert starts or clears (once mail is on).</p>
             </div>
           ) : <p className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3 text-sm"><CheckCircle2 className="size-4 text-success" /> No active alerts. Checked every 5 minutes.</p>}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

@@ -307,6 +307,8 @@ change email.
     Backups: `/root/aiwazz-backups` daily, AES (AIWAZZ_BACKUP_PASSPHRASE), 14 days, `docs/RESTORE.md`. PM2 `aiwazz-watchdog`.
     legal.json edits from the panel commit to git + rebuild the landing (`admin/legal_store.py`); `tools/deploy-landing.sh`
     exports the changelog (gitignored `landing/src/data/changelog.generated.json`). Mail off → every email logged as "disabled".
+    Owner decisions 25 Nov 2026: bank/OTP/KYC scam rules **block**, others flag; DPDP due 30 days; audit emails of deleted
+    accounts → SHA-256 after 3 years (`admin/audit_redact.py`, trigger allows only that); alerts → owner only; Veer owner-only.
 13. Custom voice (clone engine, CPU first, consent/source records, owner-only): `content/CUSTOM-VOICE.md`. Run before phase 12.
     **Steps 2–4 done (24 Nov 2026):** owner picked route A (hm_omega → OpenVoice v2, clip B); built as above, owner-only.
     Voice Lab samples moved to `data/preview/voice-lab/` → `/api/preview/voice-lab/` (admin only; the old public URL is gone).

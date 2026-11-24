@@ -244,7 +244,7 @@ async def active_alerts(db: AsyncSession) -> list[dict]:
 
 
 async def check_and_notify(app, db: AsyncSession) -> str:
-    """Store the current alerts; email staff (owner + admins) when an alert starts or clears."""
+    """Store the current alerts; email the owner when an alert starts or clears (logged as "disabled" while mail is off)."""
     from emails import send_template
     from models import User
     current = await evaluate(app, db)
@@ -254,7 +254,8 @@ async def check_and_notify(app, db: AsyncSession) -> str:
     started = [a for a in current if a["key"] not in before]
     cleared = [k for k in before if k not in now]
     if started or cleared:
-        staff = (await db.execute(select(User.email).where(User.role.in_(("owner", "admin")), User.is_active.is_(True)))).scalars().all()
+        # Owner decision (25 Nov 2026): alerts go to the owner only for now.
+        staff = (await db.execute(select(User.email).where(User.role == "owner", User.is_active.is_(True)))).scalars().all()
         lines = [f"PROBLEM: {a['title']} ({a['detail']})" for a in started] + [f"RESOLVED: {k}" for k in cleared]
         for email in staff:
             await send_template(db, "system_alert", email, {"summary": "; ".join(lines)[:150], "lines": "\n".join(lines)})

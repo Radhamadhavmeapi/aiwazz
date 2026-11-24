@@ -92,3 +92,11 @@ async def metrics_daily(sessionmaker, app) -> str:
     from admin import metrics
     async with sessionmaker() as db:
         return await metrics.nightly(db)
+
+
+@every("audit-redact", 86400, first_delay=600)
+async def audit_redact(sessionmaker, app) -> str:
+    """Daily: emails of deleted accounts in the audit log → SHA-256 after 3 years."""
+    from admin import audit_redact as ar
+    async with sessionmaker() as db:
+        return await ar.sweep(db)

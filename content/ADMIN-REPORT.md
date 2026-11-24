@@ -107,3 +107,22 @@ Every billing decision you gave is in place. The SAC code is still the placehold
 - **New Python packages:** pyotp, segno, cryptography, openpyxl.
 - **New npm packages** (admin bundle only, lazy-loaded): @tanstack/react-table 8, recharts, zod.
 - **No changes to:** nginx, firewall, SSH, panel or DNS, and no other sites.
+
+## 6. Owner decisions applied (25 Nov 2026)
+
+1. **Moderation:** "OTP / KYC scam phrases" and "Impersonating officials or banks" now **block** the job. The user
+   sees a clear Acceptable Use message, nothing is counted, and a "blocked" flag appears in the queue. "Threats" and
+   "Explicit content" still only flag.
+2. **DPDP requests:** 30-day deadline kept.
+3. **Audit log:** a deleted account's email stays for 3 years after the deletion, then a daily sweep
+   (`admin/audit_redact.py`, task `audit-redact`) replaces it with `sha256:<hash>`. That is the same hash as the
+   deletion log, so you can still match it when someone gives you their email. Emails with no deletion record count
+   from the audit entry's own date.
+   - The database trigger still refuses every edit, except this redaction. The sweep marks its own connection, and
+     only the label, email, reason and before/after fields may change. Deleting rows is still refused.
+   - Tested in `tests/test_owner_decisions.py`.
+4. **Backups:** the encrypted `api/.env` stays in them.
+5. **Veer:** stays owner-only.
+6. **API limit:** 60 requests per minute per key.
+7. **Alerts:** emails go to the owner only. System health shows a red banner, "Email alerts are not being sent",
+   while mail is disabled.

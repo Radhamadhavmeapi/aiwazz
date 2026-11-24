@@ -41,3 +41,13 @@ Open: 25 (SMTP in/out), 587 (submission), 465 (SMTPS), 993 (IMAPS). Keep 110/143
 - Send to a Gmail and an Outlook address: lands in Inbox, "mailed-by" and "signed-by" show aiwazz.in, SPF/DKIM/DMARC = PASS in "Show original".
 - Register aiwazz.in in Google Postmaster Tools.
 - Warm-up: low volume for the first 2–4 weeks; new IPs are distrusted at first.
+
+## Pre-check results (24 Nov 2026)
+| Check | Result |
+|---|---|
+| Outbound port 25 | **OPEN** (`220 mx.google.com ESMTP` banner received) |
+| Blocklists for 104.237.6.214 | **Not listed**: Spamhaus ZEN (queried at Spamhaus' own NS; Google DNS is refused by Spamhaus), Barracuda, SpamCop, SORBS, PSBL, Mailspike, UCEPROTECT-1, s5h. aiwazz.in not on Spamhaus DBL |
+| PTR 104.237.6.214 | **Empty**. IP belongs to **Hosteros LLC**: ask them to set rDNS → `mail.aiwazz.in` |
+| Existing DNS (Hostinger, ns*.dns-parking.com) | MX `mx1/mx2.hostinger.com`, SPF `include:_spf.mail.hostinger.com ~all`, DMARC `p=none`. These must be **replaced** (not added to): one SPF record per domain, and the MX change moves all incoming @aiwazz.in mail to this VPS |
+| Firewall (ufw) | open: 22, 80, 443, 21833. Mail ports closed until the owner confirms the install |
+| RAM | ~4 GB available; Postfix + Dovecot + Rspamd ≈ 200–300 MB without ClamAV |

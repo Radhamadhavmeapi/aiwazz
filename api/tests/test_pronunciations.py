@@ -129,3 +129,24 @@ def test_pronunciation_test_returns_audio_and_is_not_counted(client):
     assert client.get("/api/history").json()["items"] == []
     assert client.get("/api/usage").json()["used"] == 0
     assert client.post("/api/pronunciations/test", json={"say_as": "x", "voice": "nope"}).status_code == 422
+
+
+def test_custom_voice_preview_is_admin_session_only(anon, make_invite, tmp_path, monkeypatch):
+    from routes import preview
+    (tmp_path / "x.mp3").write_bytes(b"ID3fake")
+    (tmp_path / "index.html").write_text("<h1>lab</h1>")
+    (tmp_path / "secret.wav").write_bytes(b"RIFF")
+    monkeypatch.setitem(preview.ROOTS, "custom-voice", tmp_path)
+    assert anon.get("/api/preview/custom-voice/").status_code == 404             # signed out
+    make_invite("USER-CODE")
+    signup(anon, email="u@example.com", code="USER-CODE")
+    assert anon.get("/api/preview/custom-voice/").status_code == 404             # not admin
+    anon.post("/api/auth/logout")
+    make_invite("ADMN-CODE", role="admin")
+    signup(anon, code="ADMN-CODE")
+    r = anon.get("/api/preview/custom-voice/")
+    assert r.status_code == 200 and "lab" in r.text and "noindex" in r.headers["x-robots-tag"]
+    assert anon.get("/api/preview/custom-voice/x.mp3").headers["content-type"] == "audio/mpeg"
+    assert anon.get("/api/preview/custom-voice/secret.wav").status_code == 404      # only html/mp3/json
+    assert anon.get("/api/preview/custom-voice/..%2F..%2Fetc%2Fpasswd").status_code == 404
+    assert anon.get("/api/preview/other/").status_code == 404

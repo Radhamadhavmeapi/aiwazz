@@ -221,7 +221,7 @@ SEO: proper title/meta/OG tags, sitemap.xml, robots.txt, pages `/text-to-speech`
 **Built (phase 7):** `landing/src/lib/legal.ts` renders `legal/pages/*.md` at build time ({{tokens}} from legal.json,
 unknown token = build error, empty values like `llpin` removed with their fragment/line, `Implementation:` comments
 stripped) via `src/pages/[legal].astro` + `LegalLayout`; `/pricing/` has plan cards (monthly/yearly) + JSON-LD offers.
-Footer (company line) on both sites. Contact form → `POST /api/contact` (proxied same-origin on aiwazz.in; stored in
+Footers (rule, 24 Nov 2026): landing = link columns + `© 2026 RADHAMADHAV WEBSTORE LLP · AiWazz is a brand of TheWebStore028` only; app = `© 2026 AiWazz · RADHAMADHAV WEBSTORE LLP` only; auth pages = Terms/Privacy next to the consent checkbox. Address, GSTIN, email and phone only on Contact, About and policy pages (legal/IMPLEMENT.md §3). Contact form → `POST /api/contact` (proxied same-origin on aiwazz.in; stored in
 `contact_messages`, read with `manage.py list-messages`; no email sending yet). Signup stores consent (`consent_at`,
 `terms_version`, `consent_ip`, `marketing_opt_in`); account deletion logs a reference in `deletion_log`.
 Policy aliases (301) in `deploy/nginx/aiwazz.in.conf`.
@@ -283,6 +283,10 @@ change email.
 11. Self-hosted mail (Postfix/Dovecot on this VPS, no third-party email): `content/MAIL-SERVER.md`.
 12. Admin panel: complete SaaS back office at login.aiwazz.in/admin (RBAC, 2FA, audit, billing, GST, support, moderation, ops): `content/ADMIN-PANEL.md`.
 13. Custom voice (clone engine, CPU first, consent/source records, owner-only): `content/CUSTOM-VOICE.md`. Run before phase 12.
+    **Step 1 done (24 Nov 2026):** routes A (Kokoro→OpenVoice v2), B (Chatterbox Multilingual), C* (Kokoro→kNN-VC) tested;
+    findings `content/CUSTOM-VOICE-REPORT.md`; lab code `api/scripts/custom_voice/` (venv + weights in `/root/voicelab/`,
+    outside git); samples at `https://login.aiwazz.in/api/preview/custom-voice/` (`api/routes/preview.py`: admin session only,
+    else 404; files in `data/voices/hi_reel_narrator_m1/lab/`). **Waiting for the owner's pick** before Steps 2–4.
 
 ## Company
 AiWazz by TheWebStore028, a brand of **RADHAMADHAV WEBSTORE LLP**, GSTIN 27ABJFR6148J1ZO,

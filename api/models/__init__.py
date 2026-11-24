@@ -126,6 +126,7 @@ class Generation(Base):
     format: Mapped[str] = mapped_column(String(4))
     loudness_target: Mapped[float | None] = mapped_column(Float, nullable=True)
     style: Mapped[str | None] = mapped_column(String(32), nullable=True)   # tts/styles.py id
+    transliterate: Mapped[bool | None] = mapped_column(Boolean, nullable=True)   # Hinglish toggle (analytics)
     text_chars: Mapped[int] = mapped_column(Integer)
     text_excerpt: Mapped[str] = mapped_column(String(160))   # for History; the full script is not stored
     duration_sec: Mapped[float | None] = mapped_column(Float, nullable=True)

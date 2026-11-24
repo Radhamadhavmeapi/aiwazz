@@ -1,4 +1,5 @@
 """All /api/admin routers (each module guards itself with admin.deps)."""
+from .analytics import router as analytics_router
 from .billing import router as billing_router
 from .comms import router as comms_router
 from .content import router as content_router
@@ -14,4 +15,5 @@ from .users import router as users_router
 from .users import stop_router
 
 ROUTERS = [core_router, content_router, overview_router, users_router, stop_router, invites_router, billing_router,
-           plans_router, support_router, product_router, system_router, comms_router, governance_router]
+           plans_router, support_router, product_router, system_router, comms_router, governance_router,
+           analytics_router]

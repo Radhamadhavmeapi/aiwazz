@@ -1,7 +1,7 @@
 """Admin panel tables (phase 12, content/ADMIN-PANEL.md). All timestamps naive UTC."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import Base, utcnow
@@ -9,7 +9,8 @@ from db import Base, utcnow
 __all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression",
            "Refund", "CreditNote", "CreditNoteCounter", "DunningCase", "PlanVersion", "Coupon", "CouponRedemption",
            "ReferralCode", "Referral", "TaskRun", "Ticket", "TicketMessage", "CannedReply", "ModerationRule", "Flag",
-           "BlockEntry", "VoiceSetting", "StyleSetting", "RateOverride", "Announcement", "ChangelogEntry", "DsrRequest"]
+           "BlockEntry", "VoiceSetting", "StyleSetting", "RateOverride", "Announcement", "ChangelogEntry", "DsrRequest",
+           "MetricDaily"]
 
 
 class TotpSecret(Base):
@@ -457,3 +458,12 @@ class DsrRequest(Base):
     due_at: Mapped[datetime] = mapped_column(DateTime)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     handled_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class MetricDaily(Base):
+    """Nightly aggregates for Analytics (one row per IST day and metric key, e.g. "signups", "voice:hf_alpha",
+    "revenue_state:27"). Rebuilt idempotently for any day; "today" is always computed live."""
+    __tablename__ = "metrics_daily"
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)       # YYYY-MM-DD (IST)
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[float] = mapped_column(Float, default=0)

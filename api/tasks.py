@@ -83,3 +83,12 @@ async def backup_daily(sessionmaker, app) -> str:
         return "not due"
     await run_logged(sessionmaker, "backup", health.make_backup)
     return "ran"
+
+
+@every("metrics", 3600, first_delay=240)
+async def metrics_daily(sessionmaker, app) -> str:
+    """Nightly analytics aggregation: yesterday is recomputed every hour until the day is over in IST (cheap);
+    missing days in the last 60 are back-filled."""
+    from admin import metrics
+    async with sessionmaker() as db:
+        return await metrics.nightly(db)

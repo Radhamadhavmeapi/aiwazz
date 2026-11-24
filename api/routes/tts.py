@@ -294,7 +294,7 @@ async def create_tts(
     gen = Generation(
         id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
         engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
-        loudness_target=req.loudness_lufs, style=style_id, text_chars=len(body.text),
+        loudness_target=req.loudness_lufs, style=style_id, text_chars=len(body.text), transliterate=bool(body.transliterate),
         text_excerpt=" ".join(pronounce.strip_inline(body.text).split())[:160],
     )
     db.add(gen)

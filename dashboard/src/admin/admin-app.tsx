@@ -3,7 +3,6 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { ErrorState } from "./components/page";
-import { AdminShell } from "./components/shell";
 import { StepUpDialog } from "./components/stepup-dialog";
 import { AdminProvider, useAdmin } from "./lib/admin-context";
 import { ADMIN_ITEMS } from "./nav";
@@ -32,16 +31,9 @@ const PAGES: Record<string, ComponentType> = {
   announcements: lazy(() => import("./pages/announcements")),
   compliance: lazy(() => import("./pages/compliance")),
   team: lazy(() => import("./pages/team")),
+  analytics: lazy(() => import("./pages/analytics")),
 };
 
-function Pending({ to }: { to: string }) {
-  const item = ADMIN_ITEMS.find((i) => i.to === to);
-  return (
-    <AdminShell title={item?.label ?? "Admin"}>
-      <ErrorState message={`${item?.label ?? "This page"} is being built.`} />
-    </AdminShell>
-  );
-}
 
 function Gate() {
   const { state, can } = useAdmin();
@@ -58,7 +50,7 @@ function Gate() {
       <Routes>
         {ADMIN_ITEMS.filter((i) => can(i.perm)).map((i) => {
           const Page = PAGES[i.to];
-          return <Route key={i.to} path={i.to === "" ? "/" : `${i.to}/*`} element={Page ? <Page /> : <Pending to={i.to} />} />;
+          return <Route key={i.to} path={i.to === "" ? "/" : `${i.to}/*`} element={Page ? <Page /> : <Navigate to="/admin" replace />} />;
         })}
         <Route path="*" element={<Navigate to={first ? `/admin/${first.to}` : "/"} replace />} />
       </Routes>

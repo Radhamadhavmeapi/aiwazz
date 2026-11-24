@@ -88,7 +88,10 @@ def app_env(monkeypatch, tmp_path):
     url = f"sqlite+aiosqlite:///{tmp_path}/test.db"
     monkeypatch.setenv("AIWAZZ_DATABASE_URL", url)
     monkeypatch.setenv("AIWAZZ_STORAGE_DIR", str(tmp_path / "storage"))
+    monkeypatch.setenv("AIWAZZ_ADMIN_SECRET_KEY", "x" * 43 + "=")   # valid Fernet key shape (32 bytes, urlsafe b64)
     get_settings.cache_clear()
+    from admin import settings_store
+    settings_store.clear_cache()
     _run(_setup_db(url))
     yield url
     get_settings.cache_clear()
@@ -158,3 +161,113 @@ class identity:
             self.c.cookies.jar.set_cookie(ck)
         self.c.headers.clear()
         self.c.headers.update(self.headers)
+
+
+# ── Admin panel helpers ──────────────────────────────────────────────────────
+class Clock:
+    """Controls the TOTP clock (admin.totp.time.time) so tests can produce fresh, non-replayed codes."""
+
+    def __init__(self, monkeypatch):
+        import types
+
+        import admin.totp as t
+        self.now = 1_800_000_000.0
+        monkeypatch.setattr(t, "time", types.SimpleNamespace(time=lambda: self.now))
+
+    def code(self, secret: str) -> str:
+        import pyotp
+        self.now += 30                       # every call: the next 30 s window (never a replay)
+        return pyotp.TOTP(secret).at(self.now)
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    return Clock(monkeypatch)
+
+
+PW = "correct horse battery"
+
+
+def new_client(app, share=None):
+    """Another browser on the same running app. share=<the anon client>: reuse its event loop (portal), so job
+    events and the app's async state work exactly as for the main client."""
+    from fastapi.testclient import TestClient
+    c = TestClient(app, base_url="https://testserver", headers={"Origin": ORIGIN})
+    if share is not None:
+        c.portal = share.portal
+    c.headers["X-CSRF-Token"] = c.get("/api/auth/csrf").json()["csrf_token"]
+    return c
+
+
+def login(c, email, password=PW):
+    r = c.post("/api/auth/login", json={"email": email, "password": password})
+    assert r.status_code == 200, r.text
+    c.headers["X-CSRF-Token"] = c.cookies.get("__Host-aiwazz_csrf")
+    return r
+
+
+def enroll(c, clock) -> str:
+    """Set up + enable 2FA for the signed-in staff member; returns the TOTP secret (session is unlocked)."""
+    r = c.post("/api/admin/mfa/setup", json={"password": PW})
+    assert r.status_code == 200, r.text
+    secret = r.json()["secret"]
+    r = c.post("/api/admin/mfa/enable", json={"code": clock.code(secret)})
+    assert r.status_code == 200, r.text
+    c.backup_codes = r.json()["backup_codes"]
+    c.secret = secret
+    return secret
+
+
+def stepup(c, clock):
+    r = c.post("/api/admin/stepup", json={"password": PW, "code": clock.code(c.secret)})
+    assert r.status_code == 200, r.text
+
+
+@pytest.fixture
+def staff(anon, make_invite, clock, app_env):
+    """staff(role) -> a separate signed-in, 2FA-unlocked TestClient for a new account with that role.
+    Owner accounts are created with role admin, then promoted directly in the DB."""
+    made = []
+
+    def make(role="owner", email=None):
+        import asyncio  # noqa: F401
+        email = email or f"{role}{len(made)}@example.com"
+        code = f"R{len(made):03d}-{role[:4].upper():X<4}"
+        make_invite(code, role="admin" if role == "owner" else role)
+        c = new_client(anon.app, share=anon)
+        r = c.post("/api/auth/signup", json={"email": email, "password": PW, "invite_code": code, "accept_terms": True})
+        assert r.status_code == 201, r.text
+        c.headers["X-CSRF-Token"] = c.cookies.get("__Host-aiwazz_csrf")
+        if role == "owner":
+            _run(set_user(app_env, email, role="owner"))
+        enroll(c, clock)
+        c.email = email
+        made.append(c)
+        return c
+    yield make
+
+
+async def set_user(url, email, **values):
+    from sqlalchemy import update
+    from db import make_engine, make_sessionmaker
+    from models import User
+    eng = make_engine(url)
+    async with make_sessionmaker(eng)() as db:
+        await db.execute(update(User).where(User.email == email).values(**values))
+        await db.commit()
+    await eng.dispose()
+
+
+async def db_exec(url, fn):
+    """Run fn(db) in a fresh session (own engine, test thread's event loop); returns its result."""
+    from db import make_engine, make_sessionmaker
+    eng = make_engine(url)
+    async with make_sessionmaker(eng)() as db:
+        out = await fn(db)
+        await db.commit()
+    await eng.dispose()
+    return out
+
+
+def run_db(url, fn):
+    return _run(db_exec(url, fn))

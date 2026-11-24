@@ -284,11 +284,7 @@ class DeleteAccountIn(BaseModel):
 async def delete_account(body: DeleteAccountIn, request: Request, p: Principal = Depends(_session_only),
                          db: AsyncSession = Depends(get_db)):
     """Permanently deletes the account, its sessions, API keys, history and audio files."""
-    from sqlalchemy import delete, func
-
-    import secrets as _secrets
-
-    from models import DeletionLog, Generation
+    from sqlalchemy import func
 
     s = get_settings()
     lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"del:user:{p.user.id}", 5, WINDOW_LOGIN)
@@ -299,36 +295,22 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Principal =
     user = await db.get(User, p.user.id)
     if not verify_password(user.password_hash, body.password):
         raise HTTPException(422, "Your password is incorrect")
+    if user.role == "owner":
+        raise HTTPException(422, "You're the owner. Transfer ownership to another admin first (Admin → Team & roles).")
     if user.role == "admin":
         admins = (await db.execute(select(func.count()).select_from(User)
-                                   .where(User.role == "admin", User.is_active.is_(True)))).scalar_one()
+                                   .where(User.role.in_(("owner", "admin")), User.is_active.is_(True)))).scalar_one()
         if admins <= 1:
             raise HTTPException(422, "You're the only admin. Make another admin first, so nobody gets locked out.")
 
     # Stop future charges first (fails the request if Razorpay can't be reached, so nobody is charged after deleting).
+    from accounts import delete_user_data
     from billing.routes import cancel_for_account_deletion
-    from models import Invoice, Payment, Subscription
     await cancel_for_account_deletion(db, user.id)
-    # Invoices and payments are tax records (kept 8 years, Privacy Policy §3): detach them from the account, don't delete.
-    for model in (Invoice, Payment, Subscription):
-        await db.execute(update(model).where(model.user_id == user.id).values(user_id=None))
-
-    gen_ids = (await db.execute(select(Generation.id).where(Generation.user_id == user.id))).scalars().all()
-    audio_dir = request.app.state.jobs.s.audio_dir
-    for gid in gen_ids:
-        for ext in ("mp3", "wav", "json"):
-            (audio_dir / f"{gid}.{ext}").unlink(missing_ok=True)
-    # Explicit deletes (portable; doesn't rely on FK cascades)
-    await db.execute(delete(Generation).where(Generation.user_id == user.id))
-    await db.execute(delete(ApiKey).where(ApiKey.user_id == user.id))
-    await db.execute(delete(UserSession).where(UserSession.user_id == user.id))
-    await db.execute(update(Invite).where(Invite.created_by == user.id).values(created_by=None))
-    reference = f"DEL-{utcnow():%Y%m%d}-{_secrets.token_hex(3).upper()}"
-    db.add(DeletionLog(reference=reference, email_hash=sha256(user.email), generations_deleted=len(gen_ids)))
-    await db.delete(user)
+    reference, n_gen = await delete_user_data(db, user)
     await db.commit()
 
-    resp = JSONResponse({"ok": True, "deleted_generations": len(gen_ids), "reference": reference})
+    resp = JSONResponse({"ok": True, "deleted_generations": n_gen, "reference": reference})
     resp.delete_cookie(s.session_cookie, path="/", secure=s.cookie_secure, httponly=True, samesite="lax")
     return resp
 

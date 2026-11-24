@@ -6,7 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db import Base, utcnow
 
-ROLES = ("admin", "user")
+# Staff roles (admin panel, phase 12; permissions in admin/rbac.py) + "user" (customers).
+STAFF_ROLES = ("owner", "admin", "support", "finance", "viewer")
+ROLES = STAFF_ROLES + ("user",)
 
 
 class User(Base):
@@ -33,9 +35,21 @@ class User(Base):
     billing_state: Mapped[str] = mapped_column(String(2), default="", server_default="")
     billing_address: Mapped[str] = mapped_column(String(300), default="", server_default="")
 
+    # Suspension (admin panel): the user sees a friendly message at login; reason is internal.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    suspend_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    bonus_chars: Mapped[int] = mapped_column(Integer, default=0, server_default="0")   # extra characters this cycle
+    name: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     @property
     def is_admin(self) -> bool:
-        return self.role == "admin"
+        """Product-level admin (unlimited usage, admin-only voices): owner + admin. Panel permissions: admin/rbac.py."""
+        return self.role in ("owner", "admin")
+
+    @property
+    def is_staff(self) -> bool:
+        return self.role in STAFF_ROLES
 
     @property
     def effective_plan(self) -> str:
@@ -56,6 +70,12 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Admin panel: 2FA verified for THIS session (idle timeout via admin_seen_at), step-up window, impersonation.
+    mfa_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    admin_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    stepup_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    impersonate_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    impersonate_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     user: Mapped[User] = relationship(lazy="joined")
 
 
@@ -246,3 +266,6 @@ class VoiceConsent(Base):
     date: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     added_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+from .admin import *  # noqa: E402,F401,F403  (admin panel tables)

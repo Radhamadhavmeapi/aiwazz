@@ -16,6 +16,7 @@ from routes.tts import make_hooks
 from routes.tts import router as tts_router
 from routes.pronunciations import router as pronunciations_router
 from routes.preview import router as preview_router
+from admin.routes import ROUTERS as ADMIN_ROUTERS
 from settings import get_settings
 from tts.jobs import JobManager
 from tts.clone_client import CloneClient
@@ -107,6 +108,8 @@ def create_app() -> FastAPI:
     app.include_router(billing_router)
     app.include_router(pronunciations_router)
     app.include_router(preview_router)
+    for r in ADMIN_ROUTERS:
+        app.include_router(r)
     return app
 
 

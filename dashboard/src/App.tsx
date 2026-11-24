@@ -17,6 +17,7 @@ const HistoryPage = lazy(() => import("@/pages/history"));
 const VoicesPage = lazy(() => import("@/pages/voices"));
 const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
+const AdminApp = lazy(() => import("@/admin/admin-app"));
 
 const PAGES = { history: HistoryPage, voices: VoicesPage, "api-keys": ApiKeysPage, settings: SettingsPage } as const;
 
@@ -64,6 +65,7 @@ export default function App() {
                     // The design preview has no backend: those pages show a placeholder there.
                     return <Route key={p} path={`/${p}`} element={guard(PREVIEW && p !== "voices" ? <Placeholder page={p} /> : <Page />)} />;
                   })}
+                  {!PREVIEW && <Route path="/admin/*" element={<RequireAuth><AdminApp /></RequireAuth>} />}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>

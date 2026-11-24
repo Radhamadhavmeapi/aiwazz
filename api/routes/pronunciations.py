@@ -4,8 +4,7 @@ GET    /api/pronunciations                 yours + global + built-in rules
 POST   /api/pronunciations                 add or update (same word → updated)
 DELETE /api/pronunciations/{id}
 POST   /api/pronunciations/test            synthesize `say_as` with a voice → MP3 (not counted, 30/h)
-POST   /api/admin/pronunciations           global list (admin, session only; moves to /admin in phase 12 A5)
-DELETE /api/admin/pronunciations/{id}
+The global list is edited in the admin panel (admin/routes/content.py: 2FA, pronunciations.write, audited).
 """
 import asyncio
 import secrets
@@ -74,7 +73,7 @@ async def _upsert(db: AsyncSession, user_id: int | None, body: EntryIn) -> Pronu
 async def list_pronunciations(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_db)):
     return {"items": [_out(r) for r in await _list(db, p.user.id)],
             "global": [_out(r) for r in await _list(db, None)], "builtin": BUILTIN,
-            "can_edit_global": p.user.is_admin and p.via == "session", "max": pronounce.MAX_PER_USER}
+            "can_edit_global": False, "max": pronounce.MAX_PER_USER}
 
 
 @router.post("/pronunciations", dependencies=[Depends(csrf_protect)])
@@ -86,28 +85,6 @@ async def save_pronunciation(body: EntryIn, p: Principal = Depends(current_princ
 async def delete_pronunciation(entry_id: int, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_db)):
     row = await db.get(Pronunciation, entry_id)
     if row is None or row.user_id != p.user.id:
-        raise HTTPException(404, "Not found")
-    await db.delete(row)
-    await db.commit()
-    return {"ok": True}
-
-
-# ── Global list (admins) ──
-async def _admin(p: Principal = Depends(current_principal)) -> Principal:
-    if not p.user.is_admin or p.via != "session":
-        raise HTTPException(404, "Not found")
-    return p
-
-
-@router.post("/admin/pronunciations", dependencies=[Depends(csrf_protect)])
-async def save_global(body: EntryIn, p: Principal = Depends(_admin), db: AsyncSession = Depends(get_db)):
-    return _out(await _upsert(db, None, body))
-
-
-@router.delete("/admin/pronunciations/{entry_id}", dependencies=[Depends(csrf_protect)])
-async def delete_global(entry_id: int, p: Principal = Depends(_admin), db: AsyncSession = Depends(get_db)):
-    row = await db.get(Pronunciation, entry_id)
-    if row is None or row.user_id is not None:
         raise HTTPException(404, "Not found")
     await db.delete(row)
     await db.commit()

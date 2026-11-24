@@ -1,6 +1,6 @@
 """Admin CLI. Run from /www/aiwazz/api:  .venv/bin/python manage.py <command> [options]
 
-  create-user  --email E [--role admin|user]   prompts for the password (never pass it as an argument)
+  create-user  --email E [--role owner|admin|support|finance|viewer|user]   prompts for the password (never pass it as an argument)
   set-password --email E                       prompts for the new password; signs the user out everywhere
   set-active   --email E --active yes|no       disable/enable an account (disabling signs them out)
   list-users
@@ -28,6 +28,14 @@
   add-voice-consent --voice ID --source ai_voice|real_person --by EMAIL --note TEXT [--speaker S] [--scope S]
                     [--document PATH]          ai_voice → active; real_person → active only with --document
   revoke-voice-consent --voice ID              disables the voice now and deletes its reference audio + tone colour
+
+Admin panel (phase 12, https://login.aiwazz.in/admin):
+  gen-admin-key                                AIWAZZ_ADMIN_SECRET_KEY (encrypts 2FA secrets) in api/.env, once; restart
+  set-role     --email E --role owner|admin|support|finance|viewer|user [--transfer]
+               owner: --transfer moves ownership (the current owner becomes admin). Locks the user's admin sessions.
+  reset-2fa    --email E                       removes a staff member's 2FA (lost phone); they set it up again at /admin
+  delete-user  --email E                       deletes the account like self-service deletion (asks to confirm)
+  audit-tail   [--limit N]                     latest admin audit log entries
 """
 import argparse
 import asyncio
@@ -110,6 +118,56 @@ def ask_password(email: str) -> str:
     sys.exit("Aborted")
 
 
+async def admin_cmd(db, a) -> None:
+    from sqlalchemy import update
+
+    from admin.audit import audit
+    from models import BackupCode, TotpSecret
+    email = a.email.lower().strip()
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if not user:
+        sys.exit(f"No user {email}")
+    lock = update(UserSession).where(UserSession.user_id == user.id).values(mfa_at=None, admin_seen_at=None, stepup_until=None)
+    if a.cmd == "set-role":
+        before = user.role
+        owners = (await db.execute(select(User).where(User.role == "owner", User.id != user.id))).scalars().all()
+        if a.role == "owner" and owners:
+            if not a.transfer:
+                sys.exit(f"{owners[0].email} is the owner. Use --transfer to move ownership (they become admin).")
+            for o in owners:
+                o.role = "admin"
+                audit(db, None, None, "team.ownership.transfer", target_type="user", target_id=o.id, label=o.email,
+                      before={"role": "owner"}, after={"role": "admin"}, reason="manage.py set-role --transfer")
+        if before == "owner" and a.role != "owner" and not owners:
+            sys.exit("This is the only owner. Make someone else owner first (set-role --role owner --transfer).")
+        user.role = a.role
+        await db.execute(lock)
+        audit(db, None, None, "team.role.change", target_type="user", target_id=user.id, label=email,
+              before={"role": before}, after={"role": a.role}, reason="manage.py set-role")
+        await db.commit()
+        print(f"{email}: {before} → {a.role}" + ("" if a.role == "user" else "  (2FA is required at /admin)"))
+    elif a.cmd == "reset-2fa":
+        await db.execute(delete(BackupCode).where(BackupCode.user_id == user.id))
+        await db.execute(delete(TotpSecret).where(TotpSecret.user_id == user.id))
+        await db.execute(lock)
+        audit(db, None, None, "mfa.reset", target_type="user", target_id=user.id, label=email, reason="manage.py reset-2fa")
+        await db.commit()
+        print(f"2FA removed for {email}. They set it up again at https://login.aiwazz.in/admin")
+    elif a.cmd == "delete-user":
+        from accounts import delete_user_data
+        from billing.service import live_subscription as live_subscription_or_none
+        if user.role == "owner":
+            sys.exit("Can't delete the owner. Transfer ownership first.")
+        if await live_subscription_or_none(db, user.id):
+            sys.exit("This user has a live subscription. Cancel it (admin panel → Subscriptions) first.")
+        if not a.yes and input(f"Delete {email} and all their data? Type the email to confirm: ").strip().lower() != email:
+            sys.exit("Aborted")
+        audit(db, None, None, "user.delete", target_type="user", target_id=user.id, label=email, reason="manage.py delete-user")
+        ref, n = await delete_user_data(db, user)
+        await db.commit()
+        print(f"Deleted {email} ({n} generations). Reference {ref}")
+
+
 async def main(argv: list[str]) -> None:
     ap = argparse.ArgumentParser(prog="manage.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -124,7 +182,7 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("mark-request"); p.add_argument("--id", type=int, required=True)
     p.add_argument("--status", choices=("new", "invited", "declined"), required=True)
     p = sub.add_parser("create-invite")
-    p.add_argument("--uses", type=int, default=1); p.add_argument("--role", choices=ROLES, default="user")
+    p.add_argument("--uses", type=int, default=1); p.add_argument("--role", choices=[r for r in ROLES if r != "owner"], default="user")
     p.add_argument("--days", type=int, default=14); p.add_argument("--label", default="")
     sub.add_parser("list-invites")
     p = sub.add_parser("revoke-invite"); p.add_argument("--id", type=int, required=True)
@@ -144,7 +202,20 @@ async def main(argv: list[str]) -> None:
     p.add_argument("--note", required=True); p.add_argument("--speaker", default="")
     p.add_argument("--scope", default="Commercial use on AiWazz: reels and ads"); p.add_argument("--document")
     p = sub.add_parser("revoke-voice-consent"); p.add_argument("--voice", required=True)
+    sub.add_parser("gen-admin-key")
+    p = sub.add_parser("set-role"); p.add_argument("--email", required=True); p.add_argument("--role", choices=ROLES, required=True)
+    p.add_argument("--transfer", action="store_true")
+    p = sub.add_parser("reset-2fa"); p.add_argument("--email", required=True)
+    p = sub.add_parser("delete-user"); p.add_argument("--email", required=True); p.add_argument("--yes", action="store_true")
+    p = sub.add_parser("audit-tail"); p.add_argument("--limit", type=int, default=30)
     a = ap.parse_args(argv)
+    if a.cmd == "gen-admin-key":
+        from cryptography.fernet import Fernet
+        if get_settings().admin_secret_key:
+            sys.exit("AIWAZZ_ADMIN_SECRET_KEY is already set. Replacing it would break every staff member's 2FA.")
+        set_env("AIWAZZ_ADMIN_SECRET_KEY", Fernet.generate_key().decode())
+        print(f"Saved AIWAZZ_ADMIN_SECRET_KEY in {ENV_FILE} (not shown). Restart: pm2 restart voice-api")
+        return
     if a.cmd == "set-secret":
         value = getpass.getpass(f"{a.name} (input hidden): ").strip()
         if not value:
@@ -167,6 +238,8 @@ async def main(argv: list[str]) -> None:
             email = a.email.lower().strip()
             if (await db.execute(select(User).where(User.email == email))).scalar_one_or_none():
                 sys.exit(f"User {email} already exists")
+            if a.role == "owner" and (await db.execute(select(User.id).where(User.role == "owner"))).first():
+                print("Note: an owner already exists; this creates a second owner account (e.g. a temporary test account).")
             db.add(User(email=email, password_hash=hash_password(ask_password(email)), role=a.role))
             await db.commit()
             print(f"Created {a.role} {email}")
@@ -313,6 +386,16 @@ async def main(argv: list[str]) -> None:
             for i in (await db.execute(select(Invite).order_by(Invite.id))).scalars():
                 state = "revoked" if i.revoked else "expired" if i.expires_at and i.expires_at <= now else "used up" if i.uses >= i.max_uses else "open"
                 print(f"{i.id:>4}  {state:<8} {i.uses}/{i.max_uses} uses  role={i.role:<5} expires={i.expires_at or 'never'}  {i.label}")
+
+        elif a.cmd in ("set-role", "reset-2fa", "delete-user"):
+            await admin_cmd(db, a)
+
+        elif a.cmd == "audit-tail":
+            from models import AdminAudit
+            rows = (await db.execute(select(AdminAudit).order_by(AdminAudit.id.desc()).limit(a.limit))).scalars().all()
+            for r in reversed(rows):
+                print(f"#{r.id} {r.at:%Y-%m-%d %H:%M:%S} UTC  {r.actor_email} ({r.actor_role})  {r.action}  "
+                      f"{r.target_type}:{r.target_id} {r.target_label}  {r.reason}")
 
         elif a.cmd == "revoke-invite":
             inv = await db.get(Invite, a.id)

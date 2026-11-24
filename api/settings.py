@@ -84,6 +84,15 @@ class Settings(BaseSettings):
     razorpay_plan_ids: dict[str, str] = {}    # {"creator_yearly": "plan_…", …}
     plan_grace_days: int = 2                  # paid access lasts this long past current_end (renewal retries)
 
+    # Admin panel (phase 12). admin_secret_key = Fernet key that encrypts TOTP secrets (manage.py gen-admin-key).
+    admin_secret_key: str = ""
+    admin_idle_minutes: int = Field(30, ge=5, le=240)     # 2FA unlock expires after this much admin inactivity
+    admin_max_hours: int = Field(12, ge=1, le=24)         # ... and at the latest this long after the 2FA check
+    stepup_minutes: int = Field(10, ge=1, le=30)          # password + TOTP re-auth window for sensitive actions
+    impersonate_minutes: int = Field(15, ge=1, le=60)
+    admin_rate_per_5min: int = 600                        # per staff member, all /api/admin calls
+    totp_issuer: str = "AiWazz Admin"
+
     @property
     def session_cookie(self) -> str:
         return "__Host-aiwazz_session" if self.cookie_secure else "aiwazz_session"

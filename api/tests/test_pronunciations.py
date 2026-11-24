@@ -89,14 +89,15 @@ def test_user_list_crud_and_isolation(anon, make_invite):
     assert anon.delete(f"/api/pronunciations/{eid}").status_code == 404
 
 
-def test_global_list_read_as_and_tts_use_all_lists(anon, make_invite):
-    make_invite("ADMN-CODE", role="admin")
-    signup(anon, code="ADMN-CODE")
+def test_global_list_read_as_and_tts_use_all_lists(staff):
+    anon = staff("admin")                      # the global list is edited in the admin panel (2FA unlocked)
     assert anon.post("/api/admin/pronunciations", json={"word": "GST", "say_as": "G S T"}).status_code == 200
     assert anon.post("/api/admin/pronunciations", json={"word": "UPI", "say_as": "U P I"}).status_code == 200
     anon.post("/api/pronunciations", json={"word": "UPI", "say_as": "यू पी आई"})   # own list beats global
     lst = anon.get("/api/pronunciations").json()
-    assert lst["can_edit_global"] is True and [g["word"] for g in lst["global"]] == ["GST", "UPI"]
+    assert lst["can_edit_global"] is False and [g["word"] for g in lst["global"]] == ["GST", "UPI"]
+    assert [a["action"] for a in anon.get("/api/admin/audit?action=pronunciation").json()["items"]] == \
+        ["pronunciation.global.save"] * 2
 
     r = anon.post("/api/read-as", json={"text": "UPI se GST bharo, [Kalyan](कल्याण) mein", "transliterate": True,
                                        "pronunciations": [{"word": "bharo", "say_as": "भरो"}]})
@@ -115,6 +116,8 @@ def test_global_list_read_as_and_tts_use_all_lists(anon, make_invite):
     with identity(anon):  # an admin's API key can't edit the global list (session only)
         assert anon.delete(f"/api/admin/pronunciations/{gid}", headers={"X-API-Key": key}).status_code == 404
     assert anon.delete(f"/api/admin/pronunciations/{gid}").status_code == 200
+    anon.post("/api/admin/lock")
+    assert anon.post("/api/admin/pronunciations", json={"word": "X", "say_as": "Y"}).status_code == 401   # locked
 
 
 def test_replacements_cannot_blow_up_the_script(client):

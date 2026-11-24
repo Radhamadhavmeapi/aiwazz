@@ -5,6 +5,7 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public retryAfter?: number,
+    public headers?: Headers,
   ) {
     super(message);
   }
@@ -33,6 +34,8 @@ function messageFrom(body: unknown, status: number): string {
   return "Request failed";
 }
 
+export { csrfToken, messageFrom };
+
 export async function api<T = unknown>(path: string, init: { method?: string; json?: unknown } = {}, retried = false): Promise<T> {
   const method = init.method ?? (init.json !== undefined ? "POST" : "GET");
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -53,7 +56,7 @@ export async function api<T = unknown>(path: string, init: { method?: string; js
       await csrfToken(true);
       return api<T>(path, init, true);
     }
-    throw new ApiError(res.status, msg, Number(res.headers.get("retry-after")) || undefined);
+    throw new ApiError(res.status, msg, Number(res.headers.get("retry-after")) || undefined, res.headers);
   }
   return body as T;
 }

@@ -93,7 +93,7 @@ export function AppShell({
         <main id="main" className="flex-1">
           {children}
         </main>
-        <SiteFooter compact className="mt-8 pb-24 lg:pb-0" />
+        <SiteFooter className="mt-8 pb-24 lg:pb-5" />
       </div>
 
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} onPickVoice={onPickVoice} />

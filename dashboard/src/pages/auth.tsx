@@ -17,7 +17,6 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
-import { SiteFooter } from "@/components/site-footer";
 import { toast } from "sonner";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { LiveWaveform } from "@/components/brand/live-waveform";
@@ -796,7 +795,6 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             </p>
           </div>
         </main>
-        <SiteFooter compact />
       </div>
       <BrandPanel />
     </div>

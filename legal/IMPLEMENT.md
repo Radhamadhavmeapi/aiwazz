@@ -35,12 +35,14 @@ Create one page per markdown file, with a shared `LegalLayout` that follows the 
 
 Build plan cards from `legal.json → plans`: Free ₹0 / Starter ₹199 / Creator ₹499 / Pro ₹1,499 per month (monthly/yearly toggle, yearly = 12 × round(monthly × (1 − yearlyDiscountPercent/100)), "+ 18% GST" note, "Most popular" on Creator, show characters/month and ≈ minutes of audio at ~800 characters per minute). Also add a Pricing section teaser on the home page linking to /pricing/. Buttons go to `https://login.aiwazz.in/signup?plan=<id>`. Prices must be visible without login (Razorpay requirement).
 
-## 3. Footer on BOTH sites (landing + dashboard + auth pages)
+## 3. Footers (rule since 24 Nov 2026)
 
-Columns: **Product** (Pricing, Text to speech, Hindi text to speech, AI voiceover for reels) · **Company** (About, Contact, Grievance) · **Legal** (Terms, Privacy, Refund policy, Shipping & delivery, Acceptable use, Data deletion).
-Bottom line, always visible:
-`© 2026 RADHAMADHAV WEBSTORE LLP · AiWazz is a brand of TheWebStore028 · GSTIN 27ABJFR6148J1ZO · <address> · <supportEmail> · <phone>`
-On login.aiwazz.in link to the aiwazz.in URLs. Add "Pricing" to the landing header nav.
+- **Landing (aiwazz.in):** link columns: **Product** (Pricing + SEO pages) · **Learn** · **Company** (About, Contact, Grievance) · **Legal** (Terms, Privacy, Refund policy, Shipping & delivery, Acceptable use, Data deletion). Bottom line is ONLY:
+  `© 2026 RADHAMADHAV WEBSTORE LLP · AiWazz is a brand of TheWebStore028` (from legal.json). No address, GSTIN, email or phone in the footer.
+- **Address, GSTIN, email and phone** appear only on Contact, the About business table and the policy pages (all reachable from the footer's Contact/Legal links).
+- **Logged-in app (login.aiwazz.in):** no link row, no company line; one small muted line `© 2026 AiWazz · RADHAMADHAV WEBSTORE LLP`.
+- **Auth pages (login/signup):** no footer; Terms + Privacy links only next to the consent checkbox (and the Privacy link on the invite-request form).
+Add "Pricing" to the landing header nav.
 
 ## 4. Signup and account (login.aiwazz.in)
 
@@ -72,7 +74,7 @@ On login.aiwazz.in link to the aiwazz.in URLs. Add "Pricing" to the landing head
 
 - Every URL in section 1 returns **200** over HTTPS, without login, without JS-only rendering (static HTML), not geo-blocked.
 - Requests with user agents `facebookexternalhit/1.1` and `Razorpay` get 200 (no bot blocking, no WAF challenge).
-- Business name, address, email and phone are identical on Contact, About, Terms, Privacy and the footer, and match legal.json.
+- Business name, address, email and phone are identical on Contact, About, Terms and Privacy and match legal.json; the landing footer links to /contact/ (the footer itself shows only the copyright line).
 - Privacy policy includes: data collected, purposes, sharing, retention, security, user rights, and a clear **deletion path** (in-app + email). Data Deletion page exists at /data-deletion/.
 - No "lorem", "TODO", "coming soon" or empty sections anywhere on public pages.
 - Print a final table of URLs for me to paste into Razorpay (Business website details) and Meta (App Dashboard → Basic settings: Privacy Policy URL, Terms of Service URL, User data deletion → Data deletion instructions URL).

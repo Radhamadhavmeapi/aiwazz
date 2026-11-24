@@ -8,7 +8,6 @@ const cols = [
   { title: "Company", links: FOOTER.company },
   { title: "Legal", links: FOOTER.legal },
 ];
-const tel = LEGAL.phone.replace(/\s+/g, "");
 ---
 <footer class="border-t">
   <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
@@ -30,9 +29,7 @@ const tel = LEGAL.phone.replace(/\s+/g, "");
   </div>
   <div class="border-t">
     <p class="mx-auto max-w-6xl px-4 py-6 text-xs leading-6 text-subtle-foreground sm:px-6">
-      © 2026 {LEGAL.legalName} · AiWazz is a brand of {LEGAL.parentBrand} · GSTIN {LEGAL.gstin} · {LEGAL.address} ·
-      <a href={`mailto:${LEGAL.supportEmail}`} class="underline-offset-2 hover:text-foreground hover:underline">{LEGAL.supportEmail}</a> ·
-      <a href={`tel:${tel}`} class="underline-offset-2 hover:text-foreground hover:underline">{LEGAL.phone}</a>
+      © 2026 {LEGAL.legalName} · AiWazz is a brand of {LEGAL.parentBrand}
     </p>
   </div>
 </footer>

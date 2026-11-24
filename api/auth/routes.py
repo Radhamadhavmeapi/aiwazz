@@ -352,6 +352,7 @@ class ContactIn(BaseModel):
     message: str = Field(min_length=10, max_length=4000)
     consent: bool = False
     website: str = ""   # honeypot: real people never fill this hidden field
+    topic: str = Field(default="general", pattern="^(general|billing|grievance|abuse)$")
 
 
 @router.post("/contact", status_code=201)
@@ -368,8 +369,28 @@ async def contact(body: ContactIn, request: Request, db: AsyncSession = Depends(
     lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"contact:ip:{client_ip(request)}", s.contact_max_per_ip, 3600)
     if not lim.allowed:
         raise _too_many(lim.retry_after)
-    db.add(ContactMessage(name=body.name.strip(), email=body.email.lower(), subject=body.subject.strip(),
-                          message=body.message.strip(), ip=client_ip(request)[:45]))
+    from admin import moderation, support
+    if await moderation.is_blocked(db, email=body.email, ip=client_ip(request)):
+        return {"ok": True}                 # blocked senders get the same answer; nothing is stored
+    cm = ContactMessage(name=body.name.strip(), email=body.email.lower(), subject=body.subject.strip(),
+                        message=body.message.strip(), ip=client_ip(request)[:45])
+    db.add(cm)
+    await db.flush()
+    kind = {"general": "contact", "billing": "billing", "grievance": "grievance", "abuse": "abuse"}[body.topic]
+    t = await support.create_ticket(db, kind, body.email, body.name.strip(), body.subject.strip(), body.message.strip(),
+                                    source_id=cm.id, priority="high" if kind in ("grievance", "abuse") else "normal")
+    if kind == "abuse":       # misuse reports land in Moderation too
+        from models import Flag
+        db.add(Flag(source="report", category="other", severity="high", ticket_id=t.id, detail=body.subject.strip()[:500]))
+    if kind == "grievance":   # automatic acknowledgement with the reference (counts once it is actually delivered)
+        from emails import send_template
+        from datetime import timedelta as _td
+        st = await send_template(db, "grievance_ack", t.email, {
+            "name": t.name or t.email.split("@")[0], "reference": t.reference,
+            "received": f"{t.created_at + _td(hours=5, minutes=30):%d %b %Y}",
+            "due": f"{t.resolve_due_at + _td(hours=5, minutes=30):%d %b %Y}"})
+        if st == "sent":
+            t.acknowledged_at = utcnow()
     await db.commit()
     await notify_support(request, "contact", {"name": body.name.strip(), "email": body.email.lower(),
                                               "subject": body.subject.strip(), "message": body.message.strip()})
@@ -396,12 +417,24 @@ async def invite_request(body: InviteRequestIn, request: Request, db: AsyncSessi
     if not lim.allowed:
         raise _too_many(lim.retry_after)
     email = body.email.lower()
+    from admin import moderation, support
+    if await moderation.is_blocked(db, email=email, ip=client_ip(request)):
+        return {"ok": True}
     row = (await db.execute(select(InviteRequest).where(InviteRequest.email == email))).scalar_one_or_none()
+    new = row is None
     if row is None:
         row = InviteRequest(email=email)
         db.add(row)
     row.name, row.use_case = body.name.strip(), body.use_case.strip()
     row.ip, row.updated_at = client_ip(request)[:45], utcnow()
+    await db.flush()
+    from models import Ticket
+    t = (await db.execute(select(Ticket).where(Ticket.kind == "invite_request", Ticket.source_id == row.id))).scalars().first()
+    if t is None or new:
+        await support.create_ticket(db, "invite_request", email, row.name, "Invite request", row.use_case or "(no use case given)",
+                                    source_id=row.id, priority="low")
+    else:
+        await support.add_incoming(db, t, row.use_case or "(asked again)")
     await db.commit()
     await notify_support(request, "invite_request", {"email": email, "name": row.name, "use_case": row.use_case})
     return {"ok": True}

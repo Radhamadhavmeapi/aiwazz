@@ -8,7 +8,8 @@ from db import Base, utcnow
 
 __all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression",
            "Refund", "CreditNote", "CreditNoteCounter", "DunningCase", "PlanVersion", "Coupon", "CouponRedemption",
-           "ReferralCode", "Referral", "TaskRun"]
+           "ReferralCode", "Referral", "TaskRun", "Ticket", "TicketMessage", "CannedReply", "ModerationRule", "Flag",
+           "BlockEntry"]
 
 
 class TotpSecret(Base):
@@ -271,3 +272,105 @@ class TaskRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="running")  # running | ok | failed
     detail: Mapped[str] = mapped_column(String(500), default="")
+
+
+# ── Support inbox (A4) ──────────────────────────────────────────────────────
+class Ticket(Base):
+    """One conversation in the support inbox: contact form, invite request, grievance or misuse report.
+    Grievances carry the legal timelines (acknowledge within 24 h, resolve within 15 days)."""
+    __tablename__ = "tickets"
+    __table_args__ = (Index("ix_tickets_status_updated", "status", "updated_at"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))                       # contact | invite_request | grievance | abuse | billing
+    status: Mapped[str] = mapped_column(String(16), default="new")      # new | open | waiting | resolved
+    priority: Mapped[str] = mapped_column(String(8), default="normal")  # low | normal | high | urgent
+    assignee_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    subject: Mapped[str] = mapped_column(String(200))
+    name: Mapped[str] = mapped_column(String(100), default="")
+    email: Mapped[str] = mapped_column(String(254), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_id: Mapped[int | None] = mapped_column(Integer, nullable=True)   # contact_messages.id / invite_requests.id
+    reference: Mapped[str] = mapped_column(String(24), unique=True)        # shown to the sender, e.g. AWZ-T-000123
+    thread_message_id: Mapped[str] = mapped_column(String(200), default="")   # Message-ID of our first email (threading)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ack_due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)      # grievances: +24 h
+    resolve_due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # grievances: +15 days
+
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), index=True)
+    direction: Mapped[str] = mapped_column(String(8))                   # in | out | note (internal)
+    author_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    author_email: Mapped[str] = mapped_column(String(254), default="")
+    body: Mapped[str] = mapped_column(Text)
+    message_id: Mapped[str] = mapped_column(String(200), default="")
+    email_status: Mapped[str] = mapped_column(String(16), default="")  # out: sent | disabled | failed | suppressed
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class CannedReply(Base):
+    __tablename__ = "canned_replies"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(100))
+    body: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# ── Moderation & trust (A4) ─────────────────────────────────────────────────
+class ModerationRule(Base):
+    """Pattern checked against every script at submit time. action flag = allow + review; block = refuse the job."""
+    __tablename__ = "moderation_rules"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    category: Mapped[str] = mapped_column(String(24))                   # impersonation | scam | threat | explicit | other
+    kind: Mapped[str] = mapped_column(String(8), default="keywords")    # keywords (comma separated, whole words) | regex
+    pattern: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(8), default="medium")  # low | medium | high
+    action: Mapped[str] = mapped_column(String(8), default="flag")      # flag | block
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Flag(Base):
+    """Something to review: a rule match on a script, a volume spike, many accounts from one IP, or a public report.
+    Stores the matched term only (not the script); the script is viewable under the privacy rule."""
+    __tablename__ = "flags"
+    __table_args__ = (Index("ix_flags_status_created", "status", "created_at"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(16))                     # rule | volume | multi_account | report
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    generation_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    rule_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rule_name: Mapped[str] = mapped_column(String(100), default="")
+    category: Mapped[str] = mapped_column(String(24), default="other")
+    severity: Mapped[str] = mapped_column(String(8), default="medium")
+    matched: Mapped[str] = mapped_column(String(100), default="")
+    detail: Mapped[str] = mapped_column(String(500), default="")
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)       # the job was refused
+    status: Mapped[str] = mapped_column(String(16), default="open")     # open | dismissed | actioned
+    action: Mapped[str] = mapped_column(String(32), default="")         # warned | suspended | audio_deleted | reported
+    note: Mapped[str] = mapped_column(String(500), default="")
+    ticket_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class BlockEntry(Base):
+    """Blocklist: email address, email domain or IP (or CIDR). Blocks signup and invite requests."""
+    __tablename__ = "blocklist"
+    __table_args__ = (UniqueConstraint("kind", "value", name="uq_blocklist"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(8))                        # email | domain | ip
+    value: Mapped[str] = mapped_column(String(254))
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

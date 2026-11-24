@@ -242,6 +242,15 @@ async def create_tts(
         raise HTTPException(402, f"Not enough characters left this month: {usage.remaining:,} left, this script needs "
                                  f"{len(body.text):,}. Shorten the script, or upgrade your plan.")
 
+    # Moderation (admin → Moderation): "block" rules refuse the job; "flag" rules allow it and queue a review.
+    from admin import moderation
+    matches = await moderation.screen(db, body.text)
+    if any(m.rule.action == "block" for m in matches):
+        await moderation.record(db, p.user, matches, None, blocked=True)
+        await db.commit()
+        raise HTTPException(422, "This script can't be generated: it looks like it goes against our Acceptable Use Policy "
+                                 "(aiwazz.in/acceptable-use/). If this is a mistake, contact support@aiwazz.in.")
+
     gen = Generation(
         id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
         engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
@@ -249,6 +258,8 @@ async def create_tts(
         text_excerpt=" ".join(pronounce.strip_inline(body.text).split())[:160],
     )
     db.add(gen)
+    if matches:
+        await moderation.record(db, p.user, matches, gen.id, blocked=False)
     await db.commit()
     job = jm.submit(req, job_id=gen.id, user_id=p.user.id,
                     estimate_sec=clone.estimate_sec(len(text), speed) if clone else None)

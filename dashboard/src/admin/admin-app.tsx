@@ -20,6 +20,8 @@ const PAGES: Record<string, ComponentType> = {
   invoices: lazy(() => import("./pages/invoices")),
   plans: lazy(() => import("./pages/plans")),
   coupons: lazy(() => import("./pages/coupons")),
+  support: lazy(() => import("./pages/support")),
+  moderation: lazy(() => import("./pages/moderation")),
 };
 
 function Pending({ to }: { to: string }) {

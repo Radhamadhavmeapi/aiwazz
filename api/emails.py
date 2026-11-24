@@ -112,7 +112,8 @@ async def send_template(db: AsyncSession, key: str, to: str, values: dict, *, us
     from models import EmailLog, EmailSuppression
     to = to.strip().lower()
     subject, text, html_ = await render(db, key, values)
-    row = EmailLog(to_email=to, template=key, subject=subject[:200], user_id=user_id, status="queued")
+    row = EmailLog(to_email=to, template=key, subject=subject[:200], user_id=user_id, status="queued",
+                   message_id=(headers or {}).get("Message-ID", ""))
     db.add(row)
     if await db.get(EmailSuppression, to):
         row.status = "suppressed"
@@ -122,6 +123,7 @@ async def send_template(db: AsyncSession, key: str, to: str, values: dict, *, us
         return row.status
     msg = mailer.build(to, subject, text, html_, reply_to=reply_to)
     for k, v in (headers or {}).items():
+        del msg[k]
         msg[k] = v
     for data, filename in attachments or []:
         msg.add_attachment(data, maintype="application", subtype="pdf", filename=filename)

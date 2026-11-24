@@ -13,4 +13,5 @@ const { page } = Astro.props as { page: LegalPage };
 ---
 <LegalLayout page={page}>
   {page.slug === "contact" && <ContactForm />}
+  {page.slug === "grievance" && <ContactForm topic="grievance" />}
 </LegalLayout>

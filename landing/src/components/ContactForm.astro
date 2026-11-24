@@ -1,6 +1,9 @@
 ---
 // Posts to /api/contact (nginx proxies it same-origin to the AiWazz API). Honeypot + rate limit server-side.
+// topic: lands in the right queue of the support inbox (grievances get the legal timelines; misuse reports also
+// go to Moderation). The grievance page shows this form with topic "grievance" preselected.
 import { LEGAL } from "../lib/legal";
+const { topic = "general" } = Astro.props as { topic?: string };
 ---
 <section aria-labelledby="contact-form-title" class="mt-12 rounded-2xl border bg-surface p-5 shadow-md sm:p-6">
   <h2 id="contact-form-title" class="text-xl font-semibold text-foreground">Send us a message</h2>
@@ -13,6 +16,14 @@ import { LEGAL } from "../lib/legal";
         <input name="email" type="email" required maxlength="254" autocomplete="email" class="h-11 rounded-lg border border-input bg-surface-2 px-3 text-[15px] font-normal" />
       </label>
     </div>
+    <label class="grid gap-1.5 text-sm font-medium text-foreground">Topic
+      <select name="topic" class="h-11 rounded-lg border border-input bg-surface-2 px-3 text-[15px] font-normal">
+        <option value="general" selected={topic === "general"}>General question</option>
+        <option value="billing" selected={topic === "billing"}>Billing or invoice</option>
+        <option value="grievance" selected={topic === "grievance"}>Grievance (complaint to the Grievance Officer)</option>
+        <option value="abuse" selected={topic === "abuse"}>Report misuse (impersonation, scam or harmful audio)</option>
+      </select>
+    </label>
     <label class="grid gap-1.5 text-sm font-medium text-foreground">Subject
       <input name="subject" required maxlength="150" class="h-11 rounded-lg border border-input bg-surface-2 px-3 text-[15px] font-normal" />
     </label>

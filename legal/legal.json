@@ -33,6 +33,8 @@
   "currency": "INR",
   "gstRatePercent": 18,
   "pricesIncludeGst": false,
+  "sacCode": "998439",
+  "sacCode_CONFIRM": "SAC printed on GST invoices. 998439 = other online content services; confirm with your CA (some SaaS use 997331 or 998314).",
   "plans_CONFIRM": "Launch prices set below the market (Nov 2026): ElevenLabs Starter is about Rs 528/month for 30k characters and Creator about Rs 1,848 for 100k; Speakatoo starts at Rs 399. Change here only; every page reads these.",
   "plans": [
     {

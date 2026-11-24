@@ -14,7 +14,8 @@ const plans = LEGAL.plans.map((p) => {
     yearlyPerMonth,
     minutes: Math.round(p.characters / 800),
     popular: p.id === "creator",
-    href: p.id === "free" ? `${SITE.app}/signup` : `${SITE.app}/signup?plan=${p.id}`,
+    // Paid: straight to checkout in Settings → Billing (sign-in first if needed). The period follows the toggle.
+    href: p.id === "free" ? `${SITE.app}/signup` : `${SITE.app}/settings?plan=${p.id}&period=monthly`,
   };
 });
 
@@ -106,6 +107,9 @@ const jsonLd = [
       root.querySelectorAll("[data-period]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       root.querySelectorAll<HTMLElement>("[data-monthly]").forEach((e) => {
         e.textContent = (yearly ? e.dataset.yearly : e.dataset.monthly) ?? "";
+      });
+      root.querySelectorAll<HTMLAnchorElement>('a[href*="period="]').forEach((a) => {
+        a.href = a.href.replace(/period=(monthly|yearly)/, `period=${yearly ? "yearly" : "monthly"}`);
       });
     }),
   );

@@ -305,6 +305,14 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Principal =
         if admins <= 1:
             raise HTTPException(422, "You're the only admin. Make another admin first, so nobody gets locked out.")
 
+    # Stop future charges first (fails the request if Razorpay can't be reached, so nobody is charged after deleting).
+    from billing.routes import cancel_for_account_deletion
+    from models import Invoice, Payment, Subscription
+    await cancel_for_account_deletion(db, user.id)
+    # Invoices and payments are tax records (kept 8 years, Privacy Policy §3): detach them from the account, don't delete.
+    for model in (Invoice, Payment, Subscription):
+        await db.execute(update(model).where(model.user_id == user.id).values(user_id=None))
+
     gen_ids = (await db.execute(select(Generation.id).where(Generation.user_id == user.id))).scalars().all()
     audio_dir = request.app.state.jobs.s.audio_dir
     for gid in gen_ids:

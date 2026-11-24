@@ -525,9 +525,8 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                   <p className="mt-3 rounded-xl border bg-surface px-3.5 py-2.5 text-xs leading-5 text-muted-foreground">
                     You picked the{" "}
                     <strong className="text-foreground">{planName}</strong>{" "}
-                    plan. Online payments aren't open yet, so your account
-                    starts on the Free plan; you can upgrade from Settings once
-                    billing is live.
+                    plan. Create your account first, then upgrade in Settings →
+                    Billing.
                   </p>
                 )}
 

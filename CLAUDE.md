@@ -228,6 +228,25 @@ over; admins unlimited; API keys need Creator/Pro (403 otherwise); `GET /api/usa
 Not built yet (marked "Coming soon" in guides): online upgrade/cancel, invoices, billing details, forgot password,
 change email.
 
+## Billing (Razorpay, built 24 Nov 2026, TEST mode first)
+`api/billing/`: Razorpay **Subscriptions** (auto-renew) for Starter/Creator/Pro × monthly/yearly. Prices from legal.json
+(excl. GST); charge = price + 18 % GST; yearly = 12 × round(monthly × 0.8). Plans are created by
+`manage.py billing-create-plans` (ids → `AIWAZZ_RAZORPAY_PLAN_IDS` in api/.env; re-run with `--force` after a price change,
+`billing-check` compares). Keys via `manage.py set-secret NAME` (hidden prompt, writes api/.env, chmod 600).
+- Flow: Settings → Billing (billing details: name, state = place of supply, optional GSTIN with checksum) → `POST
+  /api/billing/subscribe` → Checkout.js → `POST /api/billing/verify` (HMAC `payment_id|subscription_id`, then reads the
+  subscription from Razorpay) → webhook `POST /api/billing/webhook` (HMAC of raw body with the webhook secret, event id
+  dedupe in `webhook_events`) is the source of truth.
+- A paid plan = `users.plan` + `plan_until = current_end + 2 days grace`; cancel = Razorpay cancel at cycle end, the plan
+  just runs out (hourly sweep). One live subscription per user (409 otherwise; switching = cancel, then pick at period end).
+- GST invoice per captured payment (`subscription.charged`): number `AWZ/<FY>/00001` (consecutive per FY, row-locked),
+  CGST+SGST 9+9 if buyer state = 27 Maharashtra else IGST 18, worked back from the amount paid; PDF (fpdf2, DejaVu for ₹)
+  in `storage/invoices/`, download `GET /api/billing/invoices/{id}/pdf`; SAC from legal.json `sacCode` (CONFIRM with CA).
+- Account deletion cancels a live subscription immediately (fails closed if Razorpay is unreachable); invoices, payments
+  and subscriptions are kept with `user_id = NULL` (8-year tax records).
+- Pricing page "Choose <plan>" → `login.aiwazz.in/settings?plan=…&period=…` (sign-in first; the card is highlighted).
+- Learn guides still say "Coming soon" for billing until a test-mode payment has passed end to end.
+
 ## Build phases
 -1. **Repo setup:** create the deploy key, show me the public key so I add it in GitHub
    (repo → Settings → Deploy keys → "Allow write access"), clone to `/www/aiwazz`, add this CLAUDE.md,

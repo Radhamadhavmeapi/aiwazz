@@ -12,6 +12,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell/app-shell";
+import { BillingCard } from "@/components/billing";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,7 +28,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type Theme } from "@/lib/theme";
-import { fmtChars, useUsage } from "@/lib/usage";
+import { useUsage } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 import { passwordScore } from "@/lib/password";
 
@@ -289,13 +290,6 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const usage = useUsage();
-  const pct =
-    usage && usage.allowance
-      ? Math.min(
-          100,
-          Math.round(((usage.used + usage.reserved) / usage.allowance) * 100),
-        )
-      : 0;
 
   const signOutOthers = async () => {
     setBusy(true);
@@ -353,74 +347,7 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card title="Billing">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">
-                {usage ? `${usage.plan_name} plan` : "Plan"}
-                {usage?.unlimited && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · unlimited (admin)
-                  </span>
-                )}
-              </p>
-              {usage?.plan_until && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Early access: free until{" "}
-                  <span className="font-medium text-foreground">
-                    {new Date(
-                      new Date(usage.plan_until).getTime() - 1,
-                    ).toLocaleDateString("en-IN", {
-                      dateStyle: "medium",
-                      timeZone: "Asia/Kolkata",
-                    })}
-                  </span>
-                  , then your account moves to the Free plan automatically.
-                  Nothing is charged.
-                </p>
-              )}
-              {usage && !usage.unlimited && usage.allowance !== null && (
-                <div className="mt-2 max-w-sm">
-                  <div
-                    className="h-1.5 overflow-hidden rounded-full bg-surface-3"
-                    role="progressbar"
-                    aria-valuenow={pct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label="Characters used this month"
-                  >
-                    <div
-                      className="h-full rounded-full bg-brand-gradient"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="mt-1.5 font-mono text-xs text-muted-foreground tabular">
-                    {fmtChars(usage.used)} / {fmtChars(usage.allowance)}{" "}
-                    characters used · resets{" "}
-                    {new Date(usage.period_end).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                </div>
-              )}
-              <p className="mt-2 text-sm text-muted-foreground">
-                Online upgrades, invoices and cancellation will be managed here
-                once payments open.
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <a
-                href="https://aiwazz.in/pricing/"
-                target="_blank"
-                rel="noopener"
-              >
-                See plans
-              </a>
-            </Button>
-          </div>
-        </Card>
+        <BillingCard usage={usage} />
 
         <Card
           title="Appearance"

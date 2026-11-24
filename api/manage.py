@@ -14,6 +14,12 @@
   mark-handled --id N
   list-requests [--all]                        "Request an invite" entries (new only unless --all)
   mark-request --id N --status invited|declined|new
+  set-secret NAME                              hidden prompt; writes NAME=value into api/.env (chmod 600). Allowed names:
+               AIWAZZ_RAZORPAY_KEY_ID, AIWAZZ_RAZORPAY_KEY_SECRET, AIWAZZ_RAZORPAY_WEBHOOK_SECRET, AIWAZZ_SMTP_PASSWORD
+  billing-create-plans [--force]               creates the 6 Razorpay plans (3 plans × monthly/yearly) from legal.json
+                                               and stores their ids in api/.env (AIWAZZ_RAZORPAY_PLAN_IDS)
+  billing-check                                compares the Razorpay plan amounts with legal.json
+  list-invoices [--limit N]
 """
 import argparse
 import asyncio
@@ -28,6 +34,58 @@ from auth.security import hash_password, new_invite_code, normalize_invite, pass
 from db import make_engine, make_sessionmaker, utcnow
 from models import ROLES, Invite, User, UserSession
 from settings import get_settings
+
+
+SECRET_NAMES = ("AIWAZZ_RAZORPAY_KEY_ID", "AIWAZZ_RAZORPAY_KEY_SECRET", "AIWAZZ_RAZORPAY_WEBHOOK_SECRET", "AIWAZZ_SMTP_PASSWORD")
+ENV_FILE = __import__("pathlib").Path(__file__).resolve().parent / ".env"
+
+
+def set_env(name: str, value: str) -> None:
+    """Replace or append NAME=value in api/.env, keeping it chmod 600. Values are written single-quoted."""
+    import os
+    import re
+    if "\n" in value or "'" in value:
+        sys.exit("Value can't contain newlines or single quotes")
+    lines = ENV_FILE.read_text().splitlines() if ENV_FILE.exists() else []
+    line = f"{name}='{value}'"
+    lines = [line if re.match(rf"^{re.escape(name)}=", ln) else ln for ln in lines]
+    if line not in lines:
+        lines.append(line)
+    ENV_FILE.write_text("\n".join(lines) + "\n")
+    os.chmod(ENV_FILE, 0o600)
+
+
+async def billing_plans(a) -> None:
+    import json
+
+    from billing.gst import GST_RATE, PAID_PLANS, PERIODS, charge_paise, plan_prices
+    from billing.razorpay import client
+    s = get_settings()
+    if not (s.razorpay_key_id and s.razorpay_key_secret):
+        sys.exit("Set AIWAZZ_RAZORPAY_KEY_ID and AIWAZZ_RAZORPAY_KEY_SECRET first (manage.py set-secret …)")
+    rz, prices = client(), plan_prices()
+    mode = "TEST" if s.billing_test_mode else "LIVE"
+    if a.cmd == "billing-check":
+        ok = True
+        for key, pid in sorted(s.razorpay_plan_ids.items()):
+            plan, period = key.split("_")
+            want = charge_paise(plan, period)[1]
+            got = (await rz.get_plan(pid))["item"]["amount"]
+            ok &= got == want
+            print(f"{key:<16} {pid}  Razorpay ₹{got / 100:,.2f}  legal.json ₹{want / 100:,.2f}  {'OK' if got == want else 'MISMATCH'}")
+        sys.exit(0 if ok and s.razorpay_plan_ids else 1)
+    if s.razorpay_plan_ids and not a.force:
+        sys.exit("Plan ids already set (AIWAZZ_RAZORPAY_PLAN_IDS). Use --force to create new ones (e.g. after a price change).")
+    ids = {}
+    for plan in PAID_PLANS:
+        for period in PERIODS:
+            base, total = charge_paise(plan, period)
+            r = await rz.create_plan(period, total, f"AiWazz {prices[plan]['name']} ({period})",
+                                     f"₹{base // 100:,} + {GST_RATE}% GST", {"plan": plan, "period": period})
+            ids[f"{plan}_{period}"] = r["id"]
+            print(f"[{mode}] {plan}_{period:<8} {r['id']}  ₹{total / 100:,.2f} incl. GST")
+    set_env("AIWAZZ_RAZORPAY_PLAN_IDS", json.dumps(ids, separators=(",", ":")))
+    print("Saved AIWAZZ_RAZORPAY_PLAN_IDS in api/.env. Restart the API: pm2 restart voice-api")
 
 
 def ask_password(email: str) -> str:
@@ -64,7 +122,21 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("revoke-invite"); p.add_argument("--id", type=int, required=True)
     p = sub.add_parser("list-messages"); p.add_argument("--all", action="store_true")
     p = sub.add_parser("mark-handled"); p.add_argument("--id", type=int, required=True)
+    p = sub.add_parser("set-secret"); p.add_argument("name", choices=SECRET_NAMES)
+    p = sub.add_parser("billing-create-plans"); p.add_argument("--force", action="store_true")
+    sub.add_parser("billing-check")
+    p = sub.add_parser("list-invoices"); p.add_argument("--limit", type=int, default=30)
     a = ap.parse_args(argv)
+    if a.cmd == "set-secret":
+        value = getpass.getpass(f"{a.name} (input hidden): ").strip()
+        if not value:
+            sys.exit("Nothing entered; .env unchanged")
+        set_env(a.name, value)
+        print(f"Saved {a.name} in {ENV_FILE} (not shown). Restart the API: pm2 restart voice-api")
+        return
+    if a.cmd in ("billing-create-plans", "billing-check"):
+        await billing_plans(a)
+        return
 
     engine = make_engine(get_settings().database_url)
     async with make_sessionmaker(engine)() as db:
@@ -111,6 +183,13 @@ async def main(argv: list[str]) -> None:
         elif a.cmd == "expire-plans":
             from usage import expire_plans
             print(f"Moved {await expire_plans(db)} user(s) back to Free")
+
+        elif a.cmd == "list-invoices":
+            from models import Invoice
+            for i in (await db.execute(select(Invoice).order_by(Invoice.id.desc()).limit(a.limit))).scalars():
+                tax = f"IGST {i.igst_paise / 100:.2f}" if i.igst_paise else f"CGST+SGST {(i.cgst_paise + i.sgst_paise) / 100:.2f}"
+                print(f"{i.number}  {i.issued_at:%Y-%m-%d}  {i.buyer_email}  {i.plan}/{i.period}  "
+                      f"taxable {i.taxable_paise / 100:.2f}  {tax}  total {i.total_paise / 100:.2f}")
 
         elif a.cmd == "list-requests":
             from models import InviteRequest

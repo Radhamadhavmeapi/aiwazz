@@ -27,6 +27,11 @@ class User(Base):
     plan: Mapped[str] = mapped_column(String(16), default="free")
     # Optional end of a time-limited plan (naive UTC). After it, the user is on Free (effective_plan + hourly sweep).
     plan_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Billing details for GST invoices (state = 2-digit GST state code: place of supply)
+    billing_name: Mapped[str] = mapped_column(String(150), default="", server_default="")
+    billing_gstin: Mapped[str] = mapped_column(String(15), default="", server_default="")
+    billing_state: Mapped[str] = mapped_column(String(2), default="", server_default="")
+    billing_address: Mapped[str] = mapped_column(String(300), default="", server_default="")
 
     @property
     def is_admin(self) -> bool:
@@ -141,3 +146,70 @@ class InviteRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     status: Mapped[str] = mapped_column(String(16), default="new")  # new | invited | declined
+
+
+# ── Billing (Razorpay Subscriptions). Invoices and payments outlive the account (8-year tax records). ──
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    rzp_subscription_id: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    plan: Mapped[str] = mapped_column(String(16))
+    period: Mapped[str] = mapped_column(String(8))          # monthly | yearly
+    status: Mapped[str] = mapped_column(String(16), default="created")  # Razorpay status
+    current_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    current_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    subscription_id: Mapped[int | None] = mapped_column(ForeignKey("subscriptions.id"), nullable=True)
+    rzp_payment_id: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16))
+    method: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Invoice(Base):
+    """GST tax invoice. Buyer details are a snapshot taken at payment time."""
+    __tablename__ = "invoices"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    number: Mapped[str] = mapped_column(String(32), unique=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    payment_id: Mapped[int] = mapped_column(ForeignKey("payments.id"), unique=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    plan: Mapped[str] = mapped_column(String(16))
+    period: Mapped[str] = mapped_column(String(8))
+    period_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    buyer_name: Mapped[str] = mapped_column(String(150))
+    buyer_email: Mapped[str] = mapped_column(String(254))
+    buyer_gstin: Mapped[str] = mapped_column(String(15), default="")
+    buyer_state: Mapped[str] = mapped_column(String(2))
+    buyer_address: Mapped[str] = mapped_column(String(300), default="")
+    taxable_paise: Mapped[int] = mapped_column(Integer)
+    cgst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    sgst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    igst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    total_paise: Mapped[int] = mapped_column(Integer)
+
+
+class InvoiceCounter(Base):
+    """One row per Indian financial year ("2026-27"); the next invoice number is last + 1 (row locked)."""
+    __tablename__ = "invoice_counters"
+    fy: Mapped[str] = mapped_column(String(7), primary_key=True)
+    last: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class WebhookEvent(Base):
+    """Processed Razorpay webhook event ids (x-razorpay-event-id), so retries are handled once."""
+    __tablename__ = "webhook_events"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event: Mapped[str] = mapped_column(String(64))
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

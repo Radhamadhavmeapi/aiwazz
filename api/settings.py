@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     mail_from: str = "AiWazz <noreply@aiwazz.in>"
     support_email: str = "support@aiwazz.in"
 
+    # Billing: Razorpay (TEST keys first). Secrets only in api/.env (manage.py set-secret). Plan ids from billing-create-plans.
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+    razorpay_plan_ids: dict[str, str] = {}    # {"creator_yearly": "plan_…", …}
+    plan_grace_days: int = 2                  # paid access lasts this long past current_end (renewal retries)
+
     @property
     def session_cookie(self) -> str:
         return "__Host-aiwazz_session" if self.cookie_secure else "aiwazz_session"
@@ -79,6 +86,18 @@ class Settings(BaseSettings):
     def debug(self) -> bool:
         """Fail-closed: API docs etc. only for an explicit dev/test env."""
         return self.env in ("development", "test")
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.razorpay_key_id and self.razorpay_key_secret and self.razorpay_plan_ids)
+
+    @property
+    def billing_test_mode(self) -> bool:
+        return self.razorpay_key_id.startswith("rzp_test_")
+
+    @property
+    def invoice_dir(self) -> Path:
+        return self.storage_dir / "invoices"
 
     @property
     def audio_dir(self) -> Path:

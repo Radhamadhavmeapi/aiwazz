@@ -1,0 +1,52 @@
+---
+// Public changelog, managed in the admin panel (Announcements → Changelog). tools/deploy-landing.sh exports the
+// published entries to src/data/changelog.generated.json (gitignored) right before the build.
+import { Marked } from "marked";
+import Base from "../layouts/Base.astro";
+import { SITE } from "../data/site";
+
+type Entry = { id: number; title: string; body: string; tag: "new" | "improved" | "fixed"; date: string };
+const files = import.meta.glob<Entry[]>("../data/changelog.generated.json", { eager: true, import: "default" });
+const entries: Entry[] = Object.values(files)[0] ?? [];
+const marked = new Marked({ gfm: true, breaks: false });
+// Links in entries open normally; raw HTML is escaped (entries are written by staff, but keep it plain).
+marked.use({ renderer: { html: ({ text }) => text.replace(/</g, "&lt;") } });
+const fmt = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const TAG = { new: "New", improved: "Improved", fixed: "Fixed" } as const;
+const url = `${SITE.url}/changelog/`;
+const jsonLd = [{
+  "@context": "https://schema.org", "@type": "BreadcrumbList",
+  itemListElement: [{ "@type": "ListItem", position: 1, name: "AiWazz", item: `${SITE.url}/` }, { "@type": "ListItem", position: 2, name: "Changelog", item: url }],
+}];
+---
+<Base title="Changelog: what's new in AiWazz" description="New voices, styles and features in AiWazz, the AI voiceover tool for Hindi, Hinglish and English." jsonLd={jsonLd}>
+  <div class="border-b bg-surface/40">
+    <div class="mx-auto max-w-3xl px-4 pt-12 pb-10 sm:px-6 sm:pt-16">
+      <nav aria-label="Breadcrumb" class="text-xs text-subtle-foreground">
+        <a href="/" class="hover:text-foreground">AiWazz</a> <span aria-hidden="true">/</span> <span aria-current="page">Changelog</span>
+      </nav>
+      <h1 class="mt-4 text-[2.25rem] leading-[1.1] font-bold tracking-[-0.03em] sm:text-[2.75rem]">Changelog</h1>
+      <p class="mt-3 text-muted-foreground">What's new and improved in AiWazz.</p>
+    </div>
+  </div>
+  <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    {entries.length === 0 ? (
+      <p class="text-muted-foreground">No updates published yet. Check back soon.</p>
+    ) : (
+      <ol class="space-y-12">
+        {entries.map((e) => (
+          <li id={`update-${e.id}`} class="grid gap-3 sm:grid-cols-[140px_1fr]">
+            <div class="text-sm text-muted-foreground">
+              <time datetime={e.date}>{fmt(e.date)}</time>
+              <p class="mt-1"><span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium text-foreground">{TAG[e.tag] ?? "Update"}</span></p>
+            </div>
+            <article class="prose-legal">
+              <h2 class="!mt-0 text-xl font-semibold">{e.title}</h2>
+              <Fragment set:html={marked.parse(e.body) as string} />
+            </article>
+          </li>
+        ))}
+      </ol>
+    )}
+  </div>
+</Base>

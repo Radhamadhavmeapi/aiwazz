@@ -6,6 +6,11 @@ export PATH=/www/server/nodejs/v24.11.1/bin:$PATH
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST=/www/wwwroot/aiwazz.in
 
+# Changelog entries published in the admin panel → src/data/changelog.generated.json (gitignored), read by /changelog/.
+OUT="$ROOT/landing/src/data/changelog.generated.json"
+if ! (cd "$ROOT/api" && .venv/bin/python -m admin.announcements > "$OUT.tmp" 2>/dev/null); then echo "[]" > "$OUT.tmp"; fi
+mv "$OUT.tmp" "$OUT"
+
 cd "$ROOT/landing"
 npm ci --no-fund --no-audit --loglevel=error
 npm run build >/dev/null

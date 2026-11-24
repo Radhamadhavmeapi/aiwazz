@@ -111,6 +111,12 @@ export default function GeneratePage() {
   const [voice, setVoice] = useState(initialVoice);
   const [speed, setSpeed] = useState(draft.speed ?? 1);
   const [transliterate, setTransliterate] = useState(draft.transliterate ?? false);
+  // Admin → Settings → Feature flags: "Hinglish on by default" (only when the user has no saved choice yet).
+  useEffect(() => {
+    if (PREVIEW || draft.transliterate !== undefined) return;
+    fetch("/api/app-config", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null))
+      .then((c) => c?.hinglish_default && setTransliterate(true), () => undefined);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [readAsPreview, setReadAsPreview] = useState<string | null>(null);
   const [style, setStyle] = useState<string | null>(STYLES.some((st) => st.id === draft.style) ? draft.style! : null);
   const [format, setFormat] = useState<Format>(draft.format ?? "mp3");

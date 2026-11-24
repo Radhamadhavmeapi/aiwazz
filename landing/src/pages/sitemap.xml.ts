@@ -11,6 +11,7 @@ const PAGES = [
   })),
   { path: "/pricing/", priority: "0.8" },
   { path: "/learn/", priority: "0.6" },
+  { path: "/changelog/", priority: "0.4" },
   ...["getting-started", "writing-scripts", "hindi-and-hinglish", "choosing-a-voice", "fix-pronunciation", "speed-and-loudness", "using-audio-in-editors",
     "api-quickstart", "plans-and-billing", "account-and-security", "troubleshooting", "glossary"].map((p) => ({ path: `/learn/${p}/`, priority: "0.6" })),
   { path: "/about/", priority: "0.5" },

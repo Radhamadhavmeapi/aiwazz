@@ -54,3 +54,6 @@ data/voices/
 data/preview/
 data/models/
 *.wav
+
+# Generated at landing build time from the admin panel (tools/deploy-landing.sh)
+landing/src/data/changelog.generated.json

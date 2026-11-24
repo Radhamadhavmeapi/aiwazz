@@ -9,7 +9,7 @@ from db import Base, utcnow
 __all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression",
            "Refund", "CreditNote", "CreditNoteCounter", "DunningCase", "PlanVersion", "Coupon", "CouponRedemption",
            "ReferralCode", "Referral", "TaskRun", "Ticket", "TicketMessage", "CannedReply", "ModerationRule", "Flag",
-           "BlockEntry", "VoiceSetting", "StyleSetting", "RateOverride"]
+           "BlockEntry", "VoiceSetting", "StyleSetting", "RateOverride", "Announcement", "ChangelogEntry", "DsrRequest"]
 
 
 class TotpSecret(Base):
@@ -411,3 +411,49 @@ class RateOverride(Base):
     rpm: Mapped[int] = mapped_column(Integer)
     note: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# ── Announcements, changelog, compliance (A7) ───────────────────────────────
+class Announcement(Base):
+    """In-app banner. audience: all | free | paid | admins | plan:<id>. Shown between starts_at and ends_at."""
+    __tablename__ = "announcements"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[str] = mapped_column(String(300))
+    level: Mapped[str] = mapped_column(String(8), default="info")        # info | warning
+    audience: Mapped[str] = mapped_column(String(24), default="all")
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    dismissible: Mapped[bool] = mapped_column(Boolean, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ChangelogEntry(Base):
+    """Public changelog at aiwazz.in/changelog/ (markdown). Published entries are exported at landing build time."""
+    __tablename__ = "changelog_entries"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(150))
+    body_md: Mapped[str] = mapped_column(Text)
+    published_on: Mapped[datetime] = mapped_column(DateTime)             # date shown (IST day, stored as naive UTC midnight IST)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    tag: Mapped[str] = mapped_column(String(16), default="improved")     # new | improved | fixed
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class DsrRequest(Base):
+    """Data-subject request under the DPDP Act (access/export, correction, deletion, grievance)."""
+    __tablename__ = "dsr_requests"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))                        # access | correction | deletion | grievance
+    email: Mapped[str] = mapped_column(String(254), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="new")       # new | in_progress | done | rejected
+    details: Mapped[str] = mapped_column(String(2000), default="")
+    notes: Mapped[str] = mapped_column(String(2000), default="")
+    ticket_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    due_at: Mapped[datetime] = mapped_column(DateTime)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    handled_by: Mapped[int | None] = mapped_column(Integer, nullable=True)

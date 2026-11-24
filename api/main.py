@@ -71,6 +71,11 @@ async def lifespan(app: FastAPI):
         ops = await settings_store.get(db, "ops")
     jobs.set_paused(bool(ops.get("queue_paused")))
     jobs.maintenance, jobs.maintenance_message = bool(ops.get("maintenance")), ops.get("message", "")
+    async with sessionmaker() as db:     # runtime limits saved in admin → Settings (only if they were ever saved)
+        from models import AppSetting
+        if await db.get(AppSetting, "limits"):
+            from admin.routes.governance import apply_limits
+            apply_limits(await settings_store.get(db, "limits"))
 
     async def load():
         await asyncio.to_thread(engine.load)

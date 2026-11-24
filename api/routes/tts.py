@@ -136,6 +136,16 @@ async def styles(db: AsyncSession = Depends(get_db)):
     return {"styles": await catalog.styles(db)}
 
 
+@router.get("/app-config")
+async def app_config(db: AsyncSession = Depends(get_db)):
+    """Feature flags the app needs (admin → Settings → Feature flags) and current limits."""
+    from admin import settings_store
+    flags = await settings_store.get(db, "flags")
+    s = get_settings()
+    return {"hinglish_default": bool(flags.get("hinglish_default")), "premium_voices": bool(flags.get("premium_voices")),
+            "referrals": bool((await settings_store.get(db, "referrals")).get("enabled")), "max_chars": s.max_chars}
+
+
 @router.get("/banners")
 async def banners(request: Request, p: Principal | None = Depends(optional_principal), db: AsyncSession = Depends(get_db)):
     """Banners for the app: maintenance / paused queue now; announcements from the admin panel (A7) as well."""

@@ -109,6 +109,10 @@ async def subscribe(body: SubscribeIn, request: Request, p: Principal = Depends(
     s = get_settings()
     if not s.billing_enabled:
         raise HTTPException(503, "Online payments aren't open yet")
+    if not s.billing_test_mode:          # LIVE keys: only after the owner's go-live approval (admin → Settings → Payments)
+        from admin import settings_store
+        if not (await settings_store.get(db, "payments")).get("live_approved"):
+            raise HTTPException(503, "Online payments aren't open yet")
     if body.plan not in PAID_PLANS or body.period not in PERIODS or not _public(body.plan):
         raise HTTPException(422, "Unknown plan")
     plan_id = await service.plan_id_for(db, body.plan, body.period)

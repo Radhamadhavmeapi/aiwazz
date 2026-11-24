@@ -16,7 +16,9 @@ DEFAULTS: dict[str, Any] = {
     "billing": {"grace_days": 7, "dunning_emails": True},
     # Operations: queue pause (jobs wait) and maintenance (new jobs refused); both show a banner to users.
     "ops": {"queue_paused": False, "maintenance": False, "message": ""},
-    "limits": {"api_rpm": 60},
+    "limits": {"api_rpm": 60, "max_chars": 5000, "queue_per_user": 3, "retention_days": 7},
+    "flags": {"premium_voices": False, "hinglish_default": False},
+    "payments": {"live_approved": False, "approved_by": None, "approved_at": None},
     "mail": {"dkim_selector": "default"},
     "alerts.state": {"active": [], "checked_at": None},
     "referrals": {"enabled": False, "reward_chars_referrer": 10000, "reward_chars_referred": 5000,

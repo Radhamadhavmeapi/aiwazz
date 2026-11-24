@@ -28,6 +28,10 @@ const PAGES: Record<string, ComponentType> = {
   queue: lazy(() => import("./pages/queue")),
   health: lazy(() => import("./pages/health")),
   logs: lazy(() => import("./pages/logs")),
+  email: lazy(() => import("./pages/email")),
+  announcements: lazy(() => import("./pages/announcements")),
+  compliance: lazy(() => import("./pages/compliance")),
+  team: lazy(() => import("./pages/team")),
 };
 
 function Pending({ to }: { to: string }) {

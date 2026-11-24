@@ -22,6 +22,10 @@ const PAGES: Record<string, ComponentType> = {
   coupons: lazy(() => import("./pages/coupons")),
   support: lazy(() => import("./pages/support")),
   moderation: lazy(() => import("./pages/moderation")),
+  voices: lazy(() => import("./pages/voices")),
+  pronunciations: lazy(() => import("./pages/pronunciations")),
+  api: lazy(() => import("./pages/api")),
+  queue: lazy(() => import("./pages/queue")),
 };
 
 function Pending({ to }: { to: string }) {

@@ -134,7 +134,7 @@ def test_pronunciation_test_returns_audio_and_is_not_counted(client):
     assert client.post("/api/pronunciations/test", json={"say_as": "x", "voice": "nope"}).status_code == 422
 
 
-def test_custom_voice_preview_is_admin_session_only(anon, make_invite, tmp_path, monkeypatch):
+def test_custom_voice_preview_is_unlocked_staff_only(anon, make_invite, staff, tmp_path, monkeypatch):
     from routes import preview
     (tmp_path / "x.mp3").write_bytes(b"ID3fake")
     (tmp_path / "index.html").write_text("<h1>lab</h1>")
@@ -143,13 +143,14 @@ def test_custom_voice_preview_is_admin_session_only(anon, make_invite, tmp_path,
     assert anon.get("/api/preview/custom-voice/").status_code == 404             # signed out
     make_invite("USER-CODE")
     signup(anon, email="u@example.com", code="USER-CODE")
-    assert anon.get("/api/preview/custom-voice/").status_code == 404             # not admin
-    anon.post("/api/auth/logout")
-    make_invite("ADMN-CODE", role="admin")
-    signup(anon, code="ADMN-CODE")
-    r = anon.get("/api/preview/custom-voice/")
+    assert anon.get("/api/preview/custom-voice/").status_code == 404             # not staff
+    assert staff("support").get("/api/preview/custom-voice/").status_code == 404  # staff without voices.read
+    a = staff("admin")
+    r = a.get("/api/preview/custom-voice/")
     assert r.status_code == 200 and "lab" in r.text and "noindex" in r.headers["x-robots-tag"]
-    assert anon.get("/api/preview/custom-voice/x.mp3").headers["content-type"] == "audio/mpeg"
-    assert anon.get("/api/preview/custom-voice/secret.wav").status_code == 404      # only html/mp3/json
-    assert anon.get("/api/preview/custom-voice/..%2F..%2Fetc%2Fpasswd").status_code == 404
-    assert anon.get("/api/preview/other/").status_code == 404
+    assert a.get("/api/preview/custom-voice/x.mp3").headers["content-type"] == "audio/mpeg"
+    assert a.get("/api/preview/custom-voice/secret.wav").status_code == 404      # only html/mp3/json
+    assert a.get("/api/preview/custom-voice/..%2F..%2Fetc%2Fpasswd").status_code == 404
+    assert a.get("/api/preview/other/").status_code == 404
+    a.post("/api/admin/lock")
+    assert a.get("/api/preview/custom-voice/").status_code == 404                # admin panel locked → 404

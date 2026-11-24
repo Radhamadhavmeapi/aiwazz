@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { Logo } from "@/components/brand/logo";
+import { Banners } from "@/components/banners";
 import { SiteFooter } from "@/components/site-footer";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CommandPalette } from "./command-palette";
@@ -90,6 +91,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar title={title} onMenu={() => setMobileOpen(true)} onCommand={() => setCmdOpen(true)} />
+        <Banners />
         <main id="main" className="flex-1">
           {children}
         </main>

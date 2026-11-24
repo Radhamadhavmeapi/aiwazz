@@ -77,10 +77,14 @@ export function VoiceCard({
               Studio
             </span>
           )}
+          {voice.isNew && (
+            <span className="shrink-0 rounded-full bg-success/12 px-1.5 py-px text-[10px] font-semibold tracking-wide text-success uppercase">New</span>
+          )}
           {isPlaying && <EqBars on />}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
           {voice.gender === "female" ? "Female" : "Male"} · {voice.tone}
+          {voice.locked && <> · <span className="capitalize">{voice.locked}</span> plan</>}
         </span>
       </span>
       <button

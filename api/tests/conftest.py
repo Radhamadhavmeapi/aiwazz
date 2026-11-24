@@ -90,8 +90,11 @@ def app_env(monkeypatch, tmp_path):
     monkeypatch.setenv("AIWAZZ_STORAGE_DIR", str(tmp_path / "storage"))
     monkeypatch.setenv("AIWAZZ_ADMIN_SECRET_KEY", "x" * 43 + "=")   # valid Fernet key shape (32 bytes, urlsafe b64)
     get_settings.cache_clear()
-    from admin import settings_store
+    from admin import moderation, settings_store
+    from tts import catalog
     settings_store.clear_cache()
+    catalog.clear_cache()
+    moderation.clear_cache()
     _run(_setup_db(url))
     yield url
     get_settings.cache_clear()

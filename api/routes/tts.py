@@ -131,8 +131,28 @@ async def read_as(body: ReadAsIn, p: Principal = Depends(current_principal), db:
 
 
 @router.get("/styles")
-async def styles():
-    return {"styles": [st.to_dict() for st in STYLES.values()]}
+async def styles(db: AsyncSession = Depends(get_db)):
+    from tts import catalog
+    return {"styles": await catalog.styles(db)}
+
+
+@router.get("/banners")
+async def banners(request: Request, p: Principal | None = Depends(optional_principal), db: AsyncSession = Depends(get_db)):
+    """Banners for the app: maintenance / paused queue now; announcements from the admin panel (A7) as well."""
+    jm = manager(request)
+    out = []
+    if jm.maintenance:
+        out.append({"id": "maintenance", "level": "warning", "text": jm.maintenance_message or
+                    "AiWazz is in maintenance for a few minutes. New voiceovers can't start right now."})
+    elif jm.paused:
+        out.append({"id": "paused", "level": "info", "text": "Voiceovers are paused for a few minutes. Anything you start now "
+                    "waits in the queue and begins automatically."})
+    try:
+        from admin.announcements import active_banners
+        out += await active_banners(db, p.user if p else None)
+    except ImportError:
+        pass
+    return {"banners": out}
 
 
 @router.get("/health")
@@ -160,10 +180,15 @@ async def usable_clone_voice(request: Request, db: AsyncSession, p: Principal | 
 
 @router.get("/voices")
 async def voices(request: Request, p: Principal | None = Depends(optional_principal), db: AsyncSession = Depends(get_db)):
-    out = [v.to_dict() for v in VOICES.values()]
+    from tts import catalog
+    out = await catalog.builtin_voices(db, p.user if p else None)
+    st = await catalog.voice_settings(db)
     for vid in getattr(request.app.state, "clone_voices", {}):
         if cv := await usable_clone_voice(request, db, p, vid):
-            out.append(cv.to_public_dict())
+            meta = catalog.voice_meta(vid, cv.to_public_dict(), st.get(vid), 1000)
+            if meta["enabled"] or (p and p.user.is_admin):
+                out.append(cv.to_public_dict() | {k: meta[k] for k in ("tone", "tags", "is_new", "min_plan")}
+                           | {"available": catalog.plan_allows(p.user if p else None, meta["min_plan"])})
     return {"voices": out}
 
 
@@ -189,7 +214,12 @@ async def create_tts(
     jm = manager(request)
     if not jm.engine.ready:
         raise HTTPException(503, "TTS engine is still loading, try again in a few seconds")
+    if jm.maintenance:
+        raise HTTPException(503, jm.maintenance_message or "AiWazz is in maintenance for a few minutes. Please try again soon.")
     s = get_settings()
+    from tts import catalog
+    await catalog.check_voice(db, p.user, body.voice)
+    await catalog.check_style(db, p.user, body.style)
     clone: CloneVoice | None = None
     if body.voice not in VOICES:
         clone = await usable_clone_voice(request, db, p, body.voice)

@@ -51,6 +51,11 @@ async def lifespan(app: FastAPI):
     app.state.clone_voices = load_clone_voices(s.data_dir / "voices") if cloner else {}
     jobs.on_start, jobs.on_finish = make_hooks(sessionmaker)
     app.state.jobs = jobs
+    from admin import settings_store
+    async with sessionmaker() as db:     # queue pause / maintenance survive restarts
+        ops = await settings_store.get(db, "ops")
+    jobs.set_paused(bool(ops.get("queue_paused")))
+    jobs.maintenance, jobs.maintenance_message = bool(ops.get("maintenance")), ops.get("message", "")
 
     async def load():
         await asyncio.to_thread(engine.load)
@@ -70,6 +75,27 @@ async def lifespan(app: FastAPI):
     await engine_db.dispose()
 
 
+async def _count_request(request: Request, status: int) -> None:
+    """Per-endpoint request/error counters for admin → API & usage (Redis hash per UTC day, 32-day expiry)."""
+    path = request.url.path
+    if not path.startswith("/api/") or path.startswith("/api/admin") or path == "/api/health":
+        return
+    route = request.scope.get("route")
+    tmpl = getattr(route, "path", None) or "other"
+    redis = getattr(request.app.state, "redis", None)
+    if redis is None:
+        return
+    try:
+        s = get_settings()
+        key = f"{s.redis_prefix}reqstats:{utcnow():%Y%m%d}"
+        async with redis.pipeline(transaction=False) as pipe:
+            pipe.hincrby(key, f"{request.method} {tmpl}|{status // 100}xx", 1)
+            pipe.expire(key, 32 * 86400)
+            await pipe.execute()
+    except Exception:  # noqa: BLE001 - statistics must never break a request
+        pass
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     dev = s.debug
@@ -84,6 +110,7 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
         resp = await call_next(request)
+        await _count_request(request, resp.status_code)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         resp.headers.setdefault("X-Frame-Options", "DENY")

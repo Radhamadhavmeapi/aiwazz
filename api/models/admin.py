@@ -9,7 +9,7 @@ from db import Base, utcnow
 __all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression",
            "Refund", "CreditNote", "CreditNoteCounter", "DunningCase", "PlanVersion", "Coupon", "CouponRedemption",
            "ReferralCode", "Referral", "TaskRun", "Ticket", "TicketMessage", "CannedReply", "ModerationRule", "Flag",
-           "BlockEntry"]
+           "BlockEntry", "VoiceSetting", "StyleSetting", "RateOverride"]
 
 
 class TotpSecret(Base):
@@ -373,4 +373,41 @@ class BlockEntry(Base):
     value: Mapped[str] = mapped_column(String(254))
     reason: Mapped[str] = mapped_column(String(255), default="")
     created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# ── Voices, styles, API limits (A5) ─────────────────────────────────────────
+class VoiceSetting(Base):
+    """Admin overrides for a catalogue voice (tts/voices.py or a clone voice). No row = defaults."""
+    __tablename__ = "voice_settings"
+    voice_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    display_name: Mapped[str] = mapped_column(String(40), default="")
+    description: Mapped[str] = mapped_column(String(120), default="")     # the short tone line on voice cards
+    tags: Mapped[str] = mapped_column(String(200), default="")            # comma separated: gender, accent, tone…
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_new: Mapped[bool] = mapped_column(Boolean, default=False)
+    min_plan: Mapped[str] = mapped_column(String(16), default="free")     # free | starter | creator | pro
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class StyleSetting(Base):
+    __tablename__ = "style_settings"
+    style_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    display_name: Mapped[str] = mapped_column(String(40), default="")
+    description: Mapped[str] = mapped_column(String(160), default="")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class RateOverride(Base):
+    """Per-key or per-user API rate limit (requests per minute) replacing the default."""
+    __tablename__ = "rate_overrides"
+    __table_args__ = (UniqueConstraint("scope", "target_id", name="uq_rate_overrides"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scope: Mapped[str] = mapped_column(String(8))                        # key | user
+    target_id: Mapped[int] = mapped_column(Integer)
+    rpm: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

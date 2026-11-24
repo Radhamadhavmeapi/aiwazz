@@ -11,6 +11,9 @@ export type Voice = {
   tone: string;
   /** custom (clone) voices only: GET /api/voices engine "clone" */
   studio?: StudioInfo;
+  /** admin panel: "new" badge, and the plan needed when the user's plan doesn't include this voice */
+  isNew?: boolean;
+  locked?: string;
 };
 
 export type StudioInfo = {
@@ -54,11 +57,13 @@ export const previewUrl = (v: Voice) => v.studio?.previewUrl ?? sampleUrl(v.id);
 
 // ── Studio (clone) voices: private per account, so they come from GET /api/voices, never from this file ──
 type ApiVoice = {
-  id: string; engine: string; name: string; lang: Lang; gender: "female" | "male"; tags?: string[];
+  id: string; engine: string; name: string; lang: Lang; gender: "female" | "male"; tags?: string[]; tone?: string;
+  is_new?: boolean; available?: boolean; min_plan?: string; enabled?: boolean;
   max_chars?: number; default_style?: string | null; style_speed?: Record<string, number>;
   seconds_per_char?: number; is_public?: boolean; preview_url?: string;
 };
 let studio: Voice[] = [];
+let builtin: Voice[] | null = null;   // built-in voices with admin overrides (name, tone, order, hidden, plan)
 let loading: Promise<Voice[]> | null = null;
 const listeners = new Set<() => void>();
 
@@ -66,6 +71,13 @@ export function loadStudioVoices(): Promise<Voice[]> {
   loading ??= fetch("/api/voices", { credentials: "same-origin" })
     .then((r) => (r.ok ? r.json() : { voices: [] }))
     .then((d: { voices: ApiVoice[] }) => {
+      builtin = d.voices
+        .filter((v) => v.engine !== "clone")
+        .map((v) => {
+          const base = VOICES.find((x) => x.id === v.id);
+          return { id: v.id, name: v.name, lang: v.lang, gender: v.gender, tone: v.tone || base?.tone || "", isNew: !!v.is_new,
+                   locked: v.available === false ? (v.min_plan ?? "pro") : undefined } as Voice;
+        });
       studio = d.voices
         .filter((v) => v.engine === "clone")
         .map((v) => ({
@@ -99,7 +111,8 @@ export function useVoices(): Voice[] {
     void loadStudioVoices();
     return () => void listeners.delete(f);
   }, []);
-  return studio.length ? [...VOICES, ...studio] : VOICES;
+  const base = builtin ?? VOICES;
+  return studio.length ? [...base, ...studio] : base;
 }
 
 export const findVoice = (id: string): Voice | undefined => VOICES.find((v) => v.id === id) ?? studio.find((v) => v.id === id);

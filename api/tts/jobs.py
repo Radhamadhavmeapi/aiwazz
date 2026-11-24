@@ -87,6 +87,11 @@ class JobManager:
         self.pending: list[str] = []                     # ids waiting, in order
         self.jobs: OrderedDict[str, Job] = OrderedDict()  # recent jobs (status lookups)
         self.running: str | None = None
+        # Operations (admin → Queue & jobs): paused = jobs wait; maintenance = new jobs are refused (routes/tts.py).
+        self.resume_event = asyncio.Event()
+        self.resume_event.set()
+        self.maintenance = False
+        self.maintenance_message = ""
         self.on_start: Hook | None = None   # e.g. mark the DB row "running"
         self.on_finish: Hook | None = None  # e.g. store result/error in the DB
         self.s.audio_dir.mkdir(parents=True, exist_ok=True)
@@ -146,9 +151,30 @@ class JobManager:
         return p if p.is_file() else None
 
     # ---- worker -----------------------------------------------------------
+    @property
+    def paused(self) -> bool:
+        return not self.resume_event.is_set()
+
+    def set_paused(self, paused: bool) -> None:
+        (self.resume_event.clear if paused else self.resume_event.set)()
+
+    async def cancel(self, job_id: str, reason: str = "Cancelled by support. Nothing was charged.") -> bool:
+        """Cancel a waiting job (running jobs can't be interrupted). The DB row becomes an error → not counted."""
+        job = self.jobs.get(job_id)
+        if job is None or job.status != "queued" or job_id not in self.pending:
+            return False
+        self.pending.remove(job_id)
+        job.status, job.error = "error", reason
+        await self._finish_hooks(job)
+        return True
+
     async def worker(self) -> None:
         while True:
             job = await self.queue.get()
+            await self.resume_event.wait()          # queue paused: the next job waits here (still "queued")
+            if job.status != "queued" or job.id not in self.pending:   # cancelled while waiting
+                self.queue.task_done()
+                continue
             self.pending.remove(job.id)
             self.running, job.status = job.id, "running"
             t0 = time.perf_counter()

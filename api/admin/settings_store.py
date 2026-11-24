@@ -14,6 +14,9 @@ DEFAULTS: dict[str, Any] = {
     "general": {"product_name": "AiWazz", "support_email": "support@aiwazz.in", "signup_mode": "invite"},
     # Dunning: days of paid access after a failed renewal (emails on day 0, 3, 7), then Free.
     "billing": {"grace_days": 7, "dunning_emails": True},
+    # Operations: queue pause (jobs wait) and maintenance (new jobs refused); both show a banner to users.
+    "ops": {"queue_paused": False, "maintenance": False, "message": ""},
+    "limits": {"api_rpm": 60},
     "referrals": {"enabled": False, "reward_chars_referrer": 10000, "reward_chars_referred": 5000,
                   "require_paid": True},
 }

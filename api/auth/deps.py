@@ -49,11 +49,44 @@ async def _from_api_key(db: AsyncSession, raw: str) -> Principal | None:
     from usage import has_api_access
     if not has_api_access(key.user):
         raise HTTPException(403, "API access is included in the Creator and Pro plans")
+    await api_key_limits(db, key)
     now = utcnow()
     if not key.last_used_at or now - key.last_used_at > timedelta(minutes=5):
         key.last_used_at = now
         await db.commit()
     return Principal(user=key.user, via="api_key", api_key=key)
+
+
+_request_ctx: dict = {}
+
+
+async def api_key_limits(db: AsyncSession, key: ApiKey) -> None:
+    """Per-key requests/minute (default: admin → Settings → limits; overrides per key or per user in admin → API &
+    usage) + hourly/daily request counters for the admin panel. Redis comes from the running app."""
+    redis = _request_ctx.get("redis")
+    if redis is None:
+        return
+    from admin import settings_store
+    from models import RateOverride
+    s = get_settings()
+    rpm = int((await settings_store.get(db, "limits")).get("api_rpm", 60))
+    ov = (await db.execute(select(RateOverride).where(
+        ((RateOverride.scope == "key") & (RateOverride.target_id == key.id)) |
+        ((RateOverride.scope == "user") & (RateOverride.target_id == key.user_id))))).scalars().all()
+    if ov:
+        rpm = next((o.rpm for o in ov if o.scope == "key"), ov[0].rpm)
+    from . import ratelimit
+    lim = await ratelimit.hit(redis, s.redis_prefix, f"api:key:{key.id}", rpm, 60)
+    if not lim.allowed:
+        raise HTTPException(429, f"Rate limit: {rpm} requests per minute for this API key", headers={"Retry-After": str(lim.retry_after)})
+    now = utcnow()
+    p = s.redis_prefix
+    async with redis.pipeline(transaction=False) as pipe:
+        pipe.hincrby(f"{p}apikey:h:{now:%Y%m%d%H}", str(key.id), 1)
+        pipe.expire(f"{p}apikey:h:{now:%Y%m%d%H}", 26 * 3600)
+        pipe.hincrby(f"{p}apikey:d:{now:%Y%m%d}", str(key.id), 1)
+        pipe.expire(f"{p}apikey:d:{now:%Y%m%d}", 32 * 86400)
+        await pipe.execute()
 
 
 async def _from_session(db: AsyncSession, token: str) -> Principal | None:
@@ -80,6 +113,7 @@ async def _from_session(db: AsyncSession, token: str) -> Principal | None:
 
 async def optional_principal(request: Request, db: AsyncSession = Depends(get_db)) -> Principal | None:
     s = get_settings()
+    _request_ctx["redis"] = request.app.state.redis
     raw_key = request.headers.get("x-api-key")
     if raw_key is not None:
         p = await _from_api_key(db, raw_key.strip())

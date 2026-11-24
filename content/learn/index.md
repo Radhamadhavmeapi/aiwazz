@@ -16,7 +16,8 @@ Everything you need to go from a script to a finished voiceover. New here? Start
 - [Hindi and Hinglish guide](/learn/hindi-and-hinglish/): Devanagari, mixing English words, common fixes.
 
 ## Get better results
-- [Choose the right voice](/learn/choosing-a-voice/)
+- [Choose the right voice](/learn/choosing-a-voice/): voices and speaking styles.
+- [Fix pronunciation](/learn/fix-pronunciation/): names, brands and short forms, once and for all.
 - [Speed, loudness and file formats](/learn/speed-and-loudness/)
 - [Use your audio in CapCut, Instagram, YouTube, Premiere, DaVinci, Canva and Remotion](/learn/using-audio-in-editors/)
 

@@ -24,6 +24,20 @@ AiWazz has 14 voices: 4 Hindi, 6 US English and 4 UK English. Hear them all on t
 | Stories and narration | a deep, calm voice at speed 0.9–1.0 |
 | Courses and training | a steady narrator voice; paragraphs between topics |
 
+## Add a speaking style
+A **style** sets pace, pauses and loudness in one tap, with any voice. Pick one under **Style** in the voice panel
+(or send `"style"` in the [API](/learn/api-quickstart/)):
+
+| Style | Pace | Pauses | Loudness | Good with |
+|---|---|---|---|---|
+| **Energetic reel** | 1.12× | short | -14 LUFS | Beta |
+| **Calm narrator** | 0.92× | long | -16 LUFS | Psi |
+| **Ad announcer** | 1.05× | tight | -14 LUFS | Omega |
+| **Friendly explainer** | 1.0× | even | -14 LUFS | Alpha |
+
+A style doesn't change the voice itself. After picking one you can still move the speed slider or change the
+loudness; your change wins. Tap the style again to turn it off.
+
 ## Tips
 - **Preview with your own sentence.** Generate the same 1–2 lines with 2 or 3 voices and compare.
 - **Stay consistent.** Use one voice per channel or series so your audience recognises it.

@@ -41,7 +41,8 @@ If a number sounds wrong, write it in words.
 
 ## Test and adjust
 Generate a short test of the hardest sentence first. If a word is mispronounced, try:
-1. a different spelling (phonetic),
+1. a pronunciation fix: `[word](say it as)` in the script, or add it to **Settings → Pronunciations** so it's fixed
+   in every voiceover ([Fix pronunciation](/learn/fix-pronunciation/)),
 2. Devanagari for Hindi words,
 3. adding commas around it,
 4. a different voice.

@@ -66,6 +66,8 @@ await import("node:fs").then(fs => fs.promises.writeFile("voice.mp3", Buffer.fro
 | `normalize` | boolean | true | loudness levelling on/off |
 | `loudness_lufs` | number | -14 | -30 to -8 |
 | `transliterate` | boolean | false | Roman Hindi → Devanagari before synthesis (Hindi voices only) |
+| `style` | string | none | `energetic-reel`, `calm-narrator`, `ad-announcer` or `friendly-explainer`: sets speed, pauses and loudness; an explicit `speed` or `loudness_lufs` still wins. List: `GET /api/styles` |
+| `pronunciations` | array | `[]` | `[{"word":"Kalyan","say_as":"कल्याण"}]`, up to 100; added to your Settings list for this request. Inline `[word](say-as)` in `text` also works. See [Fix pronunciation](/learn/fix-pronunciation/) |
 
 ## Errors and limits
 | Code | Meaning |

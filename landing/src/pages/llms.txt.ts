@@ -17,6 +17,7 @@ ${SEO_PAGES.map((p) => `- [${p.label}](https://aiwazz.in${p.href})`).join("\n")}
 - [Learn hub](https://aiwazz.in/learn/)
 - [Getting started](https://aiwazz.in/learn/getting-started/)
 - [Hindi and Hinglish guide](https://aiwazz.in/learn/hindi-and-hinglish/)
+- [Fix pronunciation](https://aiwazz.in/learn/fix-pronunciation/)
 - [API quickstart](https://aiwazz.in/learn/api-quickstart/)
 
 ## Company

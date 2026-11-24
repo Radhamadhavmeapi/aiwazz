@@ -2,7 +2,7 @@
 slug: /learn/troubleshooting/
 title: Troubleshooting
 metaTitle: AiWazz Troubleshooting | Fix Common Voiceover Problems
-metaDescription: Fixes for common AiWazz issues: wrong pronunciation, Hindi sounding English, slow generation, download problems, login and payment issues.
+metaDescription: Fixes for common AiWazz issues: wrong pronunciation (pronunciation list), Hindi sounding English, slow generation, download problems, login and payment issues.
 order: 10
 category: Help
 ---
@@ -13,7 +13,15 @@ category: Help
 Your Hindi is probably in Roman letters ("aaj hum…"). Turn on **Transliterate Hinglish** in the voice panel, or write it in Devanagari. See the [Hindi and Hinglish guide](/learn/hindi-and-hinglish/).
 
 ## A word is mispronounced
-Spell it the way it sounds, write Hindi words in Devanagari, add commas around it, or try another voice. Write numbers and abbreviations in words. More in [Write scripts that sound natural](/learn/writing-scripts/).
+Fix it once and it stays fixed: add it to **Settings → Pronunciations** (word → how to say it, with a free ▶ test), or
+for one script write `[word](say it as)`, for example `[Kalyan](कल्याण)`. Check the **Will be read as** box under the
+editor before you generate. See [Fix pronunciation](/learn/fix-pronunciation/).
+
+## My pronunciation fix isn't used
+- The word must match as a **whole word**: `GST` doesn't change "GSTIN". Add the longer word as its own entry.
+- In the script, the brackets must touch: `[word](say it as)`, with no space between `]` and `(`.
+- A fix in the script wins over your list, and your list wins over the built-in list.
+- With Transliterate Hinglish on, a fix is read exactly as typed. Write Hindi sounds in Devanagari.
 
 ## Generation is taking a long time
 Generations run in a queue. A 60-second voiceover usually takes about a minute once it starts. If you see a queue position, other jobs are ahead of you. Long scripts: split them into scenes. If a job seems stuck for more than 10 minutes, refresh the page; failed jobs never use your characters.

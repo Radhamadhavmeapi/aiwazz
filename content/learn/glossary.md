@@ -11,6 +11,8 @@ category: Help
 
 - **TTS (text to speech):** technology that turns written text into spoken audio.
 - **Voice:** a synthetic speaker with its own tone, gender and accent.
+- **Style:** a preset for pace, pauses and loudness (Energetic reel, Calm narrator, Ad announcer, Friendly explainer). It works with any voice and doesn't change the voice itself.
+- **Pronunciation fix:** a rule that tells the voice how to say a word, either `[word](say it as)` in the script or an entry in Settings → Pronunciations.
 - **Character:** one letter, number, space or punctuation mark in your script; how usage is counted.
 - **Generation / job:** one request to turn a script into audio.
 - **Queue:** the waiting line of jobs; AiWazz processes them one after another.

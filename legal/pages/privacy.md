@@ -16,7 +16,7 @@ This Privacy Policy explains how **{{legalName}}** (GSTIN {{gstin}}), {{address}
 | Category | Examples | Source |
 |---|---|---|
 | Account data | Name, email address, password (stored only as a secure hash), invite code | You, at signup |
-| Usage content | Scripts (text) you submit and the audio files generated from them | You, when you use the Service |
+| Usage content | Scripts (text) you submit, the audio files generated from them, and the words in your pronunciation list (deleted with your account) | You, when you use the Service |
 | Billing data | Plan, amount, GSTIN and billing name (if you provide them), Razorpay payment and order IDs, payment status | You and Razorpay |
 | Technical data | IP address, browser and device type, pages visited, timestamps, error logs | Automatically, when you use the Service |
 | Support data | Messages you send by email, WhatsApp or the contact form | You |

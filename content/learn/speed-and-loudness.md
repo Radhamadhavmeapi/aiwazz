@@ -14,6 +14,8 @@ Set speed from **0.7 (slow)** to **1.3 (fast)**. 1.0 is natural.
 - Reels and Shorts: 1.05–1.15 keeps energy up.
 - Tutorials and courses: 0.95–1.0 is easier to follow.
 - Changing speed does not change the pitch.
+- A **style** (Energetic reel, Calm narrator, Ad announcer, Friendly explainer) sets speed, pauses and loudness together.
+  See [Choose the right voice](/learn/choosing-a-voice/#add-a-speaking-style).
 
 ## Loudness
 Every file is levelled to a consistent loudness so it doesn't sound quiet next to other videos.
@@ -27,6 +29,7 @@ Every file is levelled to a consistent loudness so it doesn't sound quiet next t
 ## Clean edges and pauses
 - Silence at the start and end is trimmed to about 0.1 seconds, so the voice starts right away.
 - Between sentences: a 0.25 s pause. Between paragraphs: a 0.6 s pause.
+- Styles change the pauses: Energetic reel 0.15 s / 0.4 s, Ad announcer 0.2 s / 0.5 s, Calm narrator 0.4 s / 0.9 s.
 
 ## MP3 or WAV?
 | | MP3 | WAV |

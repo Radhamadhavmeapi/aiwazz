@@ -34,6 +34,7 @@ If an English word sounds odd inside a Hindi sentence, write it in Devanagari th
 ## Common fixes
 | Problem | Fix |
 |---|---|
+| A name, place or brand sounds wrong | Add it in **Settings → Pronunciations**, or write `[Kalyan](कल्याण)` in the script ([Fix pronunciation](/learn/fix-pronunciation/)) |
 | Word stressed wrongly | Add a nukta or matra (ज़, फ़), or spell it as spoken |
 | Sentence sounds rushed | Split it, or lower speed to 0.9 |
 | English acronym read as a word | Add spaces: "S E O" |

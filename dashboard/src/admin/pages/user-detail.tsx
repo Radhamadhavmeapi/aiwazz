@@ -207,7 +207,7 @@ function BillingTab({ uid }: { uid: number }) {
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return <LoadingRows rows={4} />;
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
       <Section title="Subscriptions">
         {!data.subscriptions.length ? <p className="text-sm text-muted-foreground">No subscriptions.</p> : (
           <ul className="divide-y text-sm">
@@ -308,7 +308,7 @@ export default function UserDetailPage() {
           </TabsList>
         </div>
         <TabsContent value="profile">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <Section title="Account">
               <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Signed up</dt><dd>{fmtDate(u.created_at)}</dd>
@@ -328,7 +328,7 @@ export default function UserDetailPage() {
           </div>
         </TabsContent>
         <TabsContent value="usage">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <Section title="Current cycle" description={`${fmtDate(usage.period_start, false)} – ${fmtDate(usage.period_end, false)}`}>
               <p className="text-2xl font-semibold tabular">{num(usage.used)} <span className="text-sm font-normal text-muted-foreground">/ {usage.unlimited ? "unlimited" : num(usage.allowance)} characters</span></p>
               {!usage.unlimited && <div className="mt-3 h-2 rounded-full bg-surface-2"><div className="h-full rounded-full bg-brand-gradient" style={{ width: `${pctUsed}%` }} /></div>}

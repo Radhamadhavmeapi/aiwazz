@@ -73,14 +73,14 @@ export default function HealthPage() {
             <Stat label="Server uptime" value={dur(h.host.uptime_sec)} />
             <Stat label="Audio storage" value={mb(h.storage.audio_bytes)} sub={`${h.storage.audio_files} files · kept ${h.storage.retention_days} days`} />
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <Section title="Processes (PM2)">
               <ul className="divide-y text-sm">
                 {h.processes.filter((p) => p.ours).map((p) => (
                   <li key={p.name} className="flex flex-wrap items-center gap-3 py-2">
-                    <span className="w-32 font-mono text-xs">{p.name}</span>
+                    <span className="w-32 shrink-0 font-mono text-xs">{p.name}</span>
                     <Pill tone={p.status === "online" ? "green" : p.status === "stopped" && p.name === "aiwazz-watchdog" ? "gray" : "red"}>{p.status}</Pill>
-                    <span className="text-xs text-muted-foreground">{p.status === "online" ? `up ${dur(p.uptime_sec)} · ` : ""}{mb(p.memory)} · {p.restarts} restarts</span>
+                    <span className="min-w-0 text-xs text-muted-foreground">{p.status === "online" ? `up ${dur(p.uptime_sec)} · ` : ""}{mb(p.memory)} · {p.restarts} restarts</span>
                     {can("system.write") && <Button size="xs" variant="outline" className="ml-auto" onClick={() => (setReason(""), setRestart(p.name))}><RotateCw /> Restart</Button>}
                   </li>
                 ))}

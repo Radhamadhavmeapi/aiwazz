@@ -137,7 +137,7 @@ def create_app() -> FastAPI:
             log.exception("unhandled error on %s %s", request.method, request.url.path)
             raise
         resp.headers["X-Request-ID"] = rid
-        if resp.status_code >= 500:
+        if resp.status_code >= 500 and request.url.path != "/api/health":   # health is 503 while the model loads
             log.error("%s %s → %d", request.method, request.url.path, resp.status_code)
         await _count_request(request, resp.status_code)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")

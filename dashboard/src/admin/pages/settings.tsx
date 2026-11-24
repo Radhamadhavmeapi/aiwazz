@@ -41,7 +41,7 @@ function SecurityTab() {
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return <LoadingRows rows={4} />;
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
       <Section title="Your 2FA" description="Authenticator app (TOTP) + single-use backup codes.">
         <p className="flex items-center gap-2 text-sm"><ShieldCheck className="size-4 text-success" /> 2FA is on · {me?.mfa.backup_codes_left ?? 0} backup codes left</p>
         {codes ? (

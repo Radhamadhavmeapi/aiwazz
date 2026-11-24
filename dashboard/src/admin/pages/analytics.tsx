@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
             <Stat label="Revenue" value={inr(a.totals.revenue_paise)} trend={trend(a, "revenue_paise")} sub={a.totals.refunds_paise ? `−${inr(a.totals.refunds_paise)} refunds` : "incl. GST"} />
             <Stat label="Hinglish toggle" value={a.hinglish_pct == null ? "–" : `${a.hinglish_pct}%`} sub={`avg script ${a.avg_script_chars ?? "–"} chars`} />
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <Section title="Funnel" description="Landing visit → signup → first voiceover → first payment (within the range)."><Funnel steps={a.funnel} /><p className="mt-3 text-xs text-muted-foreground">{a.visits_note}</p></Section>
             <Section title="Signups per day"><TimeChart data={a.series.signups} label="Signups" /></Section>
             <Section title="Voiceovers per day"><TimeChart data={a.series.generations_done} kind="bar" label="Voiceovers" /></Section>

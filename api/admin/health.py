@@ -308,7 +308,9 @@ def read_logs(level: str = "", q: str = "", request_id: str = "", since: str = "
             if is_access and not include_access:
                 cur = None
                 continue
-            cur = {"time": m.group("pm2") + "Z", "level": lvl, "message": rest, "source": name.split(".")[1]}
+            # PM2 stamps lines in the server's local time zone (not UTC): convert so the panel shows the right IST time.
+            t = datetime.fromisoformat(m.group("pm2")).astimezone(UTC).replace(tzinfo=None).isoformat() + "Z"
+            cur = {"time": t, "level": lvl, "message": rest, "source": name.split(".")[1]}
             entries.append(cur)
     out = []
     for e in sorted(entries, key=lambda e: e["time"], reverse=True):

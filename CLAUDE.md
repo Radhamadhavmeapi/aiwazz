@@ -282,6 +282,7 @@ change email.
     `tools/voice_lab_page.py`, never in git; `deploy-preview.sh` excludes `voice-lab/`). Findings: `content/VOICE-LAB-REPORT.md`.
 11. Self-hosted mail (Postfix/Dovecot on this VPS, no third-party email): `content/MAIL-SERVER.md`.
 12. Admin panel: complete SaaS back office at login.aiwazz.in/admin (RBAC, 2FA, audit, billing, GST, support, moderation, ops): `content/ADMIN-PANEL.md`.
+13. Custom voice (clone engine, CPU first, consent/source records, owner-only): `content/CUSTOM-VOICE.md`. Run before phase 12.
 
 ## Company
 AiWazz by TheWebStore028, a brand of **RADHAMADHAV WEBSTORE LLP**, GSTIN 27ABJFR6148J1ZO,

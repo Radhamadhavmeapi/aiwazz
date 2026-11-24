@@ -48,3 +48,7 @@ Thumbs.db
 dashboard/public/
 landing/public/
 landing/.astro/
+
+# Custom voice references and caches (never commit audio)
+data/voices/
+*.wav

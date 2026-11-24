@@ -30,8 +30,8 @@ function Tip({ active, payload, label, fmt }: { active?: boolean; payload?: { va
   );
 }
 
-export function TimeChart({ data, kind = "area", fmt = (n) => n.toLocaleString("en-IN"), height = 180, label }: {
-  data: Point[]; kind?: "area" | "bar"; fmt?: (n: number) => string; height?: number; label: string;
+export function TimeChart({ data, kind = "area", fmt = (n) => n.toLocaleString("en-IN"), height = 180, label, minMax = 4 }: {
+  data: Point[]; kind?: "area" | "bar"; fmt?: (n: number) => string; height?: number; label: string; minMax?: number;
 }) {
   const c = useChartColors();
   const total = data.reduce((a, b) => a + b.value, 0);
@@ -39,7 +39,8 @@ export function TimeChart({ data, kind = "area", fmt = (n) => n.toLocaleString("
     <>
       <CartesianGrid vertical={false} stroke={c.grid} />
       <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={28} />
-      <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={44} allowDecimals={false} tickFormatter={(v) => fmt(v)} />
+      <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={52} allowDecimals={false}
+        domain={[0, (m: number) => Math.max(m, minMax)]} tickFormatter={(v) => fmt(v)} />
       <Tooltip content={<Tip fmt={fmt} />} cursor={kind === "bar" ? { fill: c.grid } : { stroke: c.axis, strokeDasharray: "3 3" }} />
     </>
   );

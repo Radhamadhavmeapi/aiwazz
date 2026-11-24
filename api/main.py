@@ -56,23 +56,11 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(engine.load)
         await jobs.worker()
 
-    async def plan_sweep():
-        """Hourly: ended time-limited plans go back to Free; invite requests older than 12 months are deleted."""
-        from usage import expire_plans, purge_old_invite_requests
-        while True:
-            try:
-                async with sessionmaker() as db:
-                    if n := await expire_plans(db):
-                        log.info("moved %d user(s) back to Free (plan ended)", n)
-                    if n := await purge_old_invite_requests(db):
-                        log.info("deleted %d invite request(s) older than 12 months", n)
-            except Exception:  # noqa: BLE001
-                log.exception("plan sweep failed")
-            await asyncio.sleep(3600)
-
     # Load the model in the background so /api/health answers (503 "loading") meanwhile.
-    tasks = [asyncio.create_task(load()), asyncio.create_task(jobs.cleanup_loop()), asyncio.create_task(plan_sweep()),
-             asyncio.create_task(jobs.clone_worker())]
+    import scheduler
+    tasks = [asyncio.create_task(load()), asyncio.create_task(jobs.cleanup_loop()), asyncio.create_task(jobs.clone_worker())]
+    if not s.debug or s.env == "development":      # tests drive tasks directly
+        tasks += scheduler.start(sessionmaker, app)
     yield
     for t in tasks:
         t.cancel()

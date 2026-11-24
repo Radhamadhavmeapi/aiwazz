@@ -108,7 +108,7 @@ class Settings(BaseSettings):
 
     @property
     def billing_enabled(self) -> bool:
-        return bool(self.razorpay_key_id and self.razorpay_key_secret and self.razorpay_plan_ids)
+        return bool(self.razorpay_key_id and self.razorpay_key_secret)   # plan ids: plan_versions table or api/.env
 
     @property
     def billing_test_mode(self) -> bool:

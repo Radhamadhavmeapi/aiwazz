@@ -39,12 +39,29 @@ class Razorpay:
     async def get_plan(self, plan_id: str) -> dict:
         return await self._call("GET", f"/plans/{plan_id}")
 
-    async def create_subscription(self, plan_id: str, total_count: int, notes: dict) -> dict:
-        return await self._call("POST", "/subscriptions", {
-            "plan_id": plan_id, "total_count": total_count, "customer_notify": 1, "notes": notes})
+    async def create_subscription(self, plan_id: str, total_count: int, notes: dict, offer_id: str = "") -> dict:
+        body = {"plan_id": plan_id, "total_count": total_count, "customer_notify": 1, "notes": notes}
+        if offer_id:
+            body["offer_id"] = offer_id
+        return await self._call("POST", "/subscriptions", body)
 
     async def get_subscription(self, sub_id: str) -> dict:
         return await self._call("GET", f"/subscriptions/{sub_id}")
+
+    async def update_subscription(self, sub_id: str, plan_id: str, now: bool) -> dict:
+        """Change plan. now=True: Razorpay charges the prorated difference immediately (upgrade); False: from the next
+        cycle (downgrade). Razorpay allows this only for card-mandate subscriptions; other methods return an error."""
+        return await self._call("PATCH", f"/subscriptions/{sub_id}", {
+            "plan_id": plan_id, "schedule_change_at": "now" if now else "cycle_end", "customer_notify": 1})
+
+    async def pause_subscription(self, sub_id: str) -> dict:
+        return await self._call("POST", f"/subscriptions/{sub_id}/pause", {"pause_at": "now"})
+
+    async def resume_subscription(self, sub_id: str) -> dict:
+        return await self._call("POST", f"/subscriptions/{sub_id}/resume", {"resume_at": "now"})
+
+    async def refund_payment(self, payment_id: str, amount_paise: int, notes: dict) -> dict:
+        return await self._call("POST", f"/payments/{payment_id}/refund", {"amount": amount_paise, "speed": "normal", "notes": notes})
 
     async def cancel_subscription(self, sub_id: str, at_cycle_end: bool) -> dict:
         return await self._call("POST", f"/subscriptions/{sub_id}/cancel", {"cancel_at_cycle_end": 1 if at_cycle_end else 0})

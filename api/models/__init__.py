@@ -1,7 +1,7 @@
 """ORM models. All timestamps are naive UTC (see db.utcnow)."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db import Base, utcnow
@@ -189,6 +189,11 @@ class Subscription(Base):
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # Plan changes (admin panel A3): upgrades apply now (Razorpay prorates), downgrades at the period end.
+    rzp_plan_id: Mapped[str] = mapped_column(String(40), default="", server_default="")
+    pending_plan: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    pending_period: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    coupon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class Payment(Base):
@@ -201,6 +206,8 @@ class Payment(Base):
     status: Mapped[str] = mapped_column(String(16))
     method: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    refunded_paise: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error: Mapped[str] = mapped_column(String(255), default="", server_default="")   # failed payments: Razorpay reason
 
 
 class Invoice(Base):
@@ -225,6 +232,7 @@ class Invoice(Base):
     sgst_paise: Mapped[int] = mapped_column(Integer, default=0)
     igst_paise: Mapped[int] = mapped_column(Integer, default=0)
     total_paise: Mapped[int] = mapped_column(Integer)
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   # cancelled by a full credit note
 
 
 class InvoiceCounter(Base):
@@ -235,11 +243,17 @@ class InvoiceCounter(Base):
 
 
 class WebhookEvent(Base):
-    """Processed Razorpay webhook event ids (x-razorpay-event-id), so retries are handled once."""
+    """Every Razorpay webhook received (x-razorpay-event-id; retries handled once). Bad signatures are logged too
+    (id "badsig:…", payload kept for diagnosis, never processed). Replay re-runs the stored payload (idempotent)."""
     __tablename__ = "webhook_events"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event: Mapped[str] = mapped_column(String(64))
     received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    signature_ok: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    status: Mapped[str] = mapped_column(String(16), default="processed", server_default="processed")  # processed|failed|ignored|rejected
+    note: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    replays: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class Pronunciation(Base):

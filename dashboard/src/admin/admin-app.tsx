@@ -15,6 +15,11 @@ const PAGES: Record<string, ComponentType> = {
   settings: lazy(() => import("./pages/settings")),
   users: lazy(() => import("./pages/users-routes")),
   invites: lazy(() => import("./pages/invites")),
+  subscriptions: lazy(() => import("./pages/subscriptions")),
+  payments: lazy(() => import("./pages/payments")),
+  invoices: lazy(() => import("./pages/invoices")),
+  plans: lazy(() => import("./pages/plans")),
+  coupons: lazy(() => import("./pages/coupons")),
 };
 
 function Pending({ to }: { to: string }) {

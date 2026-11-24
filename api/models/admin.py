@@ -1,12 +1,14 @@
 """Admin panel tables (phase 12, content/ADMIN-PANEL.md). All timestamps naive UTC."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import Base, utcnow
 
-__all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression"]
+__all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression",
+           "Refund", "CreditNote", "CreditNoteCounter", "DunningCase", "PlanVersion", "Coupon", "CouponRedemption",
+           "ReferralCode", "Referral", "TaskRun"]
 
 
 class TotpSecret(Base):
@@ -135,3 +137,137 @@ class EmailSuppression(Base):
     reason: Mapped[str] = mapped_column(String(32))       # hard_bounce | unsubscribe | manual
     note: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# ── Billing (A3) ────────────────────────────────────────────────────────────
+class Refund(Base):
+    """Full or partial refund of a payment (Razorpay). Each processed refund gets a GST credit note."""
+    __tablename__ = "refunds"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rzp_refund_id: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
+    payment_id: Mapped[int] = mapped_column(ForeignKey("payments.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16), default="pending")   # pending | processed | failed
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    credit_note_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class CreditNote(Base):
+    """GST credit note (CGST s.34) against one invoice: refund or void. Series AWZ-CN/<FY>/<n>, never renumbered."""
+    __tablename__ = "credit_notes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    number: Mapped[str] = mapped_column(String(32), unique=True)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id"), index=True)
+    refund_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(8))                        # refund | void
+    reason: Mapped[str] = mapped_column(String(255))
+    issued_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    taxable_paise: Mapped[int] = mapped_column(Integer)
+    cgst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    sgst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    igst_paise: Mapped[int] = mapped_column(Integer, default=0)
+    total_paise: Mapped[int] = mapped_column(Integer)
+
+
+class CreditNoteCounter(Base):
+    __tablename__ = "credit_note_counters"
+    fy: Mapped[str] = mapped_column(String(7), primary_key=True)
+    last: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class DunningCase(Base):
+    """A subscription whose payment failed: reminder emails on day 0/3/7, then Free after the grace period."""
+    __tablename__ = "dunning_cases"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    subscription_id: Mapped[int] = mapped_column(ForeignKey("subscriptions.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    grace_until: Mapped[datetime] = mapped_column(DateTime)
+    failures: Mapped[int] = mapped_column(Integer, default=1)
+    last_error: Mapped[str] = mapped_column(String(255), default="")
+    emails_sent: Mapped[str] = mapped_column(String(32), default="")    # "0,3,7"
+    status: Mapped[str] = mapped_column(String(16), default="open")     # open | resolved | downgraded
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PlanVersion(Base):
+    """Razorpay plans are immutable: every price change creates a new version. Subscribers keep the plan id they
+    signed up with (grandfathered) unless migrated explicitly. active = offered to new subscribers."""
+    __tablename__ = "plan_versions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan: Mapped[str] = mapped_column(String(16))
+    period: Mapped[str] = mapped_column(String(8))
+    taxable_paise: Mapped[int] = mapped_column(Integer)
+    total_paise: Mapped[int] = mapped_column(Integer)
+    rzp_plan_id: Mapped[str] = mapped_column(String(40), default="")    # empty until created in Razorpay
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class Coupon(Base):
+    """Discount code. Applied through a Razorpay Offer (offer_id on the subscription; offers are created in the
+    Razorpay Dashboard, the API can't create them) and validated here (plan, period, dates, limits)."""
+    __tablename__ = "coupons"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True)          # uppercase
+    description: Mapped[str] = mapped_column(String(255), default="")
+    kind: Mapped[str] = mapped_column(String(8))                        # percent | fixed
+    value: Mapped[int] = mapped_column(Integer)                         # percent (1-100) or paise
+    plans: Mapped[str] = mapped_column(String(64), default="")          # "" = all, else "starter,creator"
+    periods: Mapped[str] = mapped_column(String(16), default="monthly,yearly")
+    duration: Mapped[str] = mapped_column(String(8), default="once")    # once (first payment) | cycles
+    cycles: Mapped[int] = mapped_column(Integer, default=1)
+    max_redemptions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    per_user_limit: Mapped[int] = mapped_column(Integer, default=1)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    rzp_offer_id: Mapped[str] = mapped_column(String(40), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class CouponRedemption(Base):
+    __tablename__ = "coupon_redemptions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    coupon_id: Mapped[int] = mapped_column(ForeignKey("coupons.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    subscription_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending (checkout) | redeemed | void
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ReferralCode(Base):
+    """Referral program data model (user-facing part behind the "referrals" feature flag, off)."""
+    __tablename__ = "referral_codes"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    code: Mapped[str] = mapped_column(String(16), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Referral(Base):
+    __tablename__ = "referrals"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    referrer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    referred_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, unique=True)
+    status: Mapped[str] = mapped_column(String(16), default="signed_up")   # signed_up | converted | rewarded
+    reward_chars: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class TaskRun(Base):
+    """Background task log (scheduler.py): every run of every task, so failures are visible in the admin panel."""
+    __tablename__ = "task_runs"
+    __table_args__ = (Index("ix_task_runs_task_started", "task", "started_at"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    task: Mapped[str] = mapped_column(String(32))
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="running")  # running | ok | failed
+    detail: Mapped[str] = mapped_column(String(500), default="")

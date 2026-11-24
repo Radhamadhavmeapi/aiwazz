@@ -238,7 +238,7 @@ export function AdminShell({ title, children }: { title: string; children: React
           <div className="ml-auto flex items-center gap-1.5">
             <button type="button" onClick={() => setCmd(true)}
               className="hidden h-8 w-64 items-center gap-2 rounded-lg border bg-surface-2/70 px-2.5 text-left text-xs text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground lg:flex">
-              <Search className="size-3.5" /> Search users, payments, invoices…
+              <Search className="size-3.5 shrink-0" /> <span className="truncate">Search users, payments…</span>
               <kbd className="ml-auto rounded border bg-surface px-1.5 font-mono text-[10px]">⌘K</kbd>
             </button>
             <Button variant="ghost" size="icon-sm" className="lg:hidden" onClick={() => setCmd(true)} aria-label="Search"><Search /></Button>

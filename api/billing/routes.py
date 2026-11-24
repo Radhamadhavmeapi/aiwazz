@@ -39,7 +39,8 @@ def _sub_out(s: Subscription | None) -> dict | None:
     if s is None:
         return None
     return {"id": s.id, "plan": s.plan, "period": s.period, "status": s.status, "current_start": _iso(s.current_start),
-            "current_end": _iso(s.current_end), "cancel_at_period_end": s.cancel_at_period_end}
+            "current_end": _iso(s.current_end), "cancel_at_period_end": s.cancel_at_period_end,
+            "pending_plan": s.pending_plan, "pending_period": s.pending_period}
 
 
 def _profile(u: User) -> dict:
@@ -60,12 +61,18 @@ async def billing_overview(p: Principal = Depends(_session_user), db: AsyncSessi
     return {
         "enabled": s.billing_enabled, "test_mode": s.billing_test_mode, "gst_rate": GST_RATE,
         "plans": [{"id": k, **v, "total_monthly_paise": charge_paise(k, "monthly")[1],
-                   "total_yearly_paise": charge_paise(k, "yearly")[1]} for k, v in prices.items()],
+                   "total_yearly_paise": charge_paise(k, "yearly")[1]} for k, v in prices.items()
+                  if _public(k) or (sub is not None and sub.plan == k)],
         "subscription": _sub_out(sub), "profile": _profile(user),
         "invoices": [{"id": i.id, "number": i.number, "issued_at": _iso(i.issued_at), "plan": i.plan, "period": i.period,
                       "total_paise": i.total_paise} for i in invoices],
         "states": [{"code": c, "name": n} for c, n in sorted(STATES.items(), key=lambda x: x[1])],
     }
+
+
+def _public(plan: str) -> bool:
+    from .gst import LEGAL
+    return next((p.get("visibility", "public") for p in LEGAL["plans"] if p["id"] == plan), "hidden") == "public"
 
 
 class ProfileIn(BaseModel):
@@ -94,6 +101,7 @@ async def save_profile(body: ProfileIn, p: Principal = Depends(_session_user), d
 class SubscribeIn(BaseModel):
     plan: str
     period: str
+    coupon: str = Field(default="", max_length=32)
 
 
 @router.post("/subscribe", dependencies=[Depends(csrf_protect)])
@@ -101,29 +109,36 @@ async def subscribe(body: SubscribeIn, request: Request, p: Principal = Depends(
     s = get_settings()
     if not s.billing_enabled:
         raise HTTPException(503, "Online payments aren't open yet")
-    if body.plan not in PAID_PLANS or body.period not in PERIODS:
+    if body.plan not in PAID_PLANS or body.period not in PERIODS or not _public(body.plan):
         raise HTTPException(422, "Unknown plan")
-    plan_id = s.razorpay_plan_ids.get(f"{body.plan}_{body.period}")
+    plan_id = await service.plan_id_for(db, body.plan, body.period)
     if not plan_id:
         raise HTTPException(503, "This plan isn't available for online payment yet")
     user = await db.get(User, p.user.id)
     if not (user.billing_name and user.billing_state):
         raise HTTPException(422, "Add your billing details first (name and state, for the GST invoice)")
     if (live := await service.live_subscription(db, user.id)) is not None:
-        raise HTTPException(409, f"You already have the {live.plan.title()} plan. Cancel it first; you can pick a new plan "
-                                 "when it ends, or contact support to switch now.")
+        raise HTTPException(409, f"You already have the {live.plan.title()} plan. Use \"Change plan\" instead.")
+    from .coupons import check_coupon
+    coupon = await check_coupon(db, body.coupon, user.id, body.plan, body.period) if body.coupon.strip() else None
     lim = await ratelimit.hit(request.app.state.redis, s.redis_prefix, f"subscribe:user:{user.id}", 10, 3600)
     if not lim.allowed:
         raise HTTPException(429, "Too many checkout attempts. Try again later.")
     try:
         # total_count: how many renewals Razorpay may charge (10 years); the user can cancel any time.
         rs = await client().create_subscription(plan_id, 120 if body.period == "monthly" else 10,
-                                                {"user_id": str(user.id), "plan": body.plan, "period": body.period})
+                                                {"user_id": str(user.id), "plan": body.plan, "period": body.period},
+                                                offer_id=coupon.rzp_offer_id if coupon else "")
     except RazorpayError as e:
         log.warning("create_subscription failed: %s", e)
         raise HTTPException(502, "Couldn't start the payment. Please try again.") from e
-    db.add(Subscription(user_id=user.id, rzp_subscription_id=rs["id"], plan=body.plan, period=body.period,
-                        status=rs.get("status", "created")))
+    sub = Subscription(user_id=user.id, rzp_subscription_id=rs["id"], plan=body.plan, period=body.period,
+                       status=rs.get("status", "created"), rzp_plan_id=plan_id, coupon_id=coupon.id if coupon else None)
+    db.add(sub)
+    await db.flush()
+    if coupon:
+        from models import CouponRedemption
+        db.add(CouponRedemption(coupon_id=coupon.id, user_id=user.id, subscription_id=sub.id))
     await db.commit()
     price = plan_prices()[body.plan]
     return {"key_id": s.razorpay_key_id, "subscription_id": rs["id"], "name": "AiWazz",
@@ -154,6 +169,27 @@ async def verify(body: VerifyIn, p: Principal = Depends(_session_user), db: Asyn
     return {"subscription": _sub_out(sub)}
 
 
+class ChangePlanIn(BaseModel):
+    plan: str
+    period: str
+
+
+@router.post("/change-plan", dependencies=[Depends(csrf_protect)])
+async def change_plan(body: ChangePlanIn, p: Principal = Depends(_session_user), db: AsyncSession = Depends(get_db)):
+    """Upgrade = now (Razorpay charges the prorated difference); downgrade = from the next billing date."""
+    if body.plan not in PAID_PLANS or body.period not in PERIODS:
+        raise HTTPException(422, "Unknown plan")
+    sub = await service.live_subscription(db, p.user.id)
+    if sub is None:
+        raise HTTPException(404, "You don't have a plan to change. Pick one in Billing.")
+    try:
+        when = await service.change_subscription_plan(db, client(), sub, body.plan, body.period)
+    except service.PlanChangeError as e:
+        raise HTTPException(e.status, str(e)) from e
+    await db.commit()
+    return {"subscription": _sub_out(sub), "applies": when}
+
+
 @router.post("/cancel", dependencies=[Depends(csrf_protect)])
 async def cancel(p: Principal = Depends(_session_user), db: AsyncSession = Depends(get_db)):
     sub = await service.live_subscription(db, p.user.id)
@@ -182,23 +218,55 @@ async def invoice_pdf(invoice_id: int, p: Principal = Depends(current_principal)
 
 @router.post("/webhook", include_in_schema=False)
 async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Razorpay → us. Authenticated only by the HMAC signature; each event id is processed once."""
+    """Razorpay → us. Authenticated only by the HMAC signature; each event id is processed once. Every delivery is
+    logged in webhook_events (admin → Payments → Webhooks), including rejected signatures and processing errors."""
     raw = await request.body()
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        data = json.loads(raw)
+        event = str(data.get("event", ""))[:64] if isinstance(data, dict) else ""
+    except ValueError:
+        data, event = {}, ""
     if not webhook_signature_ok(raw, request.headers.get("x-razorpay-signature", "")):
+        db.add(WebhookEvent(id=f"badsig:{digest[:56]}", event=event or "?", signature_ok=False, status="rejected",
+                            note="Signature check failed", payload=raw[:20000].decode("utf-8", "replace")))
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
         raise HTTPException(400, "Bad signature")
-    data = json.loads(raw)
-    event = data.get("event", "")
-    event_id = request.headers.get("x-razorpay-event-id") or "sha256:" + hashlib.sha256(raw).hexdigest()[:56]
-    db.add(WebhookEvent(id=event_id[:64], event=event[:64]))
+    event_id = request.headers.get("x-razorpay-event-id") or "sha256:" + digest[:56]
+    row = WebhookEvent(id=event_id[:64], event=event, payload=raw.decode("utf-8", "replace")[:60000], status="processing")
+    db.add(row)
     try:
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        return {"ok": True, "duplicate": True}
-    note = await service.handle_event(db, event, data.get("payload", {}))
+        row = await db.get(WebhookEvent, event_id[:64])
+        if row is None or row.status != "failed":
+            return {"ok": True, "duplicate": True}
+        row.replays += 1          # Razorpay retrying an event we failed to process: run it again
     await db.commit()
-    log.info("webhook %s", note)
+    await process_event(db, row, data)
     return {"ok": True}
+
+
+async def process_event(db: AsyncSession, row: WebhookEvent, data: dict) -> None:
+    """Run the handler for a logged event and record the outcome (used by the webhook and by admin replay)."""
+    try:
+        note = await service.handle_event(db, row.event, data.get("payload", {}))
+        row = await db.merge(row)
+        row.status = "ignored" if note.startswith("ignored") else "processed"
+        row.note = note[:255]
+        await db.commit()
+        log.info("webhook %s", note)
+    except Exception as e:  # noqa: BLE001 - logged and visible in the admin panel; Razorpay will retry
+        await db.rollback()
+        row = await db.merge(row)
+        row.status, row.note = "failed", f"{type(e).__name__}: {e}"[:255]
+        await db.commit()
+        log.exception("webhook %s failed", row.id)
+        raise HTTPException(500, "Webhook processing failed") from e
 
 
 async def cancel_for_account_deletion(db: AsyncSession, user_id: int) -> None:

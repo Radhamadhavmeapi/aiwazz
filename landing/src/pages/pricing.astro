@@ -6,14 +6,22 @@ import { fmtINR, legalPage, LEGAL, planPrice } from "../lib/legal";
 
 const page = legalPage("pricing");
 const disc = LEGAL.yearlyDiscountPercent;
-const plans = LEGAL.plans.map((p) => {
+// Plans are edited in the admin panel (legal.json): hidden/legacy plans are not offered; sortOrder and "popular" apply.
+type PlanExtra = { visibility?: string; sortOrder?: number; popular?: boolean };
+const anyPopular = LEGAL.plans.some((p) => (p as PlanExtra).popular);
+const plans = LEGAL.plans
+  .filter((p) => ((p as PlanExtra).visibility ?? "public") === "public")
+  .map((p, i) => ({ p, order: (p as PlanExtra).sortOrder ?? i }))
+  .sort((a, b) => a.order - b.order)
+  .map(({ p }) => p)
+  .map((p) => {
   const { yearly, yearlyPerMonth } = planPrice(p.priceMonthly);
   return {
     ...p,
     yearly,
     yearlyPerMonth,
     minutes: Math.round(p.characters / 800),
-    popular: p.id === "creator",
+    popular: anyPopular ? !!(p as PlanExtra).popular : p.id === "creator",
     // Paid: straight to checkout in Settings → Billing (sign-in first if needed). The period follows the toggle.
     href: p.id === "free" ? `${SITE.app}/signup` : `${SITE.app}/settings?plan=${p.id}&period=monthly`,
   };

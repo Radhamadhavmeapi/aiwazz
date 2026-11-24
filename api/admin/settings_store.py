@@ -12,6 +12,10 @@ DEFAULTS: dict[str, Any] = {
     "security.admin_ip_allowlist": {"enabled": False, "cidrs": []},
     # signup_mode: invite (invite code required) | open (code optional) | closed (no new accounts)
     "general": {"product_name": "AiWazz", "support_email": "support@aiwazz.in", "signup_mode": "invite"},
+    # Dunning: days of paid access after a failed renewal (emails on day 0, 3, 7), then Free.
+    "billing": {"grace_days": 7, "dunning_emails": True},
+    "referrals": {"enabled": False, "reward_chars_referrer": 10000, "reward_chars_referred": 5000,
+                  "require_paid": True},
 }
 _cache: dict[str, tuple[float, Any]] = {}
 TTL = 10.0

@@ -61,8 +61,40 @@ class Usage:
                 "api_access": self.unlimited or self.plan in API_PLANS}
 
 
+def add_months(dt: datetime, n: int) -> datetime:
+    y, m = divmod(dt.month - 1 + n, 12)
+    year, month = dt.year + y, m + 1
+    import calendar
+    return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
+
+
+def anchored_bounds(anchor: datetime, now: datetime) -> tuple[datetime, datetime]:
+    """Monthly window anchored on the billing date (owner decision 24 Nov 2026: paid plans reset on their billing
+    date, Free on the 1st IST). Works for yearly subscriptions too: characters still reset every month."""
+    if now < anchor:
+        return anchor, add_months(anchor, 1)
+    k = (now.year - anchor.year) * 12 + now.month - anchor.month
+    if add_months(anchor, k) > now:
+        k -= 1
+    return add_months(anchor, k), add_months(anchor, k + 1)
+
+
+async def usage_bounds(db: AsyncSession, user: User) -> tuple[datetime, datetime]:
+    from models import Subscription
+    now = datetime.now(UTC).replace(tzinfo=None)
+    plan = user.effective_plan
+    if plan != "free":
+        sub = (await db.execute(select(Subscription).where(
+            Subscription.user_id == user.id, Subscription.plan == plan, Subscription.current_start.is_not(None),
+            Subscription.status.in_(("active", "authenticated", "pending", "halted", "cancelled", "completed")))
+            .order_by(Subscription.id.desc()))).scalars().first()
+        if sub is not None and sub.current_start is not None and (sub.current_end is None or sub.current_end > now - timedelta(days=60)):
+            return anchored_bounds(sub.current_start, now)
+    return period_bounds(now)
+
+
 async def get_usage(db: AsyncSession, user: User) -> Usage:
-    start, end = period_bounds()
+    start, end = await usage_bounds(db, user)
     current = user.effective_plan
     plan = PLANS.get(current) or PLANS.get("free")
     unlimited = user.is_admin

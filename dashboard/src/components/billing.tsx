@@ -15,7 +15,10 @@ import { cn } from "@/lib/utils";
 
 type Period = "monthly" | "yearly";
 type Plan = { id: string; name: string; monthly: number; yearly: number; yearly_per_month: number; characters: number; total_monthly_paise: number; total_yearly_paise: number };
-type Sub = { id: number; plan: string; period: Period; status: string; current_start: string | null; current_end: string | null; cancel_at_period_end: boolean };
+type Sub = {
+  id: number; plan: string; period: Period; status: string; current_start: string | null; current_end: string | null; cancel_at_period_end: boolean;
+  pending_plan?: string | null; pending_period?: Period | null;
+};
 type Profile = { name: string; gstin: string; state: string; address: string };
 type Billing = {
   enabled: boolean;
@@ -150,6 +153,23 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
     document.getElementById("billing")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [b, params]);
 
+  const [coupon, setCoupon] = useState("");
+  // Live subscription: upgrades apply now (Razorpay charges the prorated difference), downgrades at renewal.
+  const changePlan = async (planId: string) => {
+    setBusy(planId);
+    try {
+      const r = await api<{ applies: string; subscription: Sub }>("/api/billing/change-plan", { json: { plan: planId, period } });
+      toast.success(r.applies === "now" ? "Plan changed" : "Change scheduled", {
+        description: r.applies === "now" ? "Razorpay charges the prorated difference for this period." : "It starts on your next billing date.",
+      });
+      await load();
+    } catch (e) {
+      toast.error("Couldn't change the plan", { description: e instanceof ApiError ? e.message : undefined });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const pay = async (planId: string) => {
     if (!b) return;
     if (!b.profile.name || !b.profile.state) {
@@ -159,7 +179,7 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
     }
     setBusy(planId);
     try {
-      const co = await api<Checkout>("/api/billing/subscribe", { json: { plan: planId, period } });
+      const co = await api<Checkout>("/api/billing/subscribe", { json: { plan: planId, period, coupon: coupon.trim() } });
       await loadCheckout();
       const rzp = new window.Razorpay!({
         key: co.key_id,
@@ -288,10 +308,10 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
           </a>
         </p>
       )}
-      {b?.enabled && !live && !usage?.unlimited && (
+      {b?.enabled && !usage?.unlimited && (!live || sub?.status === "active") && !sub?.cancel_at_period_end && (
         <div className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium">Upgrade</p>
+            <p className="text-sm font-medium">{live ? "Change plan" : "Upgrade"}</p>
             <ToggleGroup type="single" variant="outline" size="sm" value={period} onValueChange={(v) => v && setPeriod(v as Period)} aria-label="Billing period">
               <ToggleGroupItem value="monthly" className="px-3">
                 Monthly
@@ -303,8 +323,8 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
           </div>
           <ul className="mt-3 grid gap-3 md:grid-cols-3">
             {b.plans.map((p) => {
-              const current = usage?.plan === p.id;
-              const lower = ORDER.indexOf(p.id) < ORDER.indexOf(usage?.plan ?? "free");
+              const current = live && sub ? sub.plan === p.id && sub.period === period : usage?.plan === p.id;
+              const lower = ORDER.indexOf(p.id) < ORDER.indexOf((live && sub?.plan) || usage?.plan || "free");
               return (
                 <li key={p.id} className={cn("flex flex-col rounded-xl border p-4", wanted === p.id && "border-primary ring-2 ring-primary/20")}>
                   <p className="text-sm font-semibold">{p.name}</p>
@@ -323,13 +343,17 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
                     size="sm"
                     variant={wanted === p.id || p.id === "creator" ? "brand" : "outline"}
                     disabled={!!busy || current}
-                    onClick={() => pay(p.id)}
+                    onClick={() => (live ? changePlan(p.id) : pay(p.id))}
                   >
                     {busy === p.id && <Loader2 className="animate-spin" />}
                     {current ? (
                       <>
                         <Check /> Current plan
                       </>
+                    ) : sub?.pending_plan === p.id && sub?.pending_period === period ? (
+                      "Starts at renewal"
+                    ) : live && lower ? (
+                      `Switch at renewal`
                     ) : lower ? (
                       `Switch to ${p.name}`
                     ) : (
@@ -340,6 +364,13 @@ export function BillingCard({ usage }: { usage: Usage | null }) {
               );
             })}
           </ul>
+          {!live && (
+            <div className="mt-3 flex max-w-xs items-center gap-2">
+              <label htmlFor="coupon" className="shrink-0 text-xs text-muted-foreground">Coupon</label>
+              <input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Optional"
+                className="h-8 w-full rounded-lg border border-input bg-surface px-2 font-mono text-xs uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            </div>
+          )}
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" /> Paid securely through Razorpay (UPI, cards, net banking). Renews
             automatically; cancel any time.

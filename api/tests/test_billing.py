@@ -41,7 +41,7 @@ class FakeRazorpay:
     def __init__(self):
         self.subs, self.calls = {}, []
 
-    async def create_subscription(self, plan_id, total_count, notes):
+    async def create_subscription(self, plan_id, total_count, notes, offer_id=""):
         sid = f"sub_{len(self.subs) + 1:04d}"
         self.subs[sid] = {"id": sid, "plan_id": plan_id, "status": "created", "notes": notes}
         self.calls.append(("create", sid))

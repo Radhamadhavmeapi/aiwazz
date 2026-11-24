@@ -80,7 +80,7 @@ export function Stat({ label, value, sub, trend, className }: {
     <div className={cn("rounded-xl border bg-surface p-4 shadow-sm", className)}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1.5 font-heading text-2xl font-semibold tracking-tight tabular">{value}</p>
-      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
         {t !== null && (
           <span className={cn("font-medium tabular", t > 0 ? "text-success" : t < 0 ? "text-danger" : "")}>
             {t > 0 ? "▲" : t < 0 ? "▼" : "•"} {Math.abs(t).toFixed(t !== 0 && Math.abs(t) < 10 ? 1 : 0)}%

@@ -76,7 +76,7 @@ export default function OverviewPage() {
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Section title="Revenue" description="Captured payments per day (30 days, incl. GST)" className="lg:col-span-2">
-              <TimeChart data={data.charts.revenue} kind="bar" label="Revenue" fmt={(n) => inr(n)} />
+              <TimeChart data={data.charts.revenue} kind="bar" label="Revenue" fmt={(n) => inr(n)} minMax={100000} />
             </Section>
             <Section title="Plan mix" description="Customers by current plan">
               <PlanDonut data={data.charts.plan_mix} />

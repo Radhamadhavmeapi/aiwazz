@@ -151,8 +151,9 @@ password only in `api/.env`). Migrations: Alembic (`api/migrations`). Redis **db
 
 ## Design system (applies to landing + dashboard)
 Goal: a **modern, advanced, technology-focused SaaS** look. Clean, minimal, premium (think Linear, Vercel,
-ElevenLabs). Not a template look, no clutter, no random colors. Real product screenshots first; free-licence photos
-(Unsplash/Pexels) only in landing mood/use-case sections, credited and optimised (rules in `content/LANDING-V2.md`).
+ElevenLabs). Not a template look, no clutter, no random colors. Real product screenshots first. **No photos of people**
+(owner decision, 24 Nov 2026): branded SVG illustrations in `landing/src/components/Illustration.astro` (brand colours,
+light + dark); `landing/media/illustrations/<slot>.webp` (+ `-dark.webp`) overrides a slot's SVG (see the README there).
 **Never** fake testimonials, ratings, logos or user counts.
 **Brand:** AiWazz Brand Kit v1.0 in `brand/AiWazz-Brand-Kit/` (read `AiWazz-Brand-Guidelines.pdf`). Tagline **"Type it, hear it."**
 (sentence case, with the comma and full stop). Tokens: `design/tokens.css` + `design/theme.css`; web-sized logos, icon,
@@ -214,7 +215,7 @@ Footer (company line) on both sites. Contact form → `POST /api/contact` (proxi
 `terms_version`, `consent_ip`, `marketing_opt_in`); account deletion logs a reference in `deletion_log`.
 Policy aliases (301) in `deploy/nginx/aiwazz.in.conf`.
 **Built (phase 8, landing v2):** home rebuilt per `content/LANDING-V2.md` (real dashboard screenshots + screen recording
-in `landing/media/`, 6 Pexels photos in `landing/media/photos/` with `CREDITS.md`, voices gallery with filters, comparison,
+in `landing/media/`, illustrations instead of photos since 24 Nov 2026, voices gallery with filters, comparison,
 security, 13 FAQs). New SEO pages: /hindi-voice-generator/, /hinglish-text-to-speech/, /ai-voice-for-youtube/,
 /ai-voice-for-instagram-reels/, /text-to-speech-for-ads/, /text-to-speech-for-teachers/ (english-indian-accent skipped:
 no Indian-English voice). Before/after audio section skipped (no real phone recording). Fonts: Poppins 600+700 preloaded

@@ -1,10 +1,10 @@
 ---
 import Faq, { type QA } from "../components/Faq.astro";
 import Icon from "../components/Icon.astro";
+import Illustration, { type IllustrationName } from "../components/Illustration.astro";
 import Picture from "../components/Picture.astro";
 import PlayButton from "../components/PlayButton.astro";
 import VoicesGallery from "../components/VoicesGallery.astro";
-import { PHOTOS } from "../data/photos";
 import { DEMOS, SITE, fmt } from "../data/site";
 import Base from "../layouts/Base.astro";
 import { fmtINR, LEGAL } from "../lib/legal";
@@ -37,15 +37,15 @@ const steps = [
   { n: "03", icon: "download", title: "Download and edit", text: "A 60-second voiceover is ready in about a minute. Drop it into your video editor." },
 ];
 
-// "reels" is a phone mockup of the real dashboard (landing/media/reels-phone), not a stock photo.
-type Slot = "reels" | "youtube" | "ads" | "teachers" | "stories";
-const useCases: { slot: Slot | null; icon: string; title: string; text: string; href: string; page: string | null; more: string }[] = [
-  { slot: "reels", icon: "smartphone", title: "Instagram reels & YouTube Shorts", text: "A clear hook in the first second, ready at the loudness short-video apps play.", href: "/learn/writing-scripts/", page: "/ai-voice-for-instagram-reels/", more: "AI voice for reels" },
-  { slot: "youtube", icon: "video", title: "YouTube explainers", text: "Consistent narration for long videos, generated in parts and joined in your editor.", href: "/learn/using-audio-in-editors/", page: "/ai-voice-for-youtube/", more: "AI voice for YouTube" },
-  { slot: "ads", icon: "megaphone", title: "Ads & product videos", text: "Try three voices for the same ad in minutes, then keep the one that converts.", href: "/learn/choosing-a-voice/", page: "/text-to-speech-for-ads/", more: "Text to speech for ads" },
-  { slot: "teachers", icon: "graduation-cap", title: "Online courses & teachers", text: "Turn lesson notes into clear audio in Hindi or English, at a pace students can follow.", href: "/learn/speed-and-loudness/", page: "/text-to-speech-for-teachers/", more: "Text to speech for teachers" },
-  { slot: null, icon: "store", title: "Business announcements", text: "Offers, opening hours and IVR-style messages in a friendly, consistent voice.", href: "/learn/getting-started/", page: null, more: "" },
-  { slot: "stories", icon: "book-open", title: "Audiobooks & stories", text: "Narrate stories and long-form text you own, chapter by chapter.", href: "/learn/writing-scripts/", page: null, more: "" },
+// Every card has a branded illustration (no people): components/Illustration.astro.
+// "reels" uses landing/media/illustrations/reels.* (phone mockup of the real dashboard), which overrides its SVG.
+const useCases: { slot: IllustrationName; alt: string; icon: string; title: string; text: string; href: string; page: string | null; more: string }[] = [
+  { slot: "reels", alt: "The AiWazz dashboard on a phone with a Hindi reel script ready to generate", icon: "smartphone", title: "Instagram reels & YouTube Shorts", text: "A clear hook in the first second, ready at the loudness short-video apps play.", href: "/learn/writing-scripts/", page: "/ai-voice-for-instagram-reels/", more: "AI voice for reels" },
+  { slot: "youtube", alt: "Illustration: a laptop playing a video with the voiceover track on the timeline", icon: "video", title: "YouTube explainers", text: "Consistent narration for long videos, generated in parts and joined in your editor.", href: "/learn/using-audio-in-editors/", page: "/ai-voice-for-youtube/", more: "AI voice for YouTube" },
+  { slot: "ads", alt: "Illustration: three voice takes of the same ad, with the best one picked", icon: "megaphone", title: "Ads & product videos", text: "Try three voices for the same ad in minutes, then keep the one that converts.", href: "/learn/choosing-a-voice/", page: "/text-to-speech-for-ads/", more: "Text to speech for ads" },
+  { slot: "teachers", alt: "Illustration: lesson notes turned into a Hindi voiceover at 0.9× speed", icon: "graduation-cap", title: "Online courses & teachers", text: "Turn lesson notes into clear audio in Hindi or English, at a pace students can follow.", href: "/learn/speed-and-loudness/", page: "/text-to-speech-for-teachers/", more: "Text to speech for teachers" },
+  { slot: "business", alt: "Illustration: a speaker playing shop announcements", icon: "store", title: "Business announcements", text: "Offers, opening hours and IVR-style messages in a friendly, consistent voice.", href: "/learn/getting-started/", page: null, more: "" },
+  { slot: "stories", alt: "Illustration: headphones and an open book with a sound wave", icon: "book-open", title: "Audiobooks & stories", text: "Narrate stories and long-form text you own, chapter by chapter.", href: "/learn/writing-scripts/", page: null, more: "" },
 ];
 
 const tools = [
@@ -108,7 +108,6 @@ const jsonLd = [
     mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
   },
 ];
-const problem = PHOTOS.problem;
 ---
 <Base title="AiWazz: AI text to speech in Hindi, Hinglish & English" description="Turn any script into a natural voiceover in seconds. Hindi, Hinglish and English AI voices for reels, YouTube, ads and courses. MP3 & WAV at 48 kHz, prices in ₹." jsonLd={jsonLd}>
   <link slot="head" rel="preload" as="image" href="/media/dashboard-generate.avif" type="image/avif" fetchpriority="high" />
@@ -211,15 +210,9 @@ const problem = PHOTOS.problem;
           </ul>
         </div>
       </div>
-      {problem ? (
-        <figure>
-          <Picture src={problem.src} alt={problem.alt} width={problem.width} height={problem.height} class="aspect-[4/3] h-auto w-full rounded-3xl border object-cover shadow-lg" sizes="(min-width: 1024px) 560px, 100vw" />
-        </figure>
-      ) : (
-        <div class="rounded-3xl border bg-surface p-3 shadow-lg">
-          <Picture src="/media/dashboard-history-phone" alt="Voiceover history on a phone: play and download each file" width={600} height={1298} class="mx-auto block h-auto w-[260px] rounded-2xl" sizes="260px" />
-        </div>
-      )}
+      <figure class="overflow-hidden rounded-3xl border shadow-lg">
+        <Illustration name="problem" alt="Illustration: recording yourself means a mic, a clock and Take 7; AiWazz turns a script into a finished MP3 and WAV" sizes="(min-width: 1024px) 560px, 100vw" />
+      </figure>
     </div>
   </section>
 
@@ -281,18 +274,9 @@ const problem = PHOTOS.problem;
     </div>
     <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {useCases.map((u) => {
-        const photo = u.slot === "reels"
-          ? { src: "/media/reels-phone", alt: "The AiWazz dashboard on a phone with a Hindi reel script ready to generate", width: 960, height: 540 }
-          : u.slot ? PHOTOS[u.slot] : undefined;
         return (
           <li class="flex flex-col overflow-hidden rounded-2xl border bg-surface shadow-md">
-            {photo ? (
-              <Picture src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} class="aspect-[16/9] h-auto w-full object-cover" sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" />
-            ) : (
-              <div class="grid aspect-[16/9] place-items-center bg-surface-2" aria-hidden="true">
-                <span class="grid size-14 place-items-center rounded-2xl bg-brand-gradient-strong text-white shadow-brand-glow"><Icon name={u.icon} class="size-7" /></span>
-              </div>
-            )}
+            <div class="border-b"><Illustration name={u.slot} alt={u.alt} class="aspect-[16/9]" sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" /></div>
             <div class="flex flex-1 flex-col p-5">
               <h3 class="text-h3 font-semibold">{u.title}</h3>
               <p class="mt-2 flex-1 text-[15px] leading-7 text-muted-foreground">{u.text}</p>

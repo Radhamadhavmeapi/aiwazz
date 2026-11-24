@@ -1,0 +1,243 @@
+---
+// Branded illustrations (no people): inline SVG in brand colours that follows the light/dark theme via CSS tokens.
+// Swap any slot for a rendered image without touching code: drop landing/media/illustrations/<name>.webp
+// (and optionally <name>.avif) in the same aspect ratio (16:9, or 4:3 for "problem") and rebuild.
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+export type IllustrationName = "problem" | "reels" | "youtube" | "ads" | "teachers" | "business" | "stories";
+interface Props { name: IllustrationName; alt: string; class?: string; sizes?: string }
+const { name, alt, class: cls = "", sizes } = Astro.props;
+
+const W = 480;
+const H = name === "problem" ? 360 : 270;
+const dir = join(process.cwd(), "media/illustrations");
+// Optional overrides: <name>.webp (+ .avif); <name>-dark.webp (+ .avif) is shown in the dark theme when present.
+const variants = [name, `${name}-dark`]
+  .filter((f) => existsSync(join(dir, `${f}.webp`)))
+  .map((f) => ({ src: `/media/illustrations/${f}`, avif: existsSync(join(dir, `${f}.avif`)), dark: f.endsWith("-dark") }));
+const hasWebp = variants.length > 0 && !variants[0].dark;
+const themed = hasWebp && variants.length === 2;
+
+// Deterministic waveform: bars centred on cy, n bars, step px apart
+const wave = (x0: number, cy: number, n: number, step: number, max: number, seed = 1) =>
+  Array.from({ length: n }, (_, i) => {
+    const a = 0.28 + 0.72 * Math.abs(Math.sin((i + seed) * 1.7) * Math.cos((i + seed) * 0.55)) * (0.55 + 0.45 * Math.sin(((i + 0.5) / n) * Math.PI));
+    const h = Math.round(max * a * 10) / 10;
+    return { x: x0 + i * step, y: cy - h / 2, h };
+  });
+// Jagged "bad take" line
+const jag = (x0: number, cy: number, n: number, step: number) =>
+  "M" + Array.from({ length: n }, (_, i) => `${x0 + i * step} ${cy + (i % 2 ? -1 : 1) * (4 + ((i * 7) % 11))}`).join(" L");
+const id = `il-${name}`;
+const g = `url(#${id}-g)`;
+const gs = `url(#${id}-gs)`;
+---
+{hasWebp ? (
+  <div class={`illo overflow-hidden ${cls}`}>
+    {variants.map((v) => (
+      <picture class={`block h-full w-full ${themed ? (v.dark ? "il-only-dark" : "il-only-light") : ""}`}>
+        {v.avif && <source srcset={`${v.src}.avif`} type="image/avif" sizes={sizes} />}
+        <img src={`${v.src}.webp`} alt={alt} width={W * 2} height={H * 2} loading="lazy" decoding="async" sizes={sizes} class="block h-full w-full object-cover" />
+      </picture>
+    ))}
+  </div>
+) : (
+  <svg class={`illo block h-auto w-full ${cls}`} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id={`${id}-g`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#51B2F6" /><stop offset=".5" stop-color="#2D36DB" /><stop offset="1" stop-color="#7420DD" /></linearGradient>
+      <linearGradient id={`${id}-gs`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1F6FD1" /><stop offset=".5" stop-color="#2D36DB" /><stop offset="1" stop-color="#7420DD" /></linearGradient>
+      <radialGradient id={`${id}-v`}><stop offset="0" stop-color="#7420DD" stop-opacity=".22" /><stop offset="1" stop-color="#7420DD" stop-opacity="0" /></radialGradient>
+      <radialGradient id={`${id}-s`}><stop offset="0" stop-color="#51B2F6" stop-opacity=".22" /><stop offset="1" stop-color="#51B2F6" stop-opacity="0" /></radialGradient>
+      <pattern id={`${id}-grid`} width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" class="il-gridline" /></pattern>
+      <filter id={`${id}-sh`} x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#070D25" flood-opacity=".14" /></filter>
+    </defs>
+    <rect width={W} height={H} class="il-bg" />
+    <rect width={W} height={H} fill={`url(#${id}-grid)`} />
+    <circle cx={W * 0.8} cy={H * 0.15} r={H * 0.6} fill={`url(#${id}-v)`} />
+    <circle cx={W * 0.1} cy={H * 0.95} r={H * 0.55} fill={`url(#${id}-s)`} />
+
+    {name === "problem" && (
+      <g>
+        {/* The old way: mic, a messy take, retakes */}
+        <g transform="rotate(-4 130 190)" filter={`url(#${id}-sh)`}>
+          <rect x="40" y="70" width="180" height="230" rx="18" class="il-card" />
+          <rect x="56" y="86" width="64" height="22" rx="11" class="il-danger-soft" />
+          <text x="88" y="101.5" text-anchor="middle" class="il-danger-text" font-size="11" font-weight="600">Take 7</text>
+          <circle cx="190" cy="97" r="11" class="il-line-stroke" fill="none" stroke-width="2" />
+          <path d="M190 91v6l4 3" class="il-muted-stroke" fill="none" stroke-width="2" stroke-linecap="round" />
+          <rect x="112" y="124" width="36" height="66" rx="18" class="il-muted-stroke il-fill-2" stroke-width="3" />
+          <path d="M100 168a30 30 0 0 0 60 0M130 198v22M114 220h32" class="il-muted-stroke" fill="none" stroke-width="3" stroke-linecap="round" />
+          <path d={jag(60, 258, 21, 7)} class="il-muted-stroke" fill="none" stroke-width="2" stroke-linejoin="round" />
+          <path d="M190 246l14 14M204 246l-14 14" class="il-danger-stroke" stroke-width="3" stroke-linecap="round" />
+        </g>
+        <path d="M232 186h26" class="il-arrow" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 7" />
+        <path d="M256 178l9 8-9 8" fill="none" class="il-arrow" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        {/* AiWazz: script in, clean voiceover out */}
+        <g filter={`url(#${id}-sh)`}>
+          <rect x="276" y="84" width="176" height="204" rx="18" class="il-card" />
+          <rect x="292" y="102" width="52" height="8" rx="4" fill={g} />
+          <rect x="292" y="120" width="140" height="6" rx="3" class="il-line" />
+          <rect x="292" y="133" width="118" height="6" rx="3" class="il-line" />
+          <rect x="292" y="146" width="128" height="6" rx="3" class="il-line" />
+          <rect x="292" y="168" width="144" height="56" rx="12" class="il-fill-2" />
+          {wave(302, 196, 21, 6.2, 36, 2).map((b) => <rect x={b.x} y={b.y} width="3" height={b.h} rx="1.5" fill={g} />)}
+          <rect x="292" y="238" width="40" height="20" rx="10" class="il-chip" />
+          <text x="312" y="252" text-anchor="middle" font-size="10" font-weight="600" class="il-ink">MP3</text>
+          <rect x="338" y="238" width="40" height="20" rx="10" class="il-chip" />
+          <text x="358" y="252" text-anchor="middle" font-size="10" font-weight="600" class="il-ink">WAV</text>
+          <circle cx="422" cy="248" r="14" fill={gs} />
+          <path d="M416 248l4 4 8-8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </g>
+      </g>
+    )}
+
+    {name === "reels" && (
+      <g>
+        <g transform="rotate(-6 240 160)" filter={`url(#${id}-sh)`}>
+          <rect x="176" y="26" width="128" height="262" rx="24" class="il-phone" />
+          <rect x="183" y="33" width="114" height="248" rx="18" class="il-card" />
+          <rect x="195" y="48" width="40" height="7" rx="3.5" fill={g} />
+          <circle cx="283" cy="52" r="7" fill={gs} />
+          <rect x="193" y="66" width="94" height="70" rx="10" class="il-fill-2" />
+          {[76, 87, 98, 115, 126].map((y, i) => <rect x="201" y={y} width={[74, 64, 70, 58, 44][i]} height="5" rx="2.5" class="il-line" />)}
+          <rect x="193" y="146" width="94" height="52" rx="10" class="il-fill-2" />
+          {wave(202, 172, 13, 6, 30, 4).map((b) => <rect x={b.x} y={b.y} width="3" height={b.h} rx="1.5" fill={g} />)}
+          <rect x="193" y="248" width="94" height="22" rx="11" fill={gs} />
+          <text x="240" y="263" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Generate</text>
+        </g>
+        <g transform="rotate(7 372 140)" filter={`url(#${id}-sh)`}>
+          <rect x="326" y="78" width="92" height="124" rx="18" fill={gs} />
+          {wave(343, 140, 10, 6.4, 46, 7).map((b) => <rect x={b.x} y={b.y} width="3" height={b.h} rx="1.5" fill="#fff" />)}
+        </g>
+      </g>
+    )}
+
+    {name === "youtube" && (
+      <g>
+        <g filter={`url(#${id}-sh)`}>
+          <rect x="104" y="34" width="272" height="172" rx="12" class="il-phone" />
+          <rect x="111" y="41" width="258" height="158" rx="7" class="il-card" />
+          <path d="M80 208h320l-14 14H94z" class="il-phone" />
+        </g>
+        <rect x="121" y="50" width="238" height="88" rx="6" fill={gs} opacity=".92" />
+        <circle cx="240" cy="94" r="17" fill="#fff" fill-opacity=".95" />
+        <path d="M235 86v16l13-8z" fill="#2D36DB" />
+        <rect x="121" y="146" width="56" height="12" rx="3" class="il-line" />
+        <rect x="181" y="146" width="92" height="12" rx="3" class="il-line" />
+        <rect x="277" y="146" width="82" height="12" rx="3" class="il-line" />
+        <rect x="121" y="164" width="238" height="26" rx="5" class="il-fill-2" />
+        {wave(127, 177, 38, 6.1, 18, 3).map((b) => <rect x={b.x} y={b.y} width="2.6" height={b.h} rx="1.3" fill={g} />)}
+        <rect x="214" y="142" width="2.5" height="52" rx="1.25" class="il-ink" />
+        <circle cx="215.25" cy="142" r="4" class="il-ink" />
+      </g>
+    )}
+
+    {name === "ads" && (
+      <g>
+        {[0, 1, 2].map((i) => {
+          const y = 48 + i * 60;
+          const sel = i === 1;
+          return (
+            <g filter={sel ? `url(#${id}-sh)` : undefined}>
+              <rect x={sel ? 104 : 116} y={y} width={sel ? 232 : 208} height="48" rx="12" class="il-card" style={sel ? `stroke:${g};stroke-width:2` : undefined} />
+              <circle cx={(sel ? 104 : 116) + 26} cy={y + 24} r="13" fill={sel ? gs : undefined} class={sel ? "" : "il-fill-2"} />
+              <path d={`M${(sel ? 104 : 116) + 22} ${y + 18}v12l10-6z`} fill={sel ? "#fff" : undefined} class={sel ? "" : "il-muted-fill"} />
+              <rect x={(sel ? 104 : 116) + 48} y={y + 14} width="54" height="6" rx="3" class={sel ? "il-ink" : "il-line"} />
+              {wave((sel ? 104 : 116) + 48, y + 33, 14, 5, 10, i * 5).map((b) => <rect x={b.x} y={b.y} width="2.4" height={b.h} rx="1.2" fill={sel ? g : undefined} class={sel ? "" : "il-line"} />)}
+              {sel && <circle cx="314" cy={y + 24} r="10" fill={gs} />}
+              {sel && <path d={`M309 ${y + 24}l3.5 3.5 6.5-7`} fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />}
+            </g>
+          );
+        })}
+        <g transform="rotate(7 392 136)" filter={`url(#${id}-sh)`}>
+          <rect x="350" y="84" width="86" height="104" rx="18" fill={gs} />
+          <g transform="translate(367 110) scale(2.2)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 11 18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+          </g>
+        </g>
+      </g>
+    )}
+
+    {name === "teachers" && (
+      <g>
+        <g transform="rotate(-5 150 140)" filter={`url(#${id}-sh)`}>
+          <rect x="72" y="46" width="152" height="188" rx="14" class="il-card" />
+          <rect x="88" y="64" width="64" height="9" rx="4.5" fill={g} />
+          {[86, 99, 112, 125, 146, 159, 172, 193, 206].map((y, i) => <rect x="88" y={y} width={[118, 104, 112, 70, 116, 98, 84, 110, 62][i]} height="6" rx="3" class="il-line" />)}
+        </g>
+        <path d="M236 140h30" class="il-arrow" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 7" />
+        <path d="M264 132l9 8-9 8" fill="none" class="il-arrow" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        <g filter={`url(#${id}-sh)`}>
+          <rect x="284" y="80" width="150" height="120" rx="16" class="il-card" />
+          <circle cx="310" cy="106" r="13" fill={gs} />
+          <path d="M306 100v12l10-6z" fill="#fff" />
+          <rect x="330" y="101" width="58" height="6" rx="3" class="il-ink" />
+          <rect x="330" y="111" width="38" height="5" rx="2.5" class="il-line" />
+          {wave(298, 150, 21, 6.2, 30, 9).map((b) => <rect x={b.x} y={b.y} width="3" height={b.h} rx="1.5" fill={g} />)}
+          <rect x="296" y="174" width="44" height="18" rx="9" class="il-chip" />
+          <text x="318" y="186.5" text-anchor="middle" font-size="10" font-weight="600" class="il-ink">0.9×</text>
+          <rect x="346" y="174" width="44" height="18" rx="9" class="il-chip" />
+          <text x="368" y="186.5" text-anchor="middle" font-size="10" font-weight="600" class="il-ink">हिंदी</text>
+        </g>
+      </g>
+    )}
+
+    {name === "business" && (
+      <g>
+        {[86, 66, 46].map((r, i) => <circle cx="240" cy="134" r={r} fill="none" stroke={g} stroke-width="2" opacity={0.18 + i * 0.16} />)}
+        <circle cx="240" cy="134" r="34" fill={gs} filter={`url(#${id}-sh)`} />
+        <g transform="translate(225 119) scale(1.25)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z" />
+          <path d="M16 9a5 5 0 0 1 0 6" /><path d="M19.4 18.4a9 9 0 0 0 0-12.8" />
+        </g>
+        <g filter={`url(#${id}-sh)`}>
+          <rect x="44" y="52" width="132" height="34" rx="17" class="il-card" />
+          <circle cx="64" cy="69" r="7" fill={g} />
+          <text x="78" y="73" font-size="11" font-weight="600" class="il-ink">Sale ends Sunday</text>
+          <rect x="300" y="186" width="140" height="34" rx="17" class="il-card" />
+          <circle cx="320" cy="203" r="7" fill={g} />
+          <text x="334" y="207" font-size="11" font-weight="600" class="il-ink">Open 10 am – 9 pm</text>
+        </g>
+      </g>
+    )}
+
+    {name === "stories" && (
+      <g>
+        <g transform="rotate(-8 120 190)" filter={`url(#${id}-sh)`}>
+          <path d="M60 150q34-10 62 2v86q-28-12-62-2z" class="il-card" />
+          <path d="M122 152q28-12 62-2v86q-34-10-62 2z" class="il-card" />
+          {[168, 180, 192, 204].map((y) => <rect x="74" y={y} width="38" height="4" rx="2" class="il-line" />)}
+          {[168, 180, 192, 204].map((y) => <rect x="134" y={y} width="38" height="4" rx="2" class="il-line" />)}
+        </g>
+        <path d="M196 168v-24a64 64 0 0 1 128 0v24" fill="none" stroke={g} stroke-width="12" stroke-linecap="round" />
+        <g filter={`url(#${id}-sh)`}>
+          <rect x="180" y="148" width="36" height="70" rx="16" fill={gs} />
+          <rect x="304" y="148" width="36" height="70" rx="16" fill={gs} />
+        </g>
+        {wave(226, 183, 12, 6.4, 34, 11).map((b) => <rect x={b.x} y={b.y} width="3" height={b.h} rx="1.5" fill={g} />)}
+      </g>
+    )}
+  </svg>
+)}
+
+<style>
+  .illo :global(.il-bg) { fill: var(--surface-2); }
+  .illo :global(.il-gridline) { stroke: var(--border); stroke-width: 1; }
+  .illo :global(.il-card) { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1; }
+  .illo :global(.il-phone) { fill: var(--foreground); }
+  .illo :global(.il-fill-2) { fill: var(--surface-2); }
+  .illo :global(.il-chip) { fill: var(--surface-2); stroke: var(--border-strong); }
+  .illo :global(.il-line) { fill: var(--border-strong); }
+  .illo :global(.il-line-stroke) { stroke: var(--border-strong); }
+  .illo :global(.il-ink) { fill: var(--foreground); }
+  .illo :global(.il-muted-fill) { fill: var(--muted-foreground); }
+  .illo :global(.il-muted-stroke) { stroke: var(--muted-foreground); }
+  .illo :global(.il-danger-soft) { fill: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .illo :global(.il-danger-text) { fill: var(--danger); }
+  .illo :global(.il-danger-stroke) { stroke: var(--danger); }
+  .illo :global(.il-arrow) { stroke: var(--primary); }
+  .illo :global(text) { font-family: var(--font-sans); }
+  :global(.dark) .illo :global(.il-phone) { fill: #2a2f3d; }
+  :global(.dark) .illo :global(.il-only-light), :global(html:not(.dark)) .illo :global(.il-only-dark) { display: none; }
+</style>

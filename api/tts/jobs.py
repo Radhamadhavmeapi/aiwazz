@@ -33,6 +33,8 @@ class TTSRequest:
     speed: float
     format: str
     loudness_lufs: float | None  # None = no normalisation
+    sentence_pause_ms: int | None = None   # None = settings default (a style sets its own)
+    paragraph_pause_ms: int | None = None
 
 
 @dataclass
@@ -162,7 +164,9 @@ class JobManager:
                 job.progress = done / total * 0.9
             if row:
                 clips.append(row)
-        joined = audio.join_segments(clips, sr, s.sentence_pause_ms, s.paragraph_pause_ms)
+        joined = audio.join_segments(clips, sr,
+                                     s.sentence_pause_ms if r.sentence_pause_ms is None else r.sentence_pause_ms,
+                                     s.paragraph_pause_ms if r.paragraph_pause_ms is None else r.paragraph_pause_ms)
         joined = audio.trim_silence(joined, sr, s.silence_threshold_db, keep_ms=TRIM_KEEP_MS)
         if joined.size == 0:
             raise ValueError("No speech was produced for this text")

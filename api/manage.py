@@ -20,6 +20,9 @@
                                                and stores their ids in api/.env (AIWAZZ_RAZORPAY_PLAN_IDS)
   billing-check                                compares the Razorpay plan amounts with legal.json
   list-invoices [--limit N]
+  list-pronunciations [--email E]              the global list (or one user's list with --email)
+  add-pronunciation --word W --say-as S        add/update a global entry (case-insensitive, whole word)
+  remove-pronunciation --word W                remove a global entry
 """
 import argparse
 import asyncio
@@ -126,6 +129,9 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("billing-create-plans"); p.add_argument("--force", action="store_true")
     sub.add_parser("billing-check")
     p = sub.add_parser("list-invoices"); p.add_argument("--limit", type=int, default=30)
+    p = sub.add_parser("list-pronunciations"); p.add_argument("--email")
+    p = sub.add_parser("add-pronunciation"); p.add_argument("--word", required=True); p.add_argument("--say-as", required=True)
+    p = sub.add_parser("remove-pronunciation"); p.add_argument("--word", required=True)
     a = ap.parse_args(argv)
     if a.cmd == "set-secret":
         value = getpass.getpass(f"{a.name} (input hidden): ").strip()
@@ -190,6 +196,40 @@ async def main(argv: list[str]) -> None:
                 tax = f"IGST {i.igst_paise / 100:.2f}" if i.igst_paise else f"CGST+SGST {(i.cgst_paise + i.sgst_paise) / 100:.2f}"
                 print(f"{i.number}  {i.issued_at:%Y-%m-%d}  {i.buyer_email}  {i.plan}/{i.period}  "
                       f"taxable {i.taxable_paise / 100:.2f}  {tax}  total {i.total_paise / 100:.2f}")
+
+        elif a.cmd in ("list-pronunciations", "add-pronunciation", "remove-pronunciation"):
+            from models import Pronunciation
+            from tts.pronounce import check_entry, clean_word
+            uid = None
+            if getattr(a, "email", None):
+                u = (await db.execute(select(User).where(User.email == a.email.lower().strip()))).scalar_one_or_none()
+                if not u:
+                    sys.exit(f"No user {a.email}")
+                uid = u.id
+            cond = Pronunciation.user_id.is_(None) if uid is None else Pronunciation.user_id == uid
+            if a.cmd == "list-pronunciations":
+                for r in (await db.execute(select(Pronunciation).where(cond).order_by(Pronunciation.word_key))).scalars():
+                    print(f"{r.id:>5}  {r.word}  →  {r.say_as}")
+                print("built in: ₹ → रुपये (Hindi voices) / rupees (English voices)")
+            else:
+                word = clean_word(a.word)
+                row = (await db.execute(select(Pronunciation).where(cond, Pronunciation.word_key == word.lower()))).scalars().first()
+                if a.cmd == "remove-pronunciation":
+                    if not row:
+                        sys.exit(f"No global entry for {word}")
+                    await db.delete(row)
+                    await db.commit()
+                    print(f"Removed {word}")
+                else:
+                    if msg := check_entry(word, a.say_as):
+                        sys.exit(msg)
+                    say = " ".join(a.say_as.split())
+                    if row:
+                        row.word, row.say_as, row.updated_at = word, say, utcnow()
+                    else:
+                        db.add(Pronunciation(user_id=None, word=word, word_key=word.lower(), say_as=say))
+                    await db.commit()
+                    print(f"Global: {word} → {say}")
 
         elif a.cmd == "list-requests":
             from models import InviteRequest

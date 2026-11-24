@@ -57,3 +57,20 @@ export async function api<T = unknown>(path: string, init: { method?: string; js
   }
   return body as T;
 }
+
+/** POST JSON, get binary audio back (e.g. the pronunciation ▶ test). Same CSRF + error handling as api(). */
+export async function apiAudio(path: string, json: unknown): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrfToken() },
+      body: JSON.stringify(json),
+    });
+  } catch {
+    throw new ApiError(0, "You seem to be offline. Check your connection and try again.");
+  }
+  if (!res.ok) throw new ApiError(res.status, messageFrom(await res.json().catch(() => null), res.status));
+  return res.blob();
+}

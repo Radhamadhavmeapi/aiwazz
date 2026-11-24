@@ -28,6 +28,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius-lg)",
+          fontFamily: "var(--font-sans)",  // app font stack incl. Noto Sans Devanagari (Hindi in toasts)
         } as React.CSSProperties
       }
       {...props}

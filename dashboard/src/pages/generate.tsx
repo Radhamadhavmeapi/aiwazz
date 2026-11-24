@@ -11,6 +11,7 @@ import {
   Gauge,
   Info,
   Languages,
+  BookA,
   Pause,
   Play,
   Sparkles,
@@ -42,17 +43,19 @@ import {
   createJob,
   downloadUrl,
   getHistory,
+  INLINE_PRON,
   latinShare,
   loadDraft,
   pollJob,
+  readAs,
   rememberedJob,
   rememberJob,
   saveDraft,
-  transliterate as previewTransliteration,
   type Format,
   type HistoryItem,
   type JobStatus,
 } from "@/lib/tts";
+import { STYLES } from "@/lib/styles";
 import { cn } from "@/lib/utils";
 import { langLabel, LANGS, sampleUrl, VOICES, type Lang } from "@/lib/voices";
 
@@ -101,7 +104,8 @@ export default function GeneratePage() {
   const [voice, setVoice] = useState(initialVoice);
   const [speed, setSpeed] = useState(draft.speed ?? 1);
   const [transliterate, setTransliterate] = useState(draft.transliterate ?? false);
-  const [translitPreview, setTranslitPreview] = useState<string | null>(null);
+  const [readAsPreview, setReadAsPreview] = useState<string | null>(null);
+  const [style, setStyle] = useState<string | null>(STYLES.some((st) => st.id === draft.style) ? draft.style! : null);
   const [format, setFormat] = useState<Format>(draft.format ?? "mp3");
   const [normalize, setNormalize] = useState(draft.normalize ?? true);
   const [lufs, setLufs] = useState(draft.loudness_lufs ?? -14);
@@ -110,6 +114,7 @@ export default function GeneratePage() {
   const [recentKey, setRecentKey] = useState(0);
   const timers = useRef<number[]>([]);
   const editor = useRef<HTMLTextAreaElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
   const poll = useRef<AbortController | null>(null);
   const lastReq = useRef<{ voice: string; format: Format; lufs: number | null }>({ voice, format, lufs: normalize ? lufs : null });
 
@@ -122,19 +127,43 @@ export default function GeneratePage() {
 
   // Keep the draft (script + settings) in this browser between visits.
   useEffect(() => {
-    const t = window.setTimeout(() => saveDraft({ text, voice, speed, format, normalize, loudness_lufs: lufs, transliterate }), 400);
+    const t = window.setTimeout(() => saveDraft({ text, voice, speed, format, normalize, loudness_lufs: lufs, transliterate, style }), 400);
     return () => clearTimeout(t);
-  }, [text, voice, speed, format, normalize, lufs, transliterate]);
+  }, [text, voice, speed, format, normalize, lufs, transliterate, style]);
 
-  // Live preview of the Hinglish → Devanagari conversion (what the voice will actually read).
+  // Live preview of what the voice will actually read: pronunciations ([word](say-as), your list, global list)
+  // and the Hinglish → Devanagari conversion. Shown only when something changes.
   const translitOn = transliterate && lang === "h";
   useEffect(() => {
-    if (PREVIEW || !translitOn || !text.trim() || text.length > MAX_CHARS) return setTranslitPreview(null);
+    if (PREVIEW || !text.trim() || text.length > MAX_CHARS) return setReadAsPreview(null);
     const t = window.setTimeout(() => {
-      previewTransliteration(text.slice(0, MAX_CHARS)).then((r) => setTranslitPreview(r.text), () => setTranslitPreview(null));
+      readAs(text, translitOn).then((r) => setReadAsPreview(r.changed ? r.text : null), () => setReadAsPreview(null));
     }, 500);
     return () => clearTimeout(t);
   }, [text, translitOn]);
+  // [word](say-as) highlighted behind the textarea (same font/padding/wrapping, scroll kept in sync)
+  const highlighted = useMemo(() => {
+    const out: React.ReactNode[] = [];
+    let pos = 0;
+    for (const m of text.matchAll(INLINE_PRON)) {
+      out.push(text.slice(pos, m.index));
+      out.push(
+        <mark key={m.index} className="rounded-sm bg-brand/15 text-transparent ring-1 ring-brand/35">
+          {m[0]}
+        </mark>,
+      );
+      pos = m.index + m[0].length;
+    }
+    if (!out.length) return null;
+    out.push(text.slice(pos) + "\n");
+    return out;
+  }, [text]);
+  const currentStyle = STYLES.find((st) => st.id === style) ?? null;
+  const pickStyle = (id: string | null) => {
+    setStyle(id);
+    const st = STYLES.find((x) => x.id === id);
+    if (st) (setSpeed(st.speed), setNormalize(true), setLufs(st.lufs));
+  };
   const looksHinglish = !PREVIEW && lang === "h" && !transliterate && text.trim().length > 12 && latinShare(text) > 0.6;
 
   const toJob = useCallback((u: JobStatus): Job => {
@@ -218,7 +247,7 @@ export default function GeneratePage() {
       lastReq.current = { voice, format, lufs: normalize ? lufs : null };
       setJob({ state: "queued", position: 1 });
       try {
-        const s = await createJob({ text, voice, lang, speed, format, normalize, loudness_lufs: lufs, transliterate: translitOn });
+        const s = await createJob({ text, voice, lang, speed, format, normalize, loudness_lufs: lufs, transliterate: translitOn, style });
         setJob(toJob(s));
         if (s.status === "queued" || s.status === "running") void track(s.id);
       } catch (e) {
@@ -247,7 +276,7 @@ export default function GeneratePage() {
       });
       toast.success("Voiceover ready", { description: "Saved to History for 7 days." });
     });
-  }, [canGenerate, chars, lang, normalize, lufs, format, text, voice, speed, translitOn, toJob, track, authFailed]);
+  }, [canGenerate, chars, lang, normalize, lufs, format, text, voice, speed, translitOn, style, toJob, track, authFailed]);
 
   // ⌘/Ctrl + Enter generates from anywhere on the page.
   useEffect(() => {
@@ -314,17 +343,31 @@ export default function GeneratePage() {
             <label htmlFor="script" className="sr-only">
               Script text
             </label>
+            <div className="relative flex flex-1 flex-col">
+              {highlighted && (
+                <div
+                  ref={backdrop}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 overflow-hidden px-4 py-4 text-[15px] leading-7 break-words whitespace-pre-wrap text-transparent [scrollbar-gutter:stable]"
+                >
+                  {highlighted}
+                </div>
+              )}
             <textarea
               id="script"
               ref={editor}
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onScroll={(e) => {
+                if (backdrop.current) backdrop.current.scrollTop = e.currentTarget.scrollTop;
+              }}
               placeholder="Type or paste your script… e.g. “Raat 11 baje customer ne call kiya…” or Devanagari: “रात 11 बजे…”"
               aria-describedby="char-count"
               aria-invalid={over}
               spellCheck={false}
-              className="min-h-[240px] w-full flex-1 resize-y bg-transparent px-4 py-4 text-[15px] leading-7 outline-none placeholder:text-subtle-foreground focus-visible:outline-none sm:min-h-[320px] lg:min-h-[380px]"
+              className="relative min-h-[240px] w-full flex-1 resize-y bg-transparent px-4 py-4 text-[15px] leading-7 outline-none [scrollbar-gutter:stable] placeholder:text-subtle-foreground focus-visible:outline-none sm:min-h-[320px] lg:min-h-[380px]"
             />
+            </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-2.5 text-xs text-muted-foreground">
               <span id="char-count" className={cn("font-mono tabular", over && "font-medium text-danger")} aria-live="polite">
                 {chars.toLocaleString("en-IN")} / {MAX_CHARS.toLocaleString("en-IN")}
@@ -346,6 +389,9 @@ export default function GeneratePage() {
                 <a href="https://aiwazz.in/learn/hindi-and-hinglish/" target="_blank" rel="noopener" className="underline-offset-2 hover:text-foreground hover:underline">
                   Hindi guide
                 </a>
+                <Link to="/settings#pronunciations" className="flex items-center gap-1 underline-offset-2 hover:text-foreground hover:underline" title="Fix how a word is said: [word](say it as) in the script, or your list in Settings">
+                  <BookA className="size-3.5" aria-hidden="true" /> Pronunciations
+                </Link>
               </span>
               <span className="ml-auto hidden items-center gap-1 sm:flex">
                 <kbd className="rounded border bg-surface-2 px-1.5 font-mono text-[10px]">⌘</kbd>
@@ -363,11 +409,11 @@ export default function GeneratePage() {
               </Button>
             </div>
           )}
-          {translitOn && translitPreview && (
+          {readAsPreview && (
             <div className="rounded-xl border bg-surface px-4 py-3">
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Will be read as</p>
-              <p className="mt-1.5 line-clamp-4 text-[15px] leading-7" lang="hi">
-                {translitPreview}
+              <p className="mt-1.5 line-clamp-4 text-[15px] leading-7" lang={lang === "h" ? "hi" : "en"}>
+                {readAsPreview}
               </p>
             </div>
           )}
@@ -401,6 +447,37 @@ export default function GeneratePage() {
                   ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)
                   : voices.map((v) => <VoiceCard key={v.id} voice={v} checked={voice === v.id} onSelect={setVoice} />)}
               </div>
+            </Field>
+
+            <Field label="Style" hint={currentStyle ? undefined : "optional"}>
+              <ToggleGroup
+                type="single"
+                value={style ?? ""}
+                onValueChange={(v) => pickStyle(v || null)}
+                variant="outline"
+                className="grid w-full grid-cols-2"
+                aria-label="Speaking style"
+              >
+                {STYLES.map((st) => (
+                  <ToggleGroupItem key={st.id} value={st.id} className="h-9 text-xs data-[state=on]:border-brand/50 data-[state=on]:bg-brand/10 data-[state=on]:text-foreground">
+                    {st.name}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {currentStyle ? (
+                  <>
+                    {currentStyle.description} {currentStyle.speed.toFixed(2)}×, {currentStyle.pauses}, {currentStyle.lufs} LUFS.{" "}
+                    {voice !== currentStyle.suggestedVoice && (
+                      <button type="button" className="font-medium text-brand underline-offset-2 hover:underline" onClick={() => pickVoice(currentStyle.suggestedVoice)}>
+                        Try it with {VOICES.find((v) => v.id === currentStyle.suggestedVoice)!.name}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  "Sets pace, pauses and loudness in one tap. Works with every voice; tap again to turn it off."
+                )}
+              </p>
             </Field>
 
             <Field label="Speed" htmlFor="speed" hint={`${speed.toFixed(2)}×`}>
@@ -520,6 +597,7 @@ export default function GeneratePage() {
           <div className="min-w-0 text-xs">
             <p className="truncate font-medium">
               {current.name} · {langLabel(lang)}
+              {currentStyle && ` · ${currentStyle.name}`}
             </p>
             <p className="font-mono text-muted-foreground tabular">
               {chars.toLocaleString("en-IN")} chars · {speed.toFixed(2)}×

@@ -14,6 +14,7 @@ from models import Generation
 from billing.routes import router as billing_router
 from routes.tts import make_hooks
 from routes.tts import router as tts_router
+from routes.pronunciations import router as pronunciations_router
 from settings import get_settings
 from tts.jobs import JobManager
 from tts.kokoro_engine import KokoroEngine
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(tts_router)
     app.include_router(billing_router)
+    app.include_router(pronunciations_router)
     return app
 
 

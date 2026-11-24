@@ -46,12 +46,16 @@ def split_text(text: str) -> list[list[str]]:
 _RUPEE = re.compile(r"(?:₹|\bRs\.?|\bINR)\s?(\d[\d,]*(?:\.\d+)?)", re.IGNORECASE)
 _DIGIT_COMMA = re.compile(r"(?<=\d),(?=\d)")
 _DECIMAL = re.compile(r"(?<=\d)\.(?=\d)")
+_LONE_RUPEE = re.compile("₹")
 
 
 def normalize(text: str, lang: str) -> str:
-    """₹499 → "499 रुपये" / "499 rupees"; 2,00,000 → 200000 (read as "दो लाख"); Hindi 12.5 → "12 दशमलव 5"."""
+    """₹499 → "499 रुपये" / "499 rupees" (a lone ₹ → "रुपये" / "rupees"); 2,00,000 → 200000 (read as "दो लाख"); Hindi 12.5 → "12 दशमलव 5"."""
     hindi = lang == "h"
     text = _RUPEE.sub(lambda m: f"{m.group(1)} {'रुपये' if hindi else 'rupees'}", text)
+    word = "रुपये" if hindi else "rupees"
+    text = _LONE_RUPEE.sub(lambda m: (" " if m.start() and not text[m.start() - 1].isspace() else "") + word
+                           + (" " if m.end() < len(text) and (text[m.end()].isalnum()) else ""), text)  # "prices in ₹"
     text = _DIGIT_COMMA.sub("", text)
     if hindi:
         text = _DECIMAL.sub(" दशमलव ", text)

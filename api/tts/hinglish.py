@@ -15,7 +15,7 @@ from functools import lru_cache
 
 # ── Lexicon: common words whose casual spelling the rules would get wrong (or that look English). ──
 _LEX_SRC = """
-main mai mein=मैं|mujhe mujhko=मुझे|mera=मेरा|meri=मेरी|mere=मेरे|hum ham=हम|humein hame hamein=हमें|hamara humara=हमारा
+main mai=मैं|mujhe mujhko=मुझे|mera=मेरा|meri=मेरी|mere=मेरे|hum ham=हम|humein hame hamein=हमें|hamara humara=हमारा
 hamari humari=हमारी|hamare humare=हमारे|tum=तुम|tumhe tumhein=तुम्हें|tumhara=तुम्हारा|tumhari=तुम्हारी|tumhare=तुम्हारे
 aap ap=आप|aapka apka=आपका|aapki apki=आपकी|aapke apke=आपके|aapko apko=आपको|ye yeh=ये|wo woh vo voh=वो|yah=यह|vah=वह
 is=इस|us=उस|iska=इसका|iski=इसकी|iske=इसके|uska=उसका|uski=उसकी|uske=उसके|isko ise=इसे|usko use=उसे|inka=इनका|unka=उनका

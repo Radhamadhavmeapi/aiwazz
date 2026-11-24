@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api";
 import { daysLeft, fmtDuration, timeAgo } from "@/lib/format";
 import { downloadUrl, getHistory, type HistoryItem } from "@/lib/tts";
+import { STYLES } from "@/lib/styles";
 import { cn } from "@/lib/utils";
 import { langLabel, VOICES, type Lang } from "@/lib/voices";
 
@@ -49,6 +50,12 @@ function Row({ it, onDeleted }: { it: HistoryItem; onDeleted: (id: string) => vo
             <span className="font-mono tabular">{fmtDuration(it.duration_sec)}</span>
             <span aria-hidden="true">·</span>
             <span className="font-mono">{it.speed.toFixed(2)}×</span>
+            {it.style && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{STYLES.find((st) => st.id === it.style)?.name ?? it.style}</span>
+              </>
+            )}
             {it.output_lufs != null && (
               <>
                 <span aria-hidden="true">·</span>

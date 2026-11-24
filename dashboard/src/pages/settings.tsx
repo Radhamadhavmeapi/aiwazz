@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { BillingCard } from "@/components/billing";
+import { PronunciationsCard } from "@/components/pronunciations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -348,6 +349,8 @@ export default function SettingsPage() {
         </Card>
 
         <BillingCard usage={usage} />
+
+        <PronunciationsCard />
 
         <Card
           title="Appearance"

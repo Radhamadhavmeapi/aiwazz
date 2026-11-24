@@ -1,7 +1,7 @@
 """ORM models. All timestamps are naive UTC (see db.utcnow)."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db import Base, utcnow
@@ -102,6 +102,7 @@ class Generation(Base):
     speed: Mapped[float] = mapped_column(Float)
     format: Mapped[str] = mapped_column(String(4))
     loudness_target: Mapped[float | None] = mapped_column(Float, nullable=True)
+    style: Mapped[str | None] = mapped_column(String(32), nullable=True)   # tts/styles.py id
     text_chars: Mapped[int] = mapped_column(Integer)
     text_excerpt: Mapped[str] = mapped_column(String(160))   # for History; the full script is not stored
     duration_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -213,3 +214,17 @@ class WebhookEvent(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event: Mapped[str] = mapped_column(String(64))
     received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Pronunciation(Base):
+    """Pronunciation fix: `word` (case-insensitive, whole word) is read as `say_as`. user_id NULL = global (admin) list.
+    Uniqueness of (user_id, word_key) is also checked in code, since NULLs don't collide in a unique index."""
+    __tablename__ = "pronunciations"
+    __table_args__ = (UniqueConstraint("user_id", "word_key", name="uq_pronunciations_user_word"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    word: Mapped[str] = mapped_column(String(64))
+    word_key: Mapped[str] = mapped_column(String(64))      # lowercase, single spaces
+    say_as: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

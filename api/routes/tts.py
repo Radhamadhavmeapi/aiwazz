@@ -16,7 +16,9 @@ from models import Generation
 from usage import get_usage
 from settings import get_settings
 from tts.hinglish import latin_share, to_devanagari
+from tts import pronounce
 from tts.jobs import ID_RE, Job, JobManager, QueueFull, TooManyPending, TTSRequest
+from tts.styles import STYLES
 from tts.voices import DEFAULT_VOICE, VOICES
 
 router = APIRouter(prefix="/api")
@@ -31,6 +33,17 @@ def audio_urls(gen_id: str) -> dict:
     return {f: f"/api/audio/{gen_id}?format={f}" for f in ("mp3", "wav")}
 
 
+class PronunciationIn(BaseModel):
+    word: str = Field(min_length=1, max_length=pronounce.MAX_WORD)
+    say_as: str = Field(min_length=1, max_length=pronounce.MAX_SAY_AS)
+
+    @model_validator(mode="after")
+    def _check(self):
+        if msg := pronounce.check_entry(self.word, self.say_as):
+            raise ValueError(msg)
+        return self
+
+
 class TTSIn(BaseModel):
     text: str = Field(min_length=1)
     engine: Literal["kokoro"] = "kokoro"
@@ -40,11 +53,15 @@ class TTSIn(BaseModel):
     format: Literal["mp3", "wav"] = "mp3"
     transliterate: bool = False
     normalize: bool = True                         # loudness normalisation on/off
-    loudness_lufs: float | None = Field(None, ge=-30.0, le=-8.0)  # default from settings (-14)
+    loudness_lufs: float | None = Field(None, ge=-30.0, le=-8.0)  # default: the style's, else settings (-14)
+    style: str | None = None                       # tts/styles.py id: pace + pauses + loudness
+    pronunciations: list[PronunciationIn] = Field(default_factory=list, max_length=pronounce.MAX_PER_REQUEST)
 
     @model_validator(mode="after")
     def _check(self):
         s = get_settings()
+        if self.style is not None and self.style not in STYLES:
+            raise ValueError(f"unknown style '{self.style}' (one of: {', '.join(STYLES)})")
         if not self.text.strip():
             raise ValueError("text is empty")
         if len(self.text) > s.max_chars:
@@ -61,6 +78,19 @@ class TTSIn(BaseModel):
         return self
 
 
+async def pronunciation_entries(db: AsyncSession, user_id: int, extra: list | None = None) -> list[pronounce.Entry]:
+    """Request entries first, then the user's list, then the global list (first match wins)."""
+    from models import Pronunciation
+    rows = (await db.execute(select(Pronunciation).where((Pronunciation.user_id == user_id) | Pronunciation.user_id.is_(None))
+                             .order_by(Pronunciation.user_id.is_(None), Pronunciation.id))).scalars().all()
+    return [pronounce.Entry(e.word, e.say_as) for e in (extra or [])] + [pronounce.Entry(r.word, r.say_as) for r in rows]
+
+
+def prepare_text(text: str, transliterate: bool, entries: list[pronounce.Entry]) -> str:
+    """What the voice reads: inline [word](say-as) + dictionaries, then Hinglish → Devanagari on the rest."""
+    return pronounce.render(pronounce.apply(text, entries), to_devanagari if transliterate else None)
+
+
 class TranslitIn(BaseModel):
     text: str = Field(min_length=1)
 
@@ -75,6 +105,30 @@ class TranslitIn(BaseModel):
 async def transliterate(body: TranslitIn, p: Principal = Depends(current_principal)):
     """Preview of the Hinglish → Devanagari conversion used by `transliterate: true`."""
     return {"text": to_devanagari(body.text), "latin_share": round(latin_share(body.text), 3)}
+
+
+class ReadAsIn(BaseModel):
+    text: str = Field(min_length=1)
+    transliterate: bool = False
+    pronunciations: list[PronunciationIn] = Field(default_factory=list, max_length=pronounce.MAX_PER_REQUEST)
+
+    @model_validator(mode="after")
+    def _len(self):
+        if len(self.text) > get_settings().max_chars:
+            raise ValueError(f"text is longer than {get_settings().max_chars} characters")
+        return self
+
+
+@router.post("/read-as", dependencies=[Depends(csrf_protect)])
+async def read_as(body: ReadAsIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_db)):
+    """Preview of what the voice will read: pronunciations (inline, request, yours, global) + optional transliteration."""
+    out = prepare_text(body.text, body.transliterate, await pronunciation_entries(db, p.user.id, body.pronunciations))
+    return {"text": out, "changed": out != body.text}
+
+
+@router.get("/styles")
+async def styles():
+    return {"styles": [st.to_dict() for st in STYLES.values()]}
 
 
 @router.get("/health")
@@ -106,11 +160,20 @@ async def create_tts(
     if not jm.engine.ready:
         raise HTTPException(503, "TTS engine is still loading, try again in a few seconds")
     s = get_settings()
-    text = to_devanagari(body.text) if body.transliterate else body.text
-    req = TTSRequest(text=text, engine=body.engine, voice=body.voice, lang=body.lang,
-                     speed=body.speed, format=body.format,
-                     loudness_lufs=(body.loudness_lufs if body.loudness_lufs is not None else s.loudness_lufs)
-                     if body.normalize else None)
+    style = STYLES.get(body.style) if body.style else None
+    text = prepare_text(body.text, body.transliterate, await pronunciation_entries(db, p.user.id, body.pronunciations))
+    if len(text) > 2 * s.max_chars:   # characters are counted on the original; don't let replacements blow it up
+        raise HTTPException(422, "Pronunciation replacements make this script too long. Shorten the script or the replacements.")
+    if body.loudness_lufs is not None:
+        lufs = body.loudness_lufs
+    else:
+        lufs = style.loudness_lufs if style else s.loudness_lufs
+    # A style sets the speed unless the request gives one explicitly.
+    speed = style.speed if style and "speed" not in body.model_fields_set else body.speed
+    req = TTSRequest(text=text, engine=body.engine, voice=body.voice, lang=body.lang, speed=speed, format=body.format,
+                     loudness_lufs=lufs if body.normalize else None,
+                     sentence_pause_ms=style.sentence_pause_ms if style else None,
+                     paragraph_pause_ms=style.paragraph_pause_ms if style else None)
     try:
         jm.check_capacity(p.user.id)
     except QueueFull:
@@ -126,7 +189,8 @@ async def create_tts(
     gen = Generation(
         id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
         engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
-        loudness_target=req.loudness_lufs, text_chars=len(body.text), text_excerpt=" ".join(body.text.split())[:160],
+        loudness_target=req.loudness_lufs, style=body.style, text_chars=len(body.text),
+        text_excerpt=" ".join(pronounce.strip_inline(body.text).split())[:160],
     )
     db.add(gen)
     await db.commit()
@@ -196,7 +260,7 @@ async def history(request: Request, limit: int = Query(50, ge=1, le=50), p: Prin
         available = g.status == "done" and jm.audio_path(g.id, g.format) is not None
         items.append({
             "id": g.id, "status": g.status, "voice": g.voice, "lang": g.lang, "speed": g.speed, "format": g.format,
-            "loudness_target": g.loudness_target, "output_lufs": g.output_lufs, "text_excerpt": g.text_excerpt,
+            "loudness_target": g.loudness_target, "style": g.style, "output_lufs": g.output_lufs, "text_excerpt": g.text_excerpt,
             "text_chars": g.text_chars, "duration_sec": g.duration_sec, "error": g.error, "via_api": g.api_key_id is not None,
             "created_at": g.created_at.isoformat() + "Z", "available": available,
             "urls": audio_urls(g.id) if available else None,

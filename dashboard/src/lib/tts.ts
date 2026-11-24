@@ -25,6 +25,7 @@ export type TTSParams = {
   normalize: boolean;
   loudness_lufs: number;
   transliterate?: boolean;
+  style?: string | null;
 };
 
 export type HistoryItem = {
@@ -35,6 +36,7 @@ export type HistoryItem = {
   speed: number;
   format: Format;
   loudness_target: number | null;
+  style: string | null;
   output_lufs: number | null;
   text_excerpt: string;
   text_chars: number;
@@ -100,6 +102,13 @@ export const saveDraft = (d: Draft) => {
 };
 
 export const transliterate = (text: string) => api<{ text: string; latin_share: number }>("/api/transliterate", { json: { text } });
+
+/** What the voice will read: [word](say-as), your + global pronunciations, then transliteration (if on). */
+export const readAs = (text: string, transliterate: boolean) =>
+  api<{ text: string; changed: boolean }>("/api/read-as", { json: { text, transliterate } });
+
+/** Inline pronunciation syntax in scripts: [word](say-as). Mirrors api/tts/pronounce.py INLINE. */
+export const INLINE_PRON = /\[([^[\]\n]{1,64})\]\(([^()\n]{1,128})\)/g;
 
 /** Share of letters in Latin script (client-side, for the "looks like Hinglish" hint). */
 export function latinShare(text: string): number {

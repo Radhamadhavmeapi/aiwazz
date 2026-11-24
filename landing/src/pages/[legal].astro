@@ -17,7 +17,7 @@ const { page } = Astro.props as { page: LegalPage };
   {page.slug === "about" && (
     <section aria-labelledby="photo-credits" class="mt-12 border-t pt-8 text-sm text-muted-foreground">
       <h2 id="photo-credits" class="text-base font-semibold text-foreground">Photo credits</h2>
-      <p class="mt-2">Photos: Unsplash/Pexels contributors. The photos on our website are free-licence photos from Pexels, by
+      <p class="mt-2">Photos: Pexels. Free-licence photos by
         {Object.values(PHOTOS).map((ph, i, a) => (
           <> <a href={ph!.pageUrl} target="_blank" rel="noopener" class="text-brand underline underline-offset-2">{ph!.photographer}</a>{i < a.length - 1 ? "," : "."}</>
         ))}

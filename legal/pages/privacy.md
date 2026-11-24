@@ -20,6 +20,7 @@ This Privacy Policy explains how **{{legalName}}** (GSTIN {{gstin}}), {{address}
 | Billing data | Plan, amount, GSTIN and billing name (if you provide them), Razorpay payment and order IDs, payment status | You and Razorpay |
 | Technical data | IP address, browser and device type, pages visited, timestamps, error logs | Automatically, when you use the Service |
 | Support data | Messages you send by email, WhatsApp or the contact form | You |
+| Invite requests | Email address, optional name and what you plan to make, IP address | You, when you request an invite |
 | API data | API key identifiers (keys are stored hashed) and request logs | Automatically |
 
 We do **not** collect your card number, CVV, UPI PIN or net-banking password. These are entered on Razorpay's secure checkout and processed by Razorpay.
@@ -33,6 +34,7 @@ We do not knowingly collect data from children under 18. If you believe a child 
 - To process payments, issue GST invoices and keep tax and accounting records.
 - To send service emails: receipts, password resets, security alerts and policy changes.
 - To provide support and handle complaints.
+- To send you an invite code if you asked for one during early access.
 - To prevent fraud, abuse and violations of our [Acceptable Use Policy](/acceptable-use/).
 - To understand and improve the Service using aggregated, non-identifying statistics.
 - To send product updates or offers, **only** if you opt in. You can unsubscribe at any time.
@@ -46,6 +48,7 @@ We process your data based on your consent, to perform our contract with you, an
 - **Account data:** kept while your account is active, and deleted within 30 days after you delete your account.
 - **Billing and invoice records:** kept for 8 years, as required by Indian tax and accounting laws.
 - **Security and server logs:** kept for up to 90 days.
+- **Invite requests:** kept until we send you an invite, and deleted automatically 12 months after your last request, or sooner if you ask us.
 
 ## 4. Who we share data with
 
@@ -53,7 +56,7 @@ We share personal data only with service providers who help us run the Service, 
 
 - **Razorpay Software Private Limited:** payment processing.
 - **Hosting provider:** our servers, which store the Service's data.
-- **Email delivery provider:** transactional emails.
+- **Email:** we send and receive email on our own mail server at the hosting provider above; no separate email service receives your data.
 - **Authorities:** when required by law, a court order or a lawful government request, or to protect rights and safety.
 
 If you sign in with or connect a third-party service (for example Google or Meta) in future, we receive only the data you authorise, such as your name and email, and use it only to sign you in. We do not share data received from Meta platforms with data brokers or use it for advertising.

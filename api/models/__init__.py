@@ -25,10 +25,19 @@ class User(Base):
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     # Plan (legal/legal.json "plans"): free | starter | creator | pro. Set by billing later; for now manage.py set-plan.
     plan: Mapped[str] = mapped_column(String(16), default="free")
+    # Optional end of a time-limited plan (naive UTC). After it, the user is on Free (effective_plan + hourly sweep).
+    plan_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     @property
     def is_admin(self) -> bool:
         return self.role == "admin"
+
+    @property
+    def effective_plan(self) -> str:
+        """The plan that applies right now: an expired time-limited plan counts as Free even before the sweep runs."""
+        if self.plan_until is not None and self.plan_until <= utcnow():
+            return "free"
+        return self.plan or "free"
 
 
 class UserSession(Base):
@@ -119,3 +128,16 @@ class ContactMessage(Base):
     ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     handled: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class InviteRequest(Base):
+    """"Request an invite" form on the signup page (read with manage.py list-requests). One row per email."""
+    __tablename__ = "invite_requests"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)  # stored lowercase
+    name: Mapped[str] = mapped_column(String(100), default="")
+    use_case: Mapped[str] = mapped_column(String(500), default="")
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    status: Mapped[str] = mapped_column(String(16), default="new")  # new | invited | declined

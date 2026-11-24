@@ -5,6 +5,8 @@ import { PREVIEW } from "./env";
 export type Usage = {
   plan: string;
   plan_name: string;
+  /** End of a time-limited plan (ISO, UTC); null for open-ended plans. */
+  plan_until: string | null;
   unlimited: boolean;
   allowance: number | null;
   used: number;

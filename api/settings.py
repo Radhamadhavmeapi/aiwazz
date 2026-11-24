@@ -56,6 +56,16 @@ class Settings(BaseSettings):
         if (API_DIR.parent / "legal" / "legal.json").exists() else "unknown"
     contact_origins: list[str] = ["https://aiwazz.in"]     # the contact form lives on the landing site
     contact_max_per_ip: int = 5                            # per hour
+    invite_request_max_per_ip: int = 5                     # per hour
+
+    # Mail (self-hosted Postfix on this VPS, content/MAIL-SERVER.md). Off until the deliverability test passes.
+    mail_enabled: bool = False
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = 587
+    smtp_user: str = ""                       # noreply@aiwazz.in
+    smtp_password: str = ""                   # only in api/.env
+    mail_from: str = "AiWazz <noreply@aiwazz.in>"
+    support_email: str = "support@aiwazz.in"
 
     @property
     def session_cookie(self) -> str:

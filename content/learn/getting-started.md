@@ -12,9 +12,11 @@ category: Start here
 Make your first voiceover in about 3 minutes.
 
 ## 1. Create your account
-1. Go to [login.aiwazz.in/signup](https://login.aiwazz.in/signup).
-2. Enter your email and a strong password (at least 10 characters).
-3. Enter your invite code. During early access, AiWazz is invite-only.
+During early access, AiWazz is invite-only.
+
+1. No code yet? Go to [login.aiwazz.in/signup](https://login.aiwazz.in/signup), enter your email (and, if you like, what you'll make) and click **Request an invite**. We'll send you a code when a spot opens.
+2. Got a code? On the same page click **Create your account**, or open the invite link we sent you.
+3. Enter your email, a strong password (at least 10 characters) and your invite code.
 4. Tick the box to accept the Terms and Conditions, Privacy Policy and Acceptable Use Policy, then click **Create account**.
 
 ## 2. Open the Generate screen

@@ -12,6 +12,7 @@ from models import ApiKey, Invite, User, UserSession
 from settings import get_settings
 
 from . import ratelimit
+from mailer import notify_support
 from .deps import Principal, client_ip, csrf_protect, current_principal, optional_principal
 from .security import (
     hash_password,
@@ -35,7 +36,8 @@ def _redis(request: Request):
 
 def me_payload(u: User, via: str = "session") -> dict:
     from usage import has_api_access
-    return {"id": u.id, "email": u.email, "role": u.role, "plan": u.plan or "free", "api_access": has_api_access(u),
+    return {"id": u.id, "email": u.email, "role": u.role, "plan": u.effective_plan,
+            "plan_until": u.plan_until.isoformat() + "Z" if u.plan_until and u.effective_plan != "free" else None, "api_access": has_api_access(u),
             "created_at": u.created_at.isoformat() + "Z", "via": via}
 
 
@@ -351,4 +353,37 @@ async def contact(body: ContactIn, request: Request, db: AsyncSession = Depends(
     db.add(ContactMessage(name=body.name.strip(), email=body.email.lower(), subject=body.subject.strip(),
                           message=body.message.strip(), ip=client_ip(request)[:45]))
     await db.commit()
+    await notify_support(request, "contact", {"name": body.name.strip(), "email": body.email.lower(),
+                                              "subject": body.subject.strip(), "message": body.message.strip()})
+    return {"ok": True}
+
+
+# ── "Request an invite" (signup page on login.aiwazz.in, session-less but CSRF + Origin checked) ──
+class InviteRequestIn(BaseModel):
+    email: EmailStr
+    name: str = Field(default="", max_length=100)
+    use_case: str = Field(default="", max_length=500)
+    website: str = ""   # honeypot
+
+
+@router.post("/auth/invite-request", status_code=202, dependencies=[Depends(csrf_protect)])
+async def invite_request(body: InviteRequestIn, request: Request, db: AsyncSession = Depends(get_db)):
+    """Same answer for new, repeated or already-registered emails (no account enumeration)."""
+    from models import InviteRequest
+
+    if body.website:
+        return {"ok": True}
+    s = get_settings()
+    lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"invreq:ip:{client_ip(request)}", s.invite_request_max_per_ip, 3600)
+    if not lim.allowed:
+        raise _too_many(lim.retry_after)
+    email = body.email.lower()
+    row = (await db.execute(select(InviteRequest).where(InviteRequest.email == email))).scalar_one_or_none()
+    if row is None:
+        row = InviteRequest(email=email)
+        db.add(row)
+    row.name, row.use_case = body.name.strip(), body.use_case.strip()
+    row.ip, row.updated_at = client_ip(request)[:45], utcnow()
+    await db.commit()
+    await notify_support(request, "invite_request", {"email": email, "name": row.name, "use_case": row.use_case})
     return {"ok": True}

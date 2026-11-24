@@ -40,6 +40,7 @@ def period_bounds(now_utc: datetime | None = None) -> tuple[datetime, datetime]:
 class Usage:
     plan: str
     plan_name: str
+    plan_until: datetime | None
     unlimited: bool
     allowance: int | None
     used: int        # successful generations this period
@@ -53,7 +54,8 @@ class Usage:
 
     def to_dict(self) -> dict:
         iso = lambda d: d.isoformat() + "Z"  # noqa: E731
-        return {"plan": self.plan, "plan_name": self.plan_name, "unlimited": self.unlimited, "allowance": self.allowance,
+        return {"plan": self.plan, "plan_name": self.plan_name,
+                "plan_until": iso(self.plan_until) if self.plan_until else None, "unlimited": self.unlimited, "allowance": self.allowance,
                 "used": self.used, "reserved": self.reserved, "remaining": self.remaining,
                 "period_start": iso(self.period_start), "period_end": iso(self.period_end),
                 "api_access": self.unlimited or self.plan in API_PLANS}
@@ -61,7 +63,8 @@ class Usage:
 
 async def get_usage(db: AsyncSession, user: User) -> Usage:
     start, end = period_bounds()
-    plan = PLANS.get(user.plan) or PLANS.get("free")
+    current = user.effective_plan
+    plan = PLANS.get(current) or PLANS.get("free")
     unlimited = user.is_admin
     rows = (await db.execute(
         select(Generation.status, func.coalesce(func.sum(Generation.text_chars), 0))
@@ -69,10 +72,33 @@ async def get_usage(db: AsyncSession, user: User) -> Usage:
                Generation.status.in_(("done", "queued", "running")))
         .group_by(Generation.status))).all()
     by = {s: int(n) for s, n in rows}
-    return Usage(plan=user.plan, plan_name=plan["name"], unlimited=unlimited,
+    return Usage(plan=current, plan_name=plan["name"], plan_until=user.plan_until if current != "free" else None,
+                 unlimited=unlimited,
                  allowance=None if unlimited else int(plan["characters"]), used=by.get("done", 0),
                  reserved=by.get("queued", 0) + by.get("running", 0), period_start=start, period_end=end)
 
 
 def has_api_access(user: User) -> bool:
-    return user.is_admin or user.plan in API_PLANS
+    return user.is_admin or user.effective_plan in API_PLANS
+
+
+async def expire_plans(db: AsyncSession) -> int:
+    """Move every user whose time-limited plan has ended back to Free. Returns how many were changed."""
+    from sqlalchemy import update
+
+    from db import utcnow
+    res = await db.execute(update(User).where(User.plan_until.is_not(None), User.plan_until <= utcnow())
+                           .values(plan="free", plan_until=None))
+    await db.commit()
+    return res.rowcount or 0
+
+
+async def purge_old_invite_requests(db: AsyncSession, days: int = 365) -> int:
+    """Privacy Policy §3: invite requests are deleted 12 months after the last request."""
+    from sqlalchemy import delete
+
+    from db import utcnow
+    from models import InviteRequest
+    res = await db.execute(delete(InviteRequest).where(InviteRequest.updated_at < utcnow() - timedelta(days=days)))
+    await db.commit()
+    return res.rowcount or 0

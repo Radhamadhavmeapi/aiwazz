@@ -89,7 +89,15 @@ password only in `api/.env`). Migrations: Alembic (`api/migrations`). Redis **db
 - TTS, jobs, audio, history need a session or `X-API-Key`; audio is owner-only (admin: all); expired audio → 410.
 - Admin CLI (no default accounts anywhere): `cd api && .venv/bin/python manage.py create-user --email E --role admin`,
   `create-invite [--uses N --days D --label L]`, `list-invites`, `revoke-invite --id N`, `list-users`,
-  `set-password --email E`, `set-active --email E --active no`.
+  `set-password --email E`, `set-active --email E --active no`,
+  `set-plan --email E --plan creator [--until YYYY-MM-DD]` (early-access friends: Creator free for 3 months; the plan ends
+  after that day IST, `User.effective_plan` treats it as Free at once and an hourly sweep resets `plan`/`plan_until`),
+  `expire-plans`, `list-requests [--all]`, `mark-request --id N --status invited|declined`.
+- **Invite-only (owner decision, 24 Nov 2026).** CTAs say "Get early access" (never "Get started free"). `/signup` shows
+  "Request an invite" by default (`POST /api/auth/invite-request`: CSRF, 5/h per IP, honeypot, one row per email in
+  `invite_requests`, same answer for every email, deleted after 12 months); `/signup?invite=CODE` shows the account form.
+- Mail: `api/mailer.py` (local Postfix 127.0.0.1:587, `AIWAZZ_SMTP_*`), **off** until `AIWAZZ_MAIL_ENABLED=true` after the
+  deliverability test. Contact messages and invite requests already call `notify_support` (no-op while off).
 - nginx: `deploy/nginx/login.aiwazz.in.conf` → `/www/server/panel/vhost/nginx/extension/login.aiwazz.in/aiwazz.conf`
   (proxy /api/, SPA fallback, HTTP→HTTPS except /.well-known/); `deploy/nginx/aiwazz.in.conf` (HTTP→HTTPS).
   Main aaPanel vhost files are not edited. Always `nginx -t` before `nginx -s reload`.

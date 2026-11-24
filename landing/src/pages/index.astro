@@ -37,6 +37,7 @@ const steps = [
   { n: "03", icon: "download", title: "Download and edit", text: "A 60-second voiceover is ready in about a minute. Drop it into your video editor." },
 ];
 
+// "reels" is a phone mockup of the real dashboard (landing/media/reels-phone), not a stock photo.
 type Slot = "reels" | "youtube" | "ads" | "teachers" | "stories";
 const useCases: { slot: Slot | null; icon: string; title: string; text: string; href: string; page: string | null; more: string }[] = [
   { slot: "reels", icon: "smartphone", title: "Instagram reels & YouTube Shorts", text: "A clear hook in the first second, ready at the loudness short-video apps play.", href: "/learn/writing-scripts/", page: "/ai-voice-for-instagram-reels/", more: "AI voice for reels" },
@@ -78,7 +79,7 @@ const faq: QA[] = [
   { q: "Is there an API?", a: "Yes. On the Creator plan and above, create an API key in your dashboard and send scripts from any tool or video pipeline. You get back links to the finished MP3 and WAV." },
   { q: "What happens to my scripts and audio?", a: "They are only used to create your voiceover. Generated audio is deleted automatically after 7 days, and your scripts are never used to train voices. You can delete your account and data at any time." },
   { q: "Can I clone my own voice?", a: "Not yet. Voice cloning may come later, and only with the documented consent of the person whose voice it is." },
-  { q: "Why do I need an invite code?", a: "During early access, voices are rendered on our own servers one at a time, so we let people in in small batches to keep the queue short." },
+  { q: "Why do I need an invite code?", a: "During early access, voices are rendered on our own servers one at a time, so we let people in in small batches to keep the queue short. Request an invite on the signup page and we'll send you a code." },
 ];
 
 const jsonLd = [
@@ -132,14 +133,14 @@ const problem = PHOTOS.problem;
         </p>
         <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a href={SITE.getStarted} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong px-6 text-[15px] font-semibold text-white shadow-brand-glow transition-[filter] hover:brightness-110">
-            Get started free <Icon name="arrow-right" class="size-[18px]" />
+            Get early access <Icon name="arrow-right" class="size-[18px]" />
           </a>
           <a href="#voices" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-input bg-surface/80 px-6 text-[15px] font-medium transition-colors hover:bg-surface-2">
             <Icon name="audio-lines" class="size-[18px] text-brand" /> Hear the voices
           </a>
         </div>
         <p class="mt-5 text-sm text-subtle-foreground">Free plan · No card needed · GST invoice on paid plans</p>
-        <p class="mt-1 text-xs text-subtle-foreground">Early access: signing up needs an invite code.</p>
+        <p class="mt-1 text-xs text-subtle-foreground">Invite-only early access: request an invite in a minute.</p>
       </div>
 
       <!-- Real dashboard in device frames + live demo player -->
@@ -280,7 +281,9 @@ const problem = PHOTOS.problem;
     </div>
     <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {useCases.map((u) => {
-        const photo = u.slot ? PHOTOS[u.slot] : undefined;
+        const photo = u.slot === "reels"
+          ? { src: "/media/reels-phone", alt: "The AiWazz dashboard on a phone with a Hindi reel script ready to generate", width: 960, height: 540 }
+          : u.slot ? PHOTOS[u.slot] : undefined;
         return (
           <li class="flex flex-col overflow-hidden rounded-2xl border bg-surface shadow-md">
             {photo ? (
@@ -431,7 +434,7 @@ const problem = PHOTOS.problem;
       <h2 class="relative mx-auto mt-3 max-w-2xl text-h1 font-semibold sm:text-[2.75rem] sm:leading-[1.1]">Your next reel needs a voice. Make it in seconds.</h2>
       <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
         <a href={SITE.getStarted} class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-[15px] font-semibold text-[#070d25] transition-transform hover:scale-[1.02]">
-          Get started free <Icon name="arrow-right" class="size-[18px]" />
+          Get early access <Icon name="arrow-right" class="size-[18px]" />
         </a>
         <a href="/learn/" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/50 px-6 text-[15px] font-medium text-white hover:bg-white/10">Read the Learn guides</a>
       </div>

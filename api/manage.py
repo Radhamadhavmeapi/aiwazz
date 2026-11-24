@@ -4,18 +4,22 @@
   set-password --email E                       prompts for the new password; signs the user out everywhere
   set-active   --email E --active yes|no       disable/enable an account (disabling signs them out)
   list-users
-  set-plan     --email E --plan free|starter|creator|pro   (until online billing exists)
+  set-plan     --email E --plan free|starter|creator|pro [--until YYYY-MM-DD]
+               --until: the plan ends after that day (India time), then the user is moved back to Free automatically
+  expire-plans                                 move ended time-limited plans back to Free now (the API also does this hourly)
   create-invite [--uses N] [--role user|admin] [--days D] [--label TEXT]   prints the code once
   list-invites
   revoke-invite --id N
   list-messages [--all]                        contact form messages (unhandled only unless --all)
   mark-handled --id N
+  list-requests [--all]                        "Request an invite" entries (new only unless --all)
+  mark-request --id N --status invited|declined|new
 """
 import argparse
 import asyncio
 import getpass
 import sys
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import delete, select
 
@@ -48,6 +52,11 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("set-active"); p.add_argument("--email", required=True); p.add_argument("--active", choices=("yes", "no"), required=True)
     sub.add_parser("list-users")
     p = sub.add_parser("set-plan"); p.add_argument("--email", required=True); p.add_argument("--plan", choices=("free", "starter", "creator", "pro"), required=True)
+    p.add_argument("--until", type=date.fromisoformat, default=None, help="last day of the plan (YYYY-MM-DD, India time)")
+    sub.add_parser("expire-plans")
+    p = sub.add_parser("list-requests"); p.add_argument("--all", action="store_true")
+    p = sub.add_parser("mark-request"); p.add_argument("--id", type=int, required=True)
+    p.add_argument("--status", choices=("new", "invited", "declined"), required=True)
     p = sub.add_parser("create-invite")
     p.add_argument("--uses", type=int, default=1); p.add_argument("--role", choices=ROLES, default="user")
     p.add_argument("--days", type=int, default=14); p.add_argument("--label", default="")
@@ -83,15 +92,44 @@ async def main(argv: list[str]) -> None:
 
         elif a.cmd == "list-users":
             for u in (await db.execute(select(User).order_by(User.id))).scalars():
-                print(f"{u.id:>4}  {u.role:<5}  {u.plan:<7}  {'active  ' if u.is_active else 'DISABLED'}  {u.email}  last login: {u.last_login_at or '-'}")
+                print(f"{u.id:>4}  {u.role:<5}  {u.plan:<7}{(' until ' + format(u.plan_until, '%Y-%m-%d %H:%M') + ' UTC') if u.plan_until else ''}  {'active  ' if u.is_active else 'DISABLED'}  {u.email}  last login: {u.last_login_at or '-'}")
 
         elif a.cmd == "set-plan":
             u = (await db.execute(select(User).where(User.email == a.email.lower().strip()))).scalar_one_or_none()
             if not u:
                 sys.exit(f"No user {a.email}")
+            if a.until and a.plan == "free":
+                sys.exit("--until only makes sense with a paid plan")
             u.plan = a.plan
+            # End of the given day in IST (UTC+5:30), stored as naive UTC
+            u.plan_until = (datetime.combine(a.until, datetime.min.time()) + timedelta(days=1, hours=-5, minutes=-30)) if a.until else None
+            if u.plan_until and u.plan_until <= utcnow():
+                sys.exit("--until is in the past")
             await db.commit()
-            print(f"{u.email} is now on the {a.plan} plan")
+            print(f"{u.email} is now on the {a.plan} plan" + (f" until the end of {a.until} (India time), then Free" if a.until else ""))
+
+        elif a.cmd == "expire-plans":
+            from usage import expire_plans
+            print(f"Moved {await expire_plans(db)} user(s) back to Free")
+
+        elif a.cmd == "list-requests":
+            from models import InviteRequest
+            q = select(InviteRequest).order_by(InviteRequest.id)
+            if not a.all:
+                q = q.where(InviteRequest.status == "new")
+            for r in (await db.execute(q)).scalars():
+                print(f"#{r.id} {r.updated_at:%Y-%m-%d %H:%M} UTC  [{r.status}]  {r.email}  {r.name}")
+                if r.use_case:
+                    print("   " + r.use_case.replace("\n", "\n   "))
+
+        elif a.cmd == "mark-request":
+            from models import InviteRequest
+            r = await db.get(InviteRequest, a.id)
+            if not r:
+                sys.exit("No such request")
+            r.status = a.status
+            await db.commit()
+            print(f"Request {a.id} → {a.status}")
 
         elif a.cmd == "create-invite":
             code = new_invite_code()

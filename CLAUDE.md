@@ -299,6 +299,14 @@ change email.
     `tools/voice_lab_page.py`, never in git; `deploy-preview.sh` excludes `voice-lab/`). Findings: `content/VOICE-LAB-REPORT.md`.
 11. Self-hosted mail (Postfix/Dovecot on this VPS, no third-party email): `content/MAIL-SERVER.md`.
 12. Admin panel: complete SaaS back office at login.aiwazz.in/admin (RBAC, 2FA, audit, billing, GST, support, moderation, ops): `content/ADMIN-PANEL.md`.
+    **Built A1–A8 (24–25 Nov 2026), report: `content/ADMIN-REPORT.md`.** Code: `api/admin/` (rbac.py roles→perms, deps.py
+    guards: non-staff/API keys → 404, 2FA lock 30 min idle, `require_perm`, `require_stepup` 10 min; audit.py; routes/*),
+    `dashboard/src/admin/` (lazy bundle). admin@aiwazz.in = owner. TOTP secrets encrypted with `AIWAZZ_ADMIN_SECRET_KEY`;
+    `admin_audit` append-only (MariaDB triggers). Every new admin route needs `require_perm` (test_admin_core enforces it).
+    `scheduler.py` + `tasks.py` (plan sweep, dunning, abuse signals, alerts, backups, metrics) log to `task_runs`.
+    Backups: `/root/aiwazz-backups` daily, AES (AIWAZZ_BACKUP_PASSPHRASE), 14 days, `docs/RESTORE.md`. PM2 `aiwazz-watchdog`.
+    legal.json edits from the panel commit to git + rebuild the landing (`admin/legal_store.py`); `tools/deploy-landing.sh`
+    exports the changelog (gitignored `landing/src/data/changelog.generated.json`). Mail off → every email logged as "disabled".
 13. Custom voice (clone engine, CPU first, consent/source records, owner-only): `content/CUSTOM-VOICE.md`. Run before phase 12.
     **Steps 2–4 done (24 Nov 2026):** owner picked route A (hm_omega → OpenVoice v2, clip B); built as above, owner-only.
     Voice Lab samples moved to `data/preview/voice-lab/` → `/api/preview/voice-lab/` (admin only; the old public URL is gone).

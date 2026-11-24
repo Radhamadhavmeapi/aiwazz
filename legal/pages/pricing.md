@@ -9,7 +9,7 @@ metaDescription: Simple monthly and yearly plans for AiWazz AI text to speech. H
 
 Pick a plan, generate voiceovers, cancel any time.
 
-<!-- Implementation: render the plan cards from legal.json "plans" (name, price per month, characters per month, features). Add a Monthly / Yearly toggle: yearly price = monthly × 12 × (1 − yearlyDiscountPercent/100), rounded to the nearest rupee. Show "+ 18% GST" under each paid price when pricesIncludeGst is false. Highlight "Creator" as "Most popular". Buttons: Free → login.aiwazz.in/signup ; paid → login.aiwazz.in/signup?plan=<id> (checkout comes later via Razorpay). -->
+<!-- Implementation: render the plan cards from legal.json "plans" (name, price per month, characters per month, features). Add a Monthly / Yearly toggle: yearly price = 12 × round(monthly × (1 − yearlyDiscountPercent/100)), i.e. exactly 12 × the discounted monthly price. Show "+ 18% GST" under each paid price when pricesIncludeGst is false. Highlight "Creator" as "Most popular". Buttons: Free → login.aiwazz.in/signup ; paid → login.aiwazz.in/signup?plan=<id> (checkout comes later via Razorpay). -->
 
 ## What is a character?
 

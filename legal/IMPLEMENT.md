@@ -33,7 +33,7 @@ Create one page per markdown file, with a shared `LegalLayout` that follows the 
 
 ## 2. Pricing page
 
-Build plan cards from `legal.json → plans`: Free ₹0 / Starter ₹199 / Creator ₹499 / Pro ₹1,499 per month (monthly/yearly toggle, yearly = 12 × monthly × (1 − yearlyDiscountPercent/100), "+ 18% GST" note, "Most popular" on Creator, show characters/month and ≈ minutes of audio at ~800 characters per minute). Add a small comparison line under the cards: "Up to 70% less than popular global voice tools, billed in rupees with a GST invoice." (no competitor names). Also add a Pricing section teaser on the home page linking to /pricing/. Buttons go to `https://login.aiwazz.in/signup?plan=<id>`. Prices must be visible without login (Razorpay requirement).
+Build plan cards from `legal.json → plans`: Free ₹0 / Starter ₹199 / Creator ₹499 / Pro ₹1,499 per month (monthly/yearly toggle, yearly = 12 × round(monthly × (1 − yearlyDiscountPercent/100)), "+ 18% GST" note, "Most popular" on Creator, show characters/month and ≈ minutes of audio at ~800 characters per minute). Also add a Pricing section teaser on the home page linking to /pricing/. Buttons go to `https://login.aiwazz.in/signup?plan=<id>`. Prices must be visible without login (Razorpay requirement).
 
 ## 3. Footer on BOTH sites (landing + dashboard + auth pages)
 

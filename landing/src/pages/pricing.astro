@@ -2,16 +2,16 @@
 import Icon from "../components/Icon.astro";
 import LegalLayout from "../layouts/LegalLayout.astro";
 import { SITE } from "../data/site";
-import { fmtINR, legalPage, LEGAL } from "../lib/legal";
+import { fmtINR, legalPage, LEGAL, planPrice } from "../lib/legal";
 
 const page = legalPage("pricing");
 const disc = LEGAL.yearlyDiscountPercent;
 const plans = LEGAL.plans.map((p) => {
-  const yearly = Math.round(p.priceMonthly * 12 * (1 - disc / 100));
+  const { yearly, yearlyPerMonth } = planPrice(p.priceMonthly);
   return {
     ...p,
     yearly,
-    yearlyPerMonth: Math.round(yearly / 12),
+    yearlyPerMonth,
     minutes: Math.round(p.characters / 800),
     popular: p.id === "creator",
     href: p.id === "free" ? `${SITE.app}/signup` : `${SITE.app}/signup?plan=${p.id}`,
@@ -33,14 +33,17 @@ const jsonLd = [
     operatingSystem: "Web",
     url: SITE.url,
     description: SITE.description,
-    offers: plans.map((p) => ({
-      "@type": "Offer",
-      name: `${p.name} (monthly)`,
-      price: p.priceMonthly,
-      priceCurrency: "INR",
-      url: `${SITE.url}/pricing/`,
-      category: p.priceMonthly ? "subscription" : "free",
-    })),
+    offers: plans.flatMap((p) => {
+      const offer = (period: string, price: number) => ({
+        "@type": "Offer",
+        name: `${p.name} (${period})`,
+        price,
+        priceCurrency: "INR",
+        url: `${SITE.url}/pricing/`,
+        category: p.priceMonthly ? "subscription" : "free",
+      });
+      return p.priceMonthly ? [offer("monthly", p.priceMonthly), offer("yearly", p.yearly)] : [offer("free", 0)];
+    }),
   },
   {
     "@context": "https://schema.org",
@@ -51,8 +54,7 @@ const jsonLd = [
 ---
 <LegalLayout page={page} jsonLd={jsonLd} wide>
   <div slot="top" data-billing="monthly" id="plans">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <p class="text-[17px] text-muted-foreground">Pick a plan, generate voiceovers, cancel any time.</p>
+    <div class="flex flex-wrap items-center justify-end gap-4">
       <div role="group" aria-label="Billing period" class="inline-flex rounded-xl border bg-surface p-1 text-sm">
         <button type="button" data-period="monthly" aria-pressed="true" class="rounded-lg px-3.5 py-1.5 font-medium text-muted-foreground aria-pressed:bg-foreground aria-pressed:text-background">Monthly</button>
         <button type="button" data-period="yearly" aria-pressed="false" class="rounded-lg px-3.5 py-1.5 font-medium text-muted-foreground aria-pressed:bg-foreground aria-pressed:text-background">Yearly <span class="text-success [[aria-pressed=true]_&]:text-background">−{disc}%</span></button>
@@ -65,16 +67,17 @@ const jsonLd = [
           {p.popular && <span class="absolute -top-3 left-6 rounded-full bg-brand-gradient-strong px-3 py-1 text-xs font-semibold text-white">Most popular</span>}
           <h2 class="text-lg font-semibold text-foreground">{p.name}</h2>
           <p class="mt-4 flex items-baseline gap-1 text-foreground">
-            <span class="price-monthly font-heading text-[2.25rem] leading-none font-bold tracking-tight">{fmtINR(p.priceMonthly)}</span>
-            <span class="price-yearly hidden font-heading text-[2.25rem] leading-none font-bold tracking-tight">{fmtINR(p.yearlyPerMonth)}</span>
+            {/* One element per value; the toggle swaps its text, so readers and crawlers never see both prices. */}
+            <span class="font-heading text-[2.25rem] leading-none font-bold tracking-tight"
+              data-monthly={fmtINR(p.priceMonthly)} data-yearly={fmtINR(p.yearlyPerMonth)}>{fmtINR(p.priceMonthly)}</span>
             <span class="text-sm text-muted-foreground">/month</span>
           </p>
           <p class="mt-1.5 min-h-[2.5rem] text-xs leading-5 text-subtle-foreground">
             {p.priceMonthly === 0 ? "Free forever, no card needed" : (
-              <>
-                <span class="price-monthly">+ {LEGAL.gstRatePercent}% GST · billed monthly</span>
-                <span class="price-yearly hidden">{fmtINR(p.yearly)} billed yearly + {LEGAL.gstRatePercent}% GST</span>
-              </>
+              <span data-monthly={`+ ${LEGAL.gstRatePercent}% GST · billed monthly`}
+                data-yearly={`${fmtINR(p.yearly)} billed yearly (${fmtINR(p.yearlyPerMonth)} × 12) + ${LEGAL.gstRatePercent}% GST`}>
+                + {LEGAL.gstRatePercent}% GST · billed monthly
+              </span>
             )}
           </p>
           <p class="mt-4 text-sm text-foreground"><strong class="font-semibold">{p.characters.toLocaleString("en-IN")}</strong> characters / month</p>
@@ -91,7 +94,7 @@ const jsonLd = [
         </li>
       ))}
     </ul>
-    <p class="mt-6 text-center text-sm text-muted-foreground">Up to 70% less than popular global voice tools, billed in rupees with a GST invoice.</p>
+    <p class="mt-6 text-center text-sm text-muted-foreground">Billed in rupees with a GST invoice for every payment.</p>
   </div>
 </LegalLayout>
 
@@ -101,8 +104,9 @@ const jsonLd = [
     b.addEventListener("click", () => {
       const yearly = b.dataset.period === "yearly";
       root.querySelectorAll("[data-period]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      root.querySelectorAll(".price-monthly").forEach((e) => e.classList.toggle("hidden", yearly));
-      root.querySelectorAll(".price-yearly").forEach((e) => e.classList.toggle("hidden", !yearly));
+      root.querySelectorAll<HTMLElement>("[data-monthly]").forEach((e) => {
+        e.textContent = (yearly ? e.dataset.yearly : e.dataset.monthly) ?? "";
+      });
     }),
   );
 </script>

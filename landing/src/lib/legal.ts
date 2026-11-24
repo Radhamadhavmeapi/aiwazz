@@ -118,3 +118,9 @@ export const legalPage = (slug: string) => {
 };
 
 export const fmtINR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+/** Yearly = exactly 12 × the discounted monthly price (each rounded to whole rupees), so the two never disagree. */
+export const planPrice = (priceMonthly: number) => {
+  const yearlyPerMonth = Math.round(priceMonthly * (1 - LEGAL.yearlyDiscountPercent / 100));
+  return { monthly: priceMonthly, yearlyPerMonth, yearly: yearlyPerMonth * 12 };
+};

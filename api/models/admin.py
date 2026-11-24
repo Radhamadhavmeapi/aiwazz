@@ -1,12 +1,12 @@
 """Admin panel tables (phase 12, content/ADMIN-PANEL.md). All timestamps naive UTC."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import Base, utcnow
 
-__all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting"]
+__all__ = ["TotpSecret", "BackupCode", "AdminAudit", "AppSetting", "UserNote", "UserTag", "BonusGrant", "PasswordReset", "EmailTemplate", "EmailLog", "EmailSuppression"]
 
 
 class TotpSecret(Base):
@@ -59,3 +59,79 @@ class AppSetting(Base):
     value_json: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     updated_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class UserNote(Base):
+    """Internal staff note on a customer (never shown to the user)."""
+    __tablename__ = "user_notes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    author_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    author_email: Mapped[str] = mapped_column(String(254), default="")
+    body: Mapped[str] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class UserTag(Base):
+    __tablename__ = "user_tags"
+    __table_args__ = (UniqueConstraint("user_id", "tag", name="uq_user_tags"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    tag: Mapped[str] = mapped_column(String(32), index=True)
+
+
+class BonusGrant(Base):
+    """Extra characters for one usage cycle (period_start = start of that cycle, naive UTC). Negative = removal."""
+    __tablename__ = "bonus_grants"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    chars: Mapped[int] = mapped_column(Integer)
+    period_start: Mapped[datetime] = mapped_column(DateTime)
+    reason: Mapped[str] = mapped_column(String(255))
+    granted_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PasswordReset(Base):
+    """One-time password reset link (only the SHA-256 of the token is stored; 1 hour; emailed, never shown to staff)."""
+    __tablename__ = "password_resets"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class EmailTemplate(Base):
+    """Staff-edited override of a template in emails.DEFAULTS (no row = the default text)."""
+    __tablename__ = "email_templates"
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    subject: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    updated_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class EmailLog(Base):
+    __tablename__ = "email_log"
+    __table_args__ = (Index("ix_email_log_created", "created_at"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    to_email: Mapped[str] = mapped_column(String(254), index=True)
+    template: Mapped[str] = mapped_column(String(32))
+    subject: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(16))       # queued | sent | failed | disabled | suppressed | bounced
+    message_id: Mapped[str] = mapped_column(String(200), default="")
+    error: Mapped[str] = mapped_column(String(255), default="")
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class EmailSuppression(Base):
+    """Never email this address (hard bounce, unsubscribe or added by staff)."""
+    __tablename__ = "email_suppressions"
+    email: Mapped[str] = mapped_column(String(254), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(32))       # hard_bounce | unsubscribe | manual
+    note: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

@@ -72,10 +72,18 @@ async def get_usage(db: AsyncSession, user: User) -> Usage:
                Generation.status.in_(("done", "queued", "running")))
         .group_by(Generation.status))).all()
     by = {s: int(n) for s, n in rows}
+    bonus = await bonus_chars(db, user.id, start, end)
     return Usage(plan=current, plan_name=plan["name"], plan_until=user.plan_until if current != "free" else None,
                  unlimited=unlimited,
-                 allowance=None if unlimited else int(plan["characters"]), used=by.get("done", 0),
+                 allowance=None if unlimited else max(0, int(plan["characters"]) + bonus), used=by.get("done", 0),
                  reserved=by.get("queued", 0) + by.get("running", 0), period_start=start, period_end=end)
+
+
+async def bonus_chars(db: AsyncSession, user_id: int, start: datetime, end: datetime) -> int:
+    """Bonus characters granted by staff for the cycle [start, end) (admin panel → Users → Plan & usage)."""
+    from models import BonusGrant
+    return int((await db.execute(select(func.coalesce(func.sum(BonusGrant.chars), 0)).where(
+        BonusGrant.user_id == user_id, BonusGrant.period_start >= start, BonusGrant.period_start < end))).scalar_one())
 
 
 def has_api_access(user: User) -> bool:

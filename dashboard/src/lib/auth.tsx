@@ -3,7 +3,10 @@ import { Navigate, useLocation } from "react-router";
 import { api } from "./api";
 import { PREVIEW } from "./env";
 
-export type User = { id: number; email: string; role: "admin" | "user"; plan?: string; plan_until?: string | null; api_access?: boolean; created_at: string; via: string };
+export type User = {
+  id: number; email: string; role: string; plan?: string; plan_until?: string | null; api_access?: boolean; created_at: string; via: string;
+  staff?: boolean; impersonation?: { by: string; until: string };
+};
 type State = { status: "loading" } | { status: "anon" } | { status: "authed"; user: User };
 type Ctx = {
   state: State;

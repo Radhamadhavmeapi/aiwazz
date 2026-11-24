@@ -38,7 +38,6 @@ class User(Base):
     # Suspension (admin panel): the user sees a friendly message at login; reason is internal.
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     suspend_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
-    bonus_chars: Mapped[int] = mapped_column(Integer, default=0, server_default="0")   # extra characters this cycle
     name: Mapped[str] = mapped_column(String(100), default="", server_default="")
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -92,6 +91,10 @@ class Invite(Base):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # Early-access friends: the account starts on this plan until plan_until (admin panel → Invites).
+    plan: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    plan_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    email: Mapped[str] = mapped_column(String(254), default="", server_default="")   # set when made for a waitlist entry
 
 
 class ApiKey(Base):
@@ -167,6 +170,9 @@ class InviteRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     status: Mapped[str] = mapped_column(String(16), default="new")  # new | invited | declined
+    reviewed_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    invite_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 # ── Billing (Razorpay Subscriptions). Invoices and payments outlive the account (8-year tax records). ──

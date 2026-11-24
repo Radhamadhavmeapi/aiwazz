@@ -21,6 +21,16 @@ class Principal:
     via: str                      # "session" | "api_key"
     session: UserSession | None = None
     api_key: ApiKey | None = None
+    impersonator: User | None = None   # staff member viewing as this user (read-only, admin panel)
+
+    @property
+    def read_only(self) -> bool:
+        return self.impersonator is not None
+
+
+# While impersonating, only these writes are allowed (everything else is a read-only view).
+IMPERSONATION_WRITES = {"/api/admin/impersonate/stop", "/api/auth/logout"}
+SUSPENDED_MSG = "Your account is paused. If you think this is a mistake, write to support@aiwazz.in."
 
 
 def client_ip(request: Request) -> str:
@@ -34,6 +44,8 @@ async def _from_api_key(db: AsyncSession, raw: str) -> Principal | None:
     key = (await db.execute(select(ApiKey).where(ApiKey.key_hash == sha256(raw)))).scalar_one_or_none()
     if not key or key.revoked_at or not key.user.is_active:
         return None
+    if key.user.suspended_at:
+        raise HTTPException(403, SUSPENDED_MSG)
     from usage import has_api_access
     if not has_api_access(key.user):
         raise HTTPException(403, "API access is included in the Creator and Pro plans")
@@ -49,11 +61,20 @@ async def _from_session(db: AsyncSession, token: str) -> Principal | None:
         return None
     sess = (await db.execute(select(UserSession).where(UserSession.token_hash == sha256(token)))).scalar_one_or_none()
     now = utcnow()
-    if not sess or sess.expires_at <= now or not sess.user.is_active:
+    if not sess or sess.expires_at <= now or not sess.user.is_active or sess.user.suspended_at:
         return None
     if now - sess.last_seen_at > timedelta(minutes=5):
         sess.last_seen_at = now
+        if not sess.user.last_active_at or now - sess.user.last_active_at > timedelta(minutes=5):
+            sess.user.last_active_at = now
         await db.commit()
+    if sess.impersonate_user_id:
+        target = await db.get(User, sess.impersonate_user_id) if sess.impersonate_until and sess.impersonate_until > now else None
+        if target is None or not sess.user.is_staff:
+            sess.impersonate_user_id = sess.impersonate_until = None   # expired: back to the staff member's own view
+            await db.commit()
+        else:
+            return Principal(user=target, via="session", session=sess, impersonator=sess.user)
     return Principal(user=sess.user, via="session", session=sess)
 
 
@@ -65,7 +86,10 @@ async def optional_principal(request: Request, db: AsyncSession = Depends(get_db
         if p is None:
             raise HTTPException(401, "Invalid API key")
         return p
-    return await _from_session(db, request.cookies.get(s.session_cookie, ""))
+    p = await _from_session(db, request.cookies.get(s.session_cookie, ""))
+    if p and p.read_only and request.method in UNSAFE and request.url.path not in IMPERSONATION_WRITES:
+        raise HTTPException(403, "Read-only view: you're viewing this account as staff. Stop viewing to make changes.")
+    return p
 
 
 async def current_principal(p: Principal | None = Depends(optional_principal)) -> Principal:

@@ -10,6 +10,8 @@ from models import AppSetting
 
 DEFAULTS: dict[str, Any] = {
     "security.admin_ip_allowlist": {"enabled": False, "cidrs": []},
+    # signup_mode: invite (invite code required) | open (code optional) | closed (no new accounts)
+    "general": {"product_name": "AiWazz", "support_email": "support@aiwazz.in", "signup_mode": "invite"},
 }
 _cache: dict[str, tuple[float, Any]] = {}
 TTL = 10.0

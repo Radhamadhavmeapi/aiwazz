@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { PreviewPlayerProvider } from "@/components/audio/preview-player";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, GuestOnly, RequireAuth } from "@/lib/auth";
@@ -18,6 +19,7 @@ const VoicesPage = lazy(() => import("@/pages/voices"));
 const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const AdminApp = lazy(() => import("@/admin/admin-app"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
 
 const PAGES = { history: HistoryPage, voices: VoicesPage, "api-keys": ApiKeysPage, settings: SettingsPage } as const;
 
@@ -53,6 +55,7 @@ export default function App() {
           <AuthProvider>
             <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <RobotsMeta />
+              <ImpersonationBanner />
               <Suspense fallback={<div className="min-h-dvh bg-background" />}>
                 <Routes>
                   <Route path="/" element={PREVIEW ? <PreviewIndex /> : <Navigate to="/generate" replace />} />
@@ -65,6 +68,7 @@ export default function App() {
                     // The design preview has no backend: those pages show a placeholder there.
                     return <Route key={p} path={`/${p}`} element={guard(PREVIEW && p !== "voices" ? <Placeholder page={p} /> : <Page />)} />;
                   })}
+                  {!PREVIEW && <Route path="/reset-password" element={<ResetPasswordPage />} />}
                   {!PREVIEW && <Route path="/admin/*" element={<RequireAuth><AdminApp /></RequireAuth>} />}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

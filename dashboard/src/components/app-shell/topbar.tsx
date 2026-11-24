@@ -1,4 +1,4 @@
-import { CircleHelp, KeyRound, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react";
+import { CircleHelp, KeyRound, LogOut, Menu, Moon, Search, Settings, ShieldCheck, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { BrandIcon } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,11 @@ export function Topbar({ title, onMenu, onCommand }: { title: string; onMenu: ()
             <DropdownMenuItem onSelect={() => navigate("/settings")}>
               <Settings /> Settings
             </DropdownMenuItem>
+            {user?.staff && (
+              <DropdownMenuItem onSelect={() => navigate("/admin")}>
+                <ShieldCheck /> Admin panel
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={signOut}>
               <LogOut /> Sign out

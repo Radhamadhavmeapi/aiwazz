@@ -205,7 +205,9 @@ def test_owner_and_admin_are_product_admins_others_not(staff):
 # ── Automatic permission matrix: every /api/admin route × every staff role ──────────────────────────────────────
 SESSION_ROUTES = {"/api/admin/me", "/api/admin/mfa/setup", "/api/admin/mfa/enable", "/api/admin/mfa/verify",
                   "/api/admin/lock", "/api/admin/stepup", "/api/admin/mfa/backup-codes",
-                  "/api/admin/sessions/sign-out-admin", "/api/admin/impersonate/stop"}
+                  "/api/admin/sessions/sign-out-admin", "/api/admin/impersonate/stop",
+                  # any unlocked staff member; results are filtered by the caller's permissions inside
+                  "/api/admin/search", "/api/admin/notifications"}
 
 
 def _route_perms(route) -> set[str] | None:
@@ -263,7 +265,7 @@ def test_permission_matrix(staff, clock):
         for role, c in clients.items():
             r = c.request(method, url, json={} if method != "GET" else None)
             allowed = needed <= rbac.ROLE_PERMS[role]
-            denied = r.status_code == 403 and "x-step-up" not in r.headers
+            denied = r.status_code == 403 and r.json().get("detail") == "Your role doesn't allow this"
             assert denied != allowed, f"{role} {method} {path}: {r.status_code} {r.text[:120]}"
             assert r.status_code != 401, f"{role} {method} {path} locked: {r.text}"
             checked += 1

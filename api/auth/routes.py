@@ -34,11 +34,15 @@ def _redis(request: Request):
     return request.app.state.redis
 
 
-def me_payload(u: User, via: str = "session") -> dict:
+def me_payload(u: User, via: str = "session", p: Principal | None = None) -> dict:
     from usage import has_api_access
-    return {"id": u.id, "email": u.email, "role": u.role, "plan": u.effective_plan,
-            "plan_until": u.plan_until.isoformat() + "Z" if u.plan_until and u.effective_plan != "free" else None, "api_access": has_api_access(u),
-            "created_at": u.created_at.isoformat() + "Z", "via": via}
+    out = {"id": u.id, "email": u.email, "role": u.role, "plan": u.effective_plan,
+           "plan_until": u.plan_until.isoformat() + "Z" if u.plan_until and u.effective_plan != "free" else None, "api_access": has_api_access(u),
+           "created_at": u.created_at.isoformat() + "Z", "via": via, "staff": u.is_staff}
+    if p is not None and p.impersonator is not None:
+        out["impersonation"] = {"by": p.impersonator.email, "until": p.session.impersonate_until.isoformat() + "Z"}
+        out["staff"] = False
+    return out
 
 
 def _set_cookie(resp: Response, name: str, value: str, max_age: int, http_only: bool) -> None:
@@ -91,7 +95,7 @@ async def csrf(request: Request, response: Response):
 class SignupIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=256)
-    invite_code: str = Field(min_length=4, max_length=32)
+    invite_code: str = Field(default="", max_length=32)   # required unless signup mode is "open" (admin → Settings)
     accept_terms: bool = False          # Terms, Privacy Policy and Acceptable Use Policy (required)
     marketing_opt_in: bool = False      # product updates (optional)
 
@@ -109,27 +113,48 @@ async def signup(body: SignupIn, request: Request, response: Response, db: Async
     if problem := password_problem(body.password, email, s.password_min_length):
         raise HTTPException(422, problem)
 
+    from admin import settings_store
+    mode = (await settings_store.get(db, "general"))["signup_mode"]
+    if mode == "closed":
+        raise HTTPException(403, "New signups are paused right now. Please check back soon.")
+    if await _blocked(db, email, client_ip(request)):
+        raise HTTPException(422, "We can't create an account with these details. Contact support@aiwazz.in.")
     now = utcnow()
-    invite = (await db.execute(select(Invite).where(Invite.code_hash == sha256(normalize_invite(body.invite_code))))).scalar_one_or_none()
-    if not invite or invite.revoked or invite.uses >= invite.max_uses or (invite.expires_at and invite.expires_at <= now):
-        raise HTTPException(422, "This invite code isn't valid or has already been used")
+    invite = None
+    if body.invite_code.strip() or mode != "open":
+        invite = (await db.execute(select(Invite).where(Invite.code_hash == sha256(normalize_invite(body.invite_code))))).scalar_one_or_none()
+        if not invite or invite.revoked or invite.uses >= invite.max_uses or (invite.expires_at and invite.expires_at <= now):
+            raise HTTPException(422, "This invite code isn't valid or has already been used")
     if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "An account with this email already exists. Sign in instead.")
 
-    # Claim one use atomically (two signups racing for the last use: only one wins).
-    claimed = await db.execute(
-        update(Invite).where(Invite.id == invite.id, Invite.uses < Invite.max_uses).values(uses=Invite.uses + 1)
-    )
-    if claimed.rowcount != 1:
-        await db.rollback()
-        raise HTTPException(422, "This invite code isn't valid or has already been used")
-    user = User(email=email, password_hash=hash_password(body.password), role=invite.role,
+    if invite is not None:
+        # Claim one use atomically (two signups racing for the last use: only one wins).
+        claimed = await db.execute(
+            update(Invite).where(Invite.id == invite.id, Invite.uses < Invite.max_uses).values(uses=Invite.uses + 1)
+        )
+        if claimed.rowcount != 1:
+            await db.rollback()
+            raise HTTPException(422, "This invite code isn't valid or has already been used")
+    role = invite.role if invite is not None and invite.role != "owner" else "user"
+    user = User(email=email, password_hash=hash_password(body.password), role=role,
                 consent_at=now, terms_version=s.terms_version, consent_ip=client_ip(request)[:45],
                 marketing_opt_in=body.marketing_opt_in)
+    if invite is not None and invite.plan and invite.plan != "free" and (invite.plan_until is None or invite.plan_until > now):
+        user.plan, user.plan_until = invite.plan, invite.plan_until
     db.add(user)
     await db.flush()
     await _start_session(db, request, response, user)
     return me_payload(user)
+
+
+async def _blocked(db: AsyncSession, email: str, ip: str) -> bool:
+    """Moderation blocklist (admin → Moderation): emails, email domains and IPs (filled in A4)."""
+    try:
+        from admin.moderation import is_blocked
+    except ImportError:
+        return False
+    return await is_blocked(db, email=email, ip=ip)
 
 
 # ── Login / logout / me ──────────────────────────────────────────────────────
@@ -153,6 +178,9 @@ async def login(body: LoginIn, request: Request, response: Response, db: AsyncSe
     ok = verify_password(user.password_hash if user else None, body.password)
     if not user or not ok or not user.is_active:
         raise HTTPException(401, "Incorrect email or password")
+    if user.suspended_at:
+        from .deps import SUSPENDED_MSG
+        raise HTTPException(403, SUSPENDED_MSG)
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(body.password)
     await ratelimit.reset(r, s.redis_prefix, f"login:email:{sha256(email)}")
@@ -177,12 +205,12 @@ async def logout(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/auth/session")
 async def session(p: Principal | None = Depends(optional_principal)):
     """Like /auth/me but always 200 ({"user": null} when signed out), so the app's first check is quiet."""
-    return {"user": me_payload(p.user, p.via) if p else None}
+    return {"user": me_payload(p.user, p.via, p) if p else None}
 
 
 @router.get("/auth/me")
 async def me(p: Principal = Depends(current_principal)):
-    return me_payload(p.user, p.via)
+    return me_payload(p.user, p.via, p)
 
 
 # ── API keys ─────────────────────────────────────────────────────────────────
@@ -376,4 +404,34 @@ async def invite_request(body: InviteRequestIn, request: Request, db: AsyncSessi
     row.ip, row.updated_at = client_ip(request)[:45], utcnow()
     await db.commit()
     await notify_support(request, "invite_request", {"email": email, "name": row.name, "use_case": row.use_case})
+    return {"ok": True}
+
+
+# ── Password reset (link emailed by staff from the admin panel; self-service "forgot password" comes later) ──
+class ResetIn(BaseModel):
+    token: str = Field(min_length=20, max_length=100)
+    new_password: str = Field(min_length=1, max_length=256)
+
+
+@router.post("/auth/reset-password", dependencies=[Depends(csrf_protect)])
+async def reset_password(body: ResetIn, request: Request, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import delete
+
+    from models import PasswordReset
+    s = get_settings()
+    lim = await ratelimit.hit(_redis(request), s.redis_prefix, f"reset:ip:{client_ip(request)}", 10, 3600)
+    if not lim.allowed:
+        raise _too_many(lim.retry_after)
+    row = (await db.execute(select(PasswordReset).where(PasswordReset.token_hash == sha256(body.token)))).scalar_one_or_none()
+    if row is None or row.used_at or row.expires_at <= utcnow():
+        raise HTTPException(422, "This reset link has expired or was already used. Ask support for a new one.")
+    user = await db.get(User, row.user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(422, "This reset link has expired or was already used. Ask support for a new one.")
+    if problem := password_problem(body.new_password, user.email, s.password_min_length):
+        raise HTTPException(422, problem)
+    user.password_hash = hash_password(body.new_password)
+    row.used_at = utcnow()
+    await db.execute(delete(UserSession).where(UserSession.user_id == user.id))
+    await db.commit()
     return {"ok": True}

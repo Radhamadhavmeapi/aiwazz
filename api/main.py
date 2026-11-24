@@ -23,7 +23,22 @@ from tts.clone_client import CloneClient
 from tts.clone_voices import load_clone_voices
 from tts.kokoro_engine import KokoroEngine
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+import contextvars
+import secrets as _secrets
+
+REQUEST_ID: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
+class _RequestIdFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.rid = REQUEST_ID.get()
+        return True
+
+
+_handler = logging.StreamHandler()
+_handler.addFilter(_RequestIdFilter())
+_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s [%(rid)s]: %(message)s"))
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 log = logging.getLogger("voice-api")
 
 
@@ -109,7 +124,16 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
-        resp = await call_next(request)
+        rid = _secrets.token_hex(6)
+        REQUEST_ID.set(rid)
+        try:
+            resp = await call_next(request)
+        except Exception:
+            log.exception("unhandled error on %s %s", request.method, request.url.path)
+            raise
+        resp.headers["X-Request-ID"] = rid
+        if resp.status_code >= 500:
+            log.error("%s %s → %d", request.method, request.url.path, resp.status_code)
         await _count_request(request, resp.status_code)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")

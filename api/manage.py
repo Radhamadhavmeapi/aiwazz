@@ -36,6 +36,8 @@ Admin panel (phase 12, https://login.aiwazz.in/admin):
   reset-2fa    --email E                       removes a staff member's 2FA (lost phone); they set it up again at /admin
   delete-user  --email E                       deletes the account like self-service deletion (asks to confirm)
   audit-tail   [--limit N]                     latest admin audit log entries
+  gen-backup-key                               AIWAZZ_BACKUP_PASSPHRASE in api/.env (encrypts daily backups), shown ONCE:
+                                               store it in your password manager, restores need it (docs/RESTORE.md)
 """
 import argparse
 import asyncio
@@ -203,12 +205,29 @@ async def main(argv: list[str]) -> None:
     p.add_argument("--scope", default="Commercial use on AiWazz: reels and ads"); p.add_argument("--document")
     p = sub.add_parser("revoke-voice-consent"); p.add_argument("--voice", required=True)
     sub.add_parser("gen-admin-key")
+    sub.add_parser("gen-backup-key")
     p = sub.add_parser("set-role"); p.add_argument("--email", required=True); p.add_argument("--role", choices=ROLES, required=True)
     p.add_argument("--transfer", action="store_true")
     p = sub.add_parser("reset-2fa"); p.add_argument("--email", required=True)
     p = sub.add_parser("delete-user"); p.add_argument("--email", required=True); p.add_argument("--yes", action="store_true")
     p = sub.add_parser("audit-tail"); p.add_argument("--limit", type=int, default=30)
     a = ap.parse_args(argv)
+    if a.cmd == "gen-backup-key":
+        import secrets
+        if get_settings().backup_passphrase:
+            sys.exit("AIWAZZ_BACKUP_PASSPHRASE is already set; replacing it makes older backups unreadable without the old one.")
+        import os
+        from pathlib import Path
+        phrase = secrets.token_urlsafe(32)
+        set_env("AIWAZZ_BACKUP_PASSPHRASE", phrase)
+        d = Path("/root/aiwazz-backups")
+        d.mkdir(mode=0o700, exist_ok=True)
+        f = d / "PASSPHRASE-copy-to-password-manager-then-delete.txt"
+        f.write_text(phrase + "\n")
+        os.chmod(f, 0o600)
+        print(f"Saved AIWAZZ_BACKUP_PASSPHRASE in {ENV_FILE}. A copy is in {f} (root only):")
+        print("copy it into your password manager, then delete that file. Restart: pm2 restart voice-api")
+        return
     if a.cmd == "gen-admin-key":
         from cryptography.fernet import Fernet
         if get_settings().admin_secret_key:

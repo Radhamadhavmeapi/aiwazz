@@ -28,7 +28,7 @@ PERMS = frozenset({
     "export",           # CSV export of any list (also needs the list's own read permission)
 })
 
-_OWNER_ONLY = {"roles.write", "ownership.transfer", "settings.secrets", "payments.mode"}
+_OWNER_ONLY = {"roles.write", "ownership.transfer", "settings.secrets", "payments.mode", "backups.download"}
 _VIEWER = {"overview.read", "analytics.read", "system.read", "queue.read"}
 
 ROLE_PERMS: dict[str, frozenset[str]] = {

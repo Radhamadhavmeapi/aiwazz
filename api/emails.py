@@ -65,6 +65,9 @@ DEFAULTS = {t.key: t for t in [
     Template("grievance_ack", "Grievance acknowledgement", "We received your complaint ({{reference}})",
              "Hi {{name}},\n\nWe received your complaint on {{received}} (reference {{reference}}). Our Grievance Officer will respond "
              "within 15 days, by {{due}}.\n\n— AiWazz", ("name", "reference", "received", "due")),
+    Template("system_alert", "System alert (staff)", "[AiWazz alert] {{summary}}",
+             "System health changed:\n\n{{lines}}\n\nDetails: https://login.aiwazz.in/admin/health\n\n— AiWazz monitoring",
+             ("summary", "lines")),
     Template("dunning_reminder", "Payment reminder", "Action needed: your AiWazz plan",
              "Hi {{name}},\n\nYour last payment for the {{plan}} plan failed. Update your payment method in Settings → Billing by "
              "{{grace_until}}, or the account moves to the Free plan.\n\n— AiWazz", ("name", "plan", "grace_until")),

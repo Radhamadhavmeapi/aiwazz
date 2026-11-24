@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     impersonate_minutes: int = Field(15, ge=1, le=60)
     admin_rate_per_5min: int = 600                        # per staff member, all /api/admin calls
     totp_issuer: str = "AiWazz Admin"
+    # Daily encrypted backups (admin/health.py): passphrase from manage.py gen-backup-key; keep a copy OFF the server.
+    backup_passphrase: str = ""
 
     @property
     def session_cookie(self) -> str:

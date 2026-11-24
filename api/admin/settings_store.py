@@ -17,6 +17,8 @@ DEFAULTS: dict[str, Any] = {
     # Operations: queue pause (jobs wait) and maintenance (new jobs refused); both show a banner to users.
     "ops": {"queue_paused": False, "maintenance": False, "message": ""},
     "limits": {"api_rpm": 60},
+    "mail": {"dkim_selector": "default"},
+    "alerts.state": {"active": [], "checked_at": None},
     "referrals": {"enabled": False, "reward_chars_referrer": 10000, "reward_chars_referred": 5000,
                   "require_paid": True},
 }

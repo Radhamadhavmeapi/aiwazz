@@ -59,5 +59,20 @@ module.exports = {
       error_file: "/www/aiwazz/api/storage/logs/voice-clone.err.log",
       time: true,
     },
+    {
+      // Admin panel A6: health check of voice-api every 5 minutes from outside the API (writes api/storage/watchdog.json,
+      // emails support@ when the API is down twice in a row and mail is on). Runs once per cron tick, then exits.
+      name: "aiwazz-watchdog",
+      cwd: "/www/aiwazz/api",
+      script: "/usr/bin/env",
+      args: ["-i", ...Object.entries(ENV).map(([k, v]) => `${k}=${v}`), "/www/aiwazz/api/.venv/bin/python", "/www/aiwazz/tools/watchdog.py"],
+      interpreter: "none",
+      autorestart: false,
+      cron_restart: "*/5 * * * *",
+      max_memory_restart: "200M",
+      out_file: "/www/aiwazz/api/storage/logs/watchdog.out.log",
+      error_file: "/www/aiwazz/api/storage/logs/watchdog.err.log",
+      time: true,
+    },
   ],
 };

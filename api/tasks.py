@@ -56,3 +56,30 @@ async def abuse_signals(sessionmaker, app) -> str:
                     made += 1
         await db.commit()
     return f"{made} new flag(s)"
+
+
+@every("alerts", 300, first_delay=90, log_ok=False)
+async def alerts(sessionmaker, app) -> str:
+    from admin import health
+    async with sessionmaker() as db:
+        return await health.check_and_notify(app, db)
+
+
+@every("backup-check", 1800, first_delay=150, log_ok=False)
+async def backup_daily(sessionmaker, app) -> str:
+    """Once a day after 02:00 IST (skipped until a backup passphrase is set)."""
+    from datetime import timedelta
+
+    from admin import health
+    from admin.jobs import run_logged
+    from db import utcnow
+    from settings import get_settings
+    if not get_settings().backup_passphrase:
+        return "no passphrase"
+    now_ist = utcnow() + timedelta(hours=5, minutes=30)
+    latest = health.list_backups()[:1]
+    today = now_ist.strftime("%Y%m%d")
+    if now_ist.hour < 2 or (latest and latest[0]["name"].startswith(f"aiwazz-{today}")):
+        return "not due"
+    await run_logged(sessionmaker, "backup", health.make_backup)
+    return "ran"

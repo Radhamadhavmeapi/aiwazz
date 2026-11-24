@@ -35,5 +35,29 @@ module.exports = {
       error_file: "/www/aiwazz/api/storage/logs/voice-api.err.log",
       time: true,
     },
+    {
+      // Custom (clone) voices, phase 13: OpenVoice v2 tone colour converter. Own process so a crash or memory spike
+      // never takes Kokoro down; nice 10 + 3 torch threads so Kokoro keeps priority. 127.0.0.1 only, shared secret.
+      name: "voice-clone",
+      cwd: "/www/aiwazz/api",
+      script: "/usr/bin/env",
+      args: [
+        "-i",
+        ...Object.entries({ ...ENV, OMP_NUM_THREADS: "3" }).map(([k, v]) => `${k}=${v}`),
+        "/usr/bin/nice", "-n", "10",
+        "/www/aiwazz/api/.venv/bin/uvicorn", "voiceclone.worker:app",
+        "--host", "127.0.0.1", "--port", "8101", "--workers", "1", "--no-server-header", "--no-access-log",
+      ],
+      interpreter: "none",
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: "30s",
+      restart_delay: 5000,
+      kill_timeout: 10000,
+      max_memory_restart: "1500M",
+      out_file: "/www/aiwazz/api/storage/logs/voice-clone.out.log",
+      error_file: "/www/aiwazz/api/storage/logs/voice-clone.err.log",
+      time: true,
+    },
   ],
 };

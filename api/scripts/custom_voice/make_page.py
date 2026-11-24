@@ -43,6 +43,24 @@ summary = "".join(
     f"<tr><td><b>{e(c['label'])}</b><br><span class=muted>{e(c['route'])}</span></td><td>{e(c['similarity'])}</td>"
     f"<td>{e(c['clarity'])}</td><td>{e(c['speed'])}</td><td>{e(c['ram'])}</td></tr>" for c in cands)
 
+# Step 4: real reel scripts through the live API (production path), written by the e2e test → out/production.json
+prod_html = ""
+prod_file = OUT / "production.json"
+if prod_file.exists():
+    rows = []
+    for it in json.loads(prod_file.read_text()):
+        dst = LAB / "production" / f"{it['key']}.mp3"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(it["file"], dst)
+        rows.append(f"""<div class="row" data-id="production/{e(it['key'])}"><div class="lbl"><b>{e(it['title'])}</b>
+      <span class="muted"> · {e(it['note'])}</span></div><p class="script" lang="hi">{e(it['text'])}</p>
+      <audio controls preload="none" src="production/{e(it['key'])}.mp3"></audio>
+      <div class="vote"><button type="button" data-v="up" aria-label="Good">👍</button><button type="button" data-v="down" aria-label="Not good">👎</button>
+      <input type="text" placeholder="note" aria-label="Note"></div></div>""")
+    prod_html = ("""<section><h2>Veer in production (Step 4)</h2><p class="muted">Made through the real app path: queue, Kokoro Omega,
+    voice-clone worker (OpenVoice v2, clip B), loudness −14 LUFS, MP3 download. This is exactly what Generate gives you.</p>"""
+                 + "".join(rows) + "</section>")
+
 sections = []
 for key, (title, text) in SCRIPTS.items():
     items = "".join(f"""
@@ -71,7 +89,7 @@ table{{width:100%;border-collapse:collapse;font-size:.9em}} td,th{{text-align:le
 .btn{{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}}
 </style></head><body><main>
 <p class="muted">AiWazz · phase 13 · owner only · not indexed</p>
-<h1>Veer, Energetic Reel (Hindi): pick a route</h1>
+<h1>Veer, Energetic Reel (Hindi): samples</h1>
 <p>Same 5 scripts through every candidate. Listen to the narrator first, then compare. 👍/👎 and notes stay in this browser;
 press <b>Copy my picks</b> at the end and paste the result to Claude. Similarity is measured by a speaker encoder
 (the narrator's own clips score 98% against each other); CER is the Whisper error rate on the output (lower is clearer).</p>
@@ -79,6 +97,7 @@ press <b>Copy my picks</b> at the end and paste the result to Claude. Similarity
 <div class="row"><div class="lbl"><b>Clip A</b> <span class="muted">12.8 s, main reference</span></div><audio controls preload="none" src="narrator-A.mp3"></audio></div>
 <div class="row"><div class="lbl"><b>Clip B</b> <span class="muted">15.7 s, backup reference</span></div><audio controls preload="none" src="narrator-B.mp3"></audio></div></div>
 <div class="box"><h2>At a glance</h2><table><tr><th>Candidate</th><th>Sounds like narrator</th><th>Clarity</th><th>Speed on this CPU</th><th>RAM</th></tr>{summary}</table></div>
+{prod_html}
 {''.join(sections)}
 <div class="box"><button class="btn" id="copy" type="button">Copy my picks</button> <span id="copied" class="muted"></span></div>
 </main><script>

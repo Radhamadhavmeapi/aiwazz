@@ -20,7 +20,7 @@ for r in "${ROUTES[@]}"; do mkdir -p "$OUT/$r" && cp "$OUT/index.html" "$OUT/$r/
 
 case "$DEST" in /www/wwwroot/login.aiwazz.in/preview) ;; *) echo "refusing DEST=$DEST" >&2; exit 1;; esac
 mkdir -p "$DEST"
-# voice-lab/ is generated on the server (tools/voice_lab_page.py), never part of the build
+# voice-lab/ moved to data/preview/voice-lab/ (admin-only via /api/preview/voice-lab/); never deploy it here again
 rsync -a --delete --exclude="/voice-lab/" "$OUT/" "$DEST/"
 chown -R www:www "$DEST"
 

@@ -1,10 +1,15 @@
-# Custom voice: Step 1 report (Veer, Energetic Reel (Hindi), `hi_reel_narrator_m1`)
+# Custom voice report (Veer, Energetic Reel (Hindi), `hi_reel_narrator_m1`)
 
-24 Nov 2026 · brief: `content/CUSTOM-VOICE.md` · status: **samples ready, waiting for the owner's pick** (Steps 2–4 not started).
+24 Nov 2026 · brief: `content/CUSTOM-VOICE.md` · status: **Steps 1–4 done. Veer works in Generate and the API for the owner
+account only (`is_public = false`).** Making it public is a separate owner decision.
 
 **Listen:** https://login.aiwazz.in/api/preview/custom-voice/ (sign in as admin first; everyone else gets 404;
-`X-Robots-Tag: noindex`, `Cache-Control: private, no-store`). 10 candidates × 5 scripts = 50 samples + the two
-narrator clips. 👍/👎 + notes stay in your browser; "Copy my picks" gives a text to paste back.
+`X-Robots-Tag: noindex`, `Cache-Control: private, no-store`). The top section has the 3 real reels made through the live
+app (Step 4); below it are the Step 1 route comparisons (the Psi variants were deleted after the pick).
+
+**Owner decision (24 Nov 2026):** ship **route A = Kokoro `hm_omega` → OpenVoice v2 tone colour conversion, reference
+clip B**. Ratings: A·Omega→B 👍 on Hinglish, numbers, full reel and calm; A·Omega→A 👎 on the hook; A·Psi 👎 on the full
+reel; Chatterbox good but too slow; route C not rated.
 
 ## 1. Server
 
@@ -23,11 +28,10 @@ Safety: every test ran in its own process (nice 10–19) with a watchdog that ex
 
 - `data/voices/hi_reel_narrator_m1/` (gitignored, dir 700 / files 600): `voice_reference_A_13s.wav` (12.8 s),
   `voice_reference_B_16s.wav` (15.7 s), `voice_clean_full.wav` (67.6 s), `transcripts.txt`; all mono 44.1 kHz 16-bit.
-- Source record (for Step 3): `source_type = ai_voice`, attested by the owner, `is_public = false`.
-- ⚠️ **Mismatch to resolve before Step 3:** `transcripts.txt` says *"Consent: voice owner has agreed to its use on AiWazz
-  (confirmed by the account owner). Keep the signed consent on file."* and *"Source: uploaded reel cdd8b84e-679099.mp4"*.
-  That reads like a real person's voice taken from a reel, not an AI-generated voice. Please confirm which is true. If a
-  real person is behind it, we need their signed consent on file and `source_type = consented_person`, not `ai_voice`.
+- Source record: `voice_consents` #1, `source_type = ai_voice`, status `active`, added by the owner's admin account:
+  "Owner states the reference is an AI-generated voice, not a real person (24 Nov 2026). Owner-only (is_public = false)."
+- Resolved: the consent line in `transcripts.txt` was template text (owner, 24 Nov 2026). It now records the AI-voice
+  attestation. The "Source: uploaded reel" line stays: the AI voice's audio was taken from that reel.
 
 ## 3. Routes tested
 
@@ -117,18 +121,16 @@ production the clone step would run inside the same one-at-a-time queue, so it n
 
 ## 7. What was installed (all outside the repo, no audio in git)
 
-| | Size | Keep? |
+| | Size | Status (24 Nov 2026, after the pick) |
 |---|---|---|
-| `/root/voicelab/venv` (torch 2.6 CPU, chatterbox-tts, faster-whisper, …) | 2.0 GB | until the pick |
-| OpenVoice v2 converter `models/openvoice` | 126 MB | route A |
-| Chatterbox Multilingual `models/chatterbox` | 3.0 GB | **delete after the pick** (rejected for CPU) |
-| WavLM-Large + kNN-VC HiFiGAN `~/.cache/torch/hub/checkpoints` | 1.3 GB | route C |
-| faster-whisper small `models/whisper-small` | 464 MB | QA tool |
-| `~/.pkuseg` (Chatterbox tokenizer data, pulled in automatically) | 91 MB | delete with Chatterbox |
-| total new downloads | ≈7.0 GB | ≤ 8 GB budget |
+| OpenVoice v2 converter → **`data/models/openvoice_v2/`** | 126 MB | **production** (voice-clone worker) |
+| `/root/voicelab/venv` (lab only: torch 2.6 CPU, faster-whisper, librosa) | 1.8 GB | kept for QA (CER + similarity) |
+| faster-whisper small `models/whisper-small` + speaker encoder `models/ve` (5.7 MB, vendored MIT code in `ve/`) | 470 MB | kept for QA |
+| Chatterbox weights, its pip packages (chatterbox-tts, s3tokenizer, perth, conformer, diffusers, transformers, …), `~/.pkuseg` | 3.3 GB | **deleted** (its 10 samples stay on the page) |
+| Psi test outputs (Kokoro Psi, route A Psi→A/B) | ~30 MB | **deleted** |
+| WavLM-Large + kNN-VC HiFiGAN, `knnvc/`, route C outputs + samples | 1.3 GB | **auto-delete 25 Nov 2026 23:30 IST** (`at` job 1, `/root/voicelab/delete_route_c.sh`; keep with `touch /root/voicelab/KEEP_ROUTE_C`) |
 
-Rejected models are kept until you have listened, in case you want a re-run. Say "pick X" and I delete the rest (Chatterbox
-alone frees 3.1 GB, which also fixes the 93 % disk).
+Disk: 2.2 GB free → **5.5 GB free (81 %)** now; ≈6.8 GB after route C goes. The API venv gained only `soxr` (1 package).
 
 Lab code (reproducible): `api/scripts/custom_voice/` (`common.py`, `kokoro_gen.py`, `route_a.py`, `route_b.py`,
 `route_c.py`, `evaluate.py`, `make_page.py`); outputs in `/root/voicelab/out/`; page + MP3s in
@@ -136,12 +138,63 @@ Lab code (reproducible): `api/scripts/custom_voice/` (`common.py`, `kokoro_gen.p
 
 ## 8. Other findings
 
-- **`https://login.aiwazz.in/preview/voice-lab/` (phase 10 samples) is publicly reachable** (200 without login). It is
-  noindex and the URL is unlisted, but anyone with the link can listen. It could move behind the same admin-only
-  `/api/preview/` route; say if you want that.
-- Disk is at 93 % (2.2 GB free). Deleting Chatterbox after the pick brings it back to ≈5.3 GB.
+- Fixed: the phase 10 Voice Lab page moved out of the web root to `data/preview/voice-lab/` and is now served only at
+  **https://login.aiwazz.in/api/preview/voice-lab/** (admin session, noindex; 404 for everyone else). The old
+  `/preview/voice-lab/` URL only shows the app now.
 
-## 9. Next (waiting for the owner)
+## 9. Steps 2–4: how Veer runs
 
-Your pick (route + clip) → Step 2 (engine wiring), Step 3 (`voice_consents` record with the source attestation, after the
-§2 mismatch is resolved), Step 4 (owner-only voice in Generate). Nothing of that has been started.
+```
+Generate / POST /api/tts {"voice": "hi_reel_narrator_m1"}           (owner account only; consent record must be active)
+  → Kokoro queue (shared, one at a time): Kokoro hm_omega reads the script, sentence by sentence
+  → clone queue (separate, one at a time): each sentence → voice-clone worker → OpenVoice v2 (clip B tone colour)
+  → the usual post-processing: trim, pauses, -14 LUFS / -1 dBTP, WAV + MP3 48 kHz → History, 7-day cleanup
+```
+
+- **Worker** `voice-clone` (PM2, `api/voiceclone/worker.py`): 127.0.0.1:8101 only, `X-Clone-Secret` (random, in
+  `api/.env` only), `nice -n 10`, 3 torch threads, ~540 MB RSS, `max_memory_restart` 1.5 GB. The model stays loaded (it's
+  small). Tone colours are computed once by `python -m voiceclone.prepare` and cached in `tone_color.pt`; the source
+  colour matches the lab's at cosine 0.991.
+- **Interface:** the brief suggested `POST /synthesize {text, voice_id, speed}`. Route A needs Kokoro first, and a second
+  Kokoro inside the worker would cost another 1.3 GB RAM we don't have. So the API's shared Kokoro reads the script, and the
+  worker exposes `POST /convert` (WAV in → WAV out). A GPU worker for a direct-cloning engine (Chatterbox) can add
+  `/synthesize` behind the same secret and URL (`AIWAZZ_CLONE_URL`).
+- **Kokoro never waits for a conversion.** Conversions run in their own queue. A clone job's *speech* stage takes a normal
+  turn in the Kokoro queue, the same as any job. While a conversion runs, both share the 4 CPUs: a short Kokoro job took
+  6.2 s of compute for 4.5 s of audio (1.38×), against ≈1.05× when idle (measured on an 11 s sentence).
+- **API:** `GET /api/voices` lists Veer (`engine: "clone"`, `tier: "studio"`, `is_public: false`) only to admins;
+  `POST /api/tts` works unchanged with `"voice": "hi_reel_narrator_m1"`. With no style or speed given, it uses Energetic
+  reel at **1.08×**; an explicit style or speed wins. Limit: **1,500 characters** per job. The job status adds `stage`
+  (speech → studio-queue → studio) and `estimate_sec`. If the worker is down, the API answers 503 before anything runs.
+  If it fails mid-job, the conversion is retried once, then the job ends in `error` with no characters charged.
+- **Dashboard:** Veer appears in Generate and Voices with a "Studio" badge and a private preview
+  (`/api/voices/{id}/preview`). Picking Veer sets Energetic reel at 1.08×. The editor shows the 1,500 limit and
+  "about N to make", the progress panel shows "Converting to the studio voice", and History shows the name.
+
+### Step 4 test (live API, temporary admin test account, deleted afterwards)
+
+| Reel script | Characters | Audio | Compute | Speech / conversion / post | Loudness |
+|---|---|---|---|---|---|
+| Owner's reel: desi pre-workout shot (the narrator's own script) | 1,181 | 91.6 s | 227 s (2.48×) | 80 / 138 / 9 s | -14.2 LUFS, -1.3 dBTP |
+| AiWazz promo in Roman Hinglish (transliterate on) | 331 | 23.2 s | 60 s (2.58×) | 35 / 22 / 3 s | -14.1 LUFS, -1.3 dBTP |
+| Offer with ₹ and numbers | 215 | 19.2 s | 48 s (2.51×) | 27 / 18 / 3 s | -14.2 LUFS, -1.3 dBTP |
+
+The three were submitted together, so their stages overlapped. A later job that ran mostly alone (215 characters) took 2.35×.
+
+- Queue and progress: positions, stages and progress were reported correctly. MP3 (audio/mpeg) and WAV (audio/wav)
+  downloaded for all three.
+- Characters: +302 for 302 characters of successful jobs. The worker was stopped during a conversion: one retry, then
+  "The studio voice is unavailable right now. Nothing was charged…", **0 characters charged**. A new Veer job while the
+  worker was down got a 503 at once.
+- 7-day cleanup: clone outputs are written to the same `storage/audio/` as every other job, so the hourly retention sweep
+  removes them on the same schedule.
+- **Speed note for you:** at 1.08× Veer reads your 67 s reel in 92 s. Kokoro's rhythm is slower than the original
+  narrator. If you want reel pace, try 1.15–1.25× on the speed slider. The style default stays 1.08×, as you asked
+  (1.05–1.10).
+- Estimate shown in the app: ≈2.4× realtime ("a 60-second reel ≈ 2½ minutes"), measured, not guessed.
+
+## 10. Still owner decisions
+
+- Making Veer public (then: a Learn guide, the voices page, and whether studio voices count at about 2.5× characters or
+  sit on a higher plan).
+- Route C files go tomorrow night unless you say "keep route C".

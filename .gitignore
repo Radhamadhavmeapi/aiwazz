@@ -51,4 +51,6 @@ landing/.astro/
 
 # Custom voice references and caches (never commit audio)
 data/voices/
+data/preview/
+data/models/
 *.wav

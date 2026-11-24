@@ -23,6 +23,11 @@
   list-pronunciations [--email E]              the global list (or one user's list with --email)
   add-pronunciation --word W --say-as S        add/update a global entry (case-insensitive, whole word)
   remove-pronunciation --word W                remove a global entry
+  gen-clone-secret                             random AIWAZZ_CLONE_SECRET in api/.env (never shown); restart both
+  list-voice-consents                          consent / source records of custom (clone) voices
+  add-voice-consent --voice ID --source ai_voice|real_person --by EMAIL --note TEXT [--speaker S] [--scope S]
+                    [--document PATH]          ai_voice → active; real_person → active only with --document
+  revoke-voice-consent --voice ID              disables the voice now and deletes its reference audio + tone colour
 """
 import argparse
 import asyncio
@@ -132,6 +137,13 @@ async def main(argv: list[str]) -> None:
     p = sub.add_parser("list-pronunciations"); p.add_argument("--email")
     p = sub.add_parser("add-pronunciation"); p.add_argument("--word", required=True); p.add_argument("--say-as", required=True)
     p = sub.add_parser("remove-pronunciation"); p.add_argument("--word", required=True)
+    sub.add_parser("gen-clone-secret")
+    sub.add_parser("list-voice-consents")
+    p = sub.add_parser("add-voice-consent"); p.add_argument("--voice", required=True)
+    p.add_argument("--source", choices=("ai_voice", "real_person"), required=True); p.add_argument("--by", required=True)
+    p.add_argument("--note", required=True); p.add_argument("--speaker", default="")
+    p.add_argument("--scope", default="Commercial use on AiWazz: reels and ads"); p.add_argument("--document")
+    p = sub.add_parser("revoke-voice-consent"); p.add_argument("--voice", required=True)
     a = ap.parse_args(argv)
     if a.cmd == "set-secret":
         value = getpass.getpass(f"{a.name} (input hidden): ").strip()
@@ -139,6 +151,11 @@ async def main(argv: list[str]) -> None:
             sys.exit("Nothing entered; .env unchanged")
         set_env(a.name, value)
         print(f"Saved {a.name} in {ENV_FILE} (not shown). Restart the API: pm2 restart voice-api")
+        return
+    if a.cmd == "gen-clone-secret":
+        import secrets
+        set_env("AIWAZZ_CLONE_SECRET", secrets.token_urlsafe(32))
+        print(f"Saved a new AIWAZZ_CLONE_SECRET in {ENV_FILE} (not shown). Restart: pm2 restart voice-clone voice-api")
         return
     if a.cmd in ("billing-create-plans", "billing-check"):
         await billing_plans(a)
@@ -230,6 +247,40 @@ async def main(argv: list[str]) -> None:
                         db.add(Pronunciation(user_id=None, word=word, word_key=word.lower(), say_as=say))
                     await db.commit()
                     print(f"Global: {word} → {say}")
+
+        elif a.cmd in ("list-voice-consents", "add-voice-consent", "revoke-voice-consent"):
+            from models import VoiceConsent
+            from tts.clone_voices import load_clone_voices
+            voices_dir = get_settings().data_dir / "voices"
+            if a.cmd == "list-voice-consents":
+                for r in (await db.execute(select(VoiceConsent).order_by(VoiceConsent.id))).scalars():
+                    print(f"#{r.id} {r.voice_id}  [{r.status}]  {r.source_type}  {r.date:%Y-%m-%d}  "
+                          f"by user {r.added_by}  {r.attestation_note}" + (f"  revoked {r.revoked_at:%Y-%m-%d}" if r.revoked_at else ""))
+            elif a.cmd == "add-voice-consent":
+                if a.voice not in load_clone_voices(voices_dir):
+                    sys.exit(f"No data/voices/{a.voice}/voice.json")
+                u = (await db.execute(select(User).where(User.email == a.by.lower().strip()))).scalar_one_or_none()
+                if not u or not u.is_admin:
+                    sys.exit(f"--by must be an admin account ({a.by} isn't)")
+                status = "active" if a.source == "ai_voice" or a.document else "pending"
+                db.add(VoiceConsent(voice_id=a.voice, source_type=a.source, speaker_name=a.speaker, consent_scope=a.scope,
+                                    signed_document_path=a.document, attestation_note=a.note, status=status, added_by=u.id))
+                await db.commit()
+                print(f"Consent record for {a.voice}: {a.source}, {status}. Restart voice-api to list the voice.")
+            else:
+                rows = (await db.execute(select(VoiceConsent).where(VoiceConsent.voice_id == a.voice,
+                                                                    VoiceConsent.revoked_at.is_(None)))).scalars().all()
+                if not rows:
+                    sys.exit(f"No active consent record for {a.voice}")
+                for r in rows:
+                    r.status, r.revoked_at = "revoked", utcnow()
+                await db.commit()
+                vdir = voices_dir / a.voice
+                removed = [f.name for f in vdir.glob("*") if f.is_file() and f.suffix in (".wav", ".mp3", ".flac", ".pt")]
+                for name in removed:
+                    (vdir / name).unlink()
+                print(f"Revoked {a.voice} (voice disabled now). Deleted: {', '.join(removed) or 'nothing'}. "
+                      f"Restart voice-clone + voice-api.")
 
         elif a.cmd == "list-requests":
             from models import InviteRequest

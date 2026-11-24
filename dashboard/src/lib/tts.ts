@@ -9,6 +9,9 @@ export type JobStatus = {
   progress: number;
   position?: number;
   error?: string;
+  /** clone (studio) voices: "speech" → "studio-queue" → "studio", and a rough compute estimate */
+  stage?: "speech" | "studio-queue" | "studio";
+  estimate_sec?: number;
   url?: string;
   urls?: Record<Format, string>;
   duration_sec?: number;

@@ -1,7 +1,7 @@
 import { Check, Pause, Play } from "lucide-react";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { cn } from "@/lib/utils";
-import { sampleUrl, type Voice } from "@/lib/voices";
+import { previewUrl, type Voice } from "@/lib/voices";
 
 function EqBars({ on }: { on: boolean }) {
   return (
@@ -71,7 +71,12 @@ export function VoiceCard({
       </span>
       <span aria-hidden="true" className="min-w-0 flex-1">
         <span className="flex items-center gap-2 text-sm font-medium">
-          {voice.name}
+          <span className="truncate">{voice.name}</span>
+          {voice.studio && (
+            <span className="shrink-0 rounded-full border border-brand/40 bg-brand/10 px-1.5 py-px text-[10px] font-semibold tracking-wide text-brand uppercase">
+              Studio
+            </span>
+          )}
           {isPlaying && <EqBars on />}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
@@ -80,7 +85,7 @@ export function VoiceCard({
       </span>
       <button
         type="button"
-        onClick={() => toggle(voice.id, sampleUrl(voice.id))}
+        onClick={() => toggle(voice.id, previewUrl(voice))}
         aria-label={isPlaying ? `Stop ${voice.name} preview` : `Play ${voice.name} preview`}
         aria-pressed={isPlaying}
         className={cn(

@@ -7,7 +7,7 @@ import numpy as np, librosa, torch, jiwer
 torch.set_num_threads(4)
 from faster_whisper import WhisperModel
 from safetensors.torch import load_file
-from chatterbox.models.voice_encoder import VoiceEncoder
+from ve import VoiceEncoder  # vendored from chatterbox (MIT), similarity metric only
 
 # English words in the scripts as Whisper writes them in Devanagari (so Hinglish isn't punished for script choice)
 LATIN = {"workout": "वर्कआउट", "plan": "प्लान", "simple": "सिंपल", "exercises": "एक्सरसाइज़", "minute": "मिनट",
@@ -24,7 +24,7 @@ def norm(t: str) -> str:
 
 
 wm = WhisperModel("/root/voicelab/models/whisper-small", device="cpu", compute_type="int8", cpu_threads=4)
-ve = VoiceEncoder(); ve.load_state_dict(load_file("/root/voicelab/models/chatterbox/ve.safetensors")); ve.eval()
+ve = VoiceEncoder(); ve.load_state_dict(load_file("/root/voicelab/models/ve/ve.safetensors")); ve.eval()
 
 
 def embed(path):

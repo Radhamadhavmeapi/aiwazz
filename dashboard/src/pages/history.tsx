@@ -13,11 +13,12 @@ import { daysLeft, fmtDuration, timeAgo } from "@/lib/format";
 import { downloadUrl, getHistory, type HistoryItem } from "@/lib/tts";
 import { STYLES } from "@/lib/styles";
 import { cn } from "@/lib/utils";
-import { langLabel, VOICES, type Lang } from "@/lib/voices";
+import { findVoice, langLabel, useVoices, type Lang } from "@/lib/voices";
 
 function Row({ it, onDeleted }: { it: HistoryItem; onDeleted: (id: string) => void }) {
   const { playing, toggle } = usePreviewPlayer();
-  const v = VOICES.find((x) => x.id === it.voice);
+  useVoices();
+  const v = findVoice(it.voice);
   const on = playing === it.id;
   const busy = it.status === "queued" || it.status === "running";
   const left = daysLeft(it.created_at);

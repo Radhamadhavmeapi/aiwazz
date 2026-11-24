@@ -18,6 +18,8 @@ from routes.pronunciations import router as pronunciations_router
 from routes.preview import router as preview_router
 from settings import get_settings
 from tts.jobs import JobManager
+from tts.clone_client import CloneClient
+from tts.clone_voices import load_clone_voices
 from tts.kokoro_engine import KokoroEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -43,7 +45,9 @@ async def lifespan(app: FastAPI):
             log.info("marked %d interrupted jobs as failed", res.rowcount)
 
     engine = KokoroEngine(torch_threads=s.torch_threads)
-    jobs = JobManager(s, engine)
+    cloner = CloneClient(s.clone_url, s.clone_secret, s.clone_timeout_sec) if s.clone_secret else None
+    jobs = JobManager(s, engine, cloner)
+    app.state.clone_voices = load_clone_voices(s.data_dir / "voices") if cloner else {}
     jobs.on_start, jobs.on_finish = make_hooks(sessionmaker)
     app.state.jobs = jobs
 
@@ -66,7 +70,8 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(3600)
 
     # Load the model in the background so /api/health answers (503 "loading") meanwhile.
-    tasks = [asyncio.create_task(load()), asyncio.create_task(jobs.cleanup_loop()), asyncio.create_task(plan_sweep())]
+    tasks = [asyncio.create_task(load()), asyncio.create_task(jobs.cleanup_loop()), asyncio.create_task(plan_sweep()),
+             asyncio.create_task(jobs.clone_worker())]
     yield
     for t in tasks:
         t.cancel()

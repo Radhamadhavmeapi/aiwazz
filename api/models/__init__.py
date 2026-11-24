@@ -228,3 +228,21 @@ class Pronunciation(Base):
     say_as: Mapped[str] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class VoiceConsent(Base):
+    """Consent / source record for a custom (clone) voice (phase 13). A clone voice is selectable only while it has an
+    `active` record. real_person needs a signed document (`pending` until uploaded); ai_voice needs an owner attestation.
+    Revoking disables the voice at once and deletes its reference audio + cached tone colour (manage.py)."""
+    __tablename__ = "voice_consents"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    voice_id: Mapped[str] = mapped_column(String(64), index=True)
+    source_type: Mapped[str] = mapped_column(String(16))           # real_person | ai_voice
+    speaker_name: Mapped[str] = mapped_column(String(150), default="")   # or the tool name, if known
+    consent_scope: Mapped[str] = mapped_column(String(255), default="")
+    signed_document_path: Mapped[str | None] = mapped_column(String(255), nullable=True)  # private, on the server
+    attestation_note: Mapped[str] = mapped_column(String(500), default="")
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending | active | revoked
+    date: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    added_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

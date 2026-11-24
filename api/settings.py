@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     sentence_pause_ms: int = 250
     paragraph_pause_ms: int = 600
 
+    # Custom (clone) voices, phase 13: voice-clone worker (voiceclone/worker.py, PM2 "voice-clone", 127.0.0.1 only).
+    # Moving to a GPU host later = change clone_url; the secret lives only in api/.env.
+    data_dir: Path = API_DIR.parent / "data"   # voices/<id>/voice.json + reference audio, models/ (gitignored)
+    clone_url: str = "http://127.0.0.1:8101"
+    clone_secret: str = ""                     # shared secret (X-Clone-Secret); empty = clone voices disabled
+    clone_port: int = 8101
+    clone_threads: int = Field(3, ge=1, le=16)  # worker torch threads (runs at nice 10; Kokoro keeps priority)
+    clone_timeout_sec: float = 120.0           # per worker call (one sentence)
+    clone_max_chars: int = Field(1500, ge=1)   # per clone job (CPU is ~2x slower than Kokoro)
+
     # Post-processing
     sample_rate: int = 48000
     mp3_bitrate: str = "192k"

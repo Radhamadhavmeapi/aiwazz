@@ -57,7 +57,7 @@ import {
 } from "@/lib/tts";
 import { STYLES } from "@/lib/styles";
 import { cn } from "@/lib/utils";
-import { langLabel, LANGS, sampleUrl, VOICES, type Lang } from "@/lib/voices";
+import { findVoice, langLabel, LANGS, sampleUrl, studioEstimate, useVoices, VOICES, type Lang, type Voice } from "@/lib/voices";
 
 const MAX_CHARS = 5000;
 const SAMPLE_TEXT =
@@ -71,13 +71,18 @@ const LOUDNESS = [
 
 type Job =
   | { state: "idle" }
-  | { state: "queued"; position: number }
-  | { state: "running"; progress: number }
+  | { state: "queued"; position: number; studio?: StudioProgress }
+  | { state: "running"; progress: number; studio?: StudioProgress }
   | { state: "done"; url: string; urls?: Record<Format, string>; duration: number; voice: string; lufs: number | null; format: Format }
   | { state: "error"; message: string };
 
+/** Clone (studio) jobs: stage from the API ("speech" → "studio-queue" → "studio") + rough total time. */
+type StudioProgress = { stage?: string; estimate?: number };
+
 // ~14 chars/s of speech for Hindi, ~15 for English at speed 1.0
 const estimateSeconds = (chars: number, speed: number) => Math.round(chars / 14.5 / speed);
+/** "about 2 min" / "40 s" for wait times. */
+const fmtWait = (sec: number) => (sec < 60 ? `${Math.max(10, Math.round(sec / 10) * 10)} s` : `${Math.round(sec / 60)} min`);
 
 function Field({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -98,6 +103,8 @@ export default function GeneratePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [draft] = useState(loadDraft);
+  const allVoices = useVoices();
+  const wantedVoice = useRef<string | null>(params.get("voice") ?? draft.voice ?? null);
   const initialVoice = VOICES.find((v) => v.id === (params.get("voice") ?? draft.voice))?.id ?? "hf_alpha";
   const [text, setText] = useState(draft.text ?? SAMPLE_TEXT);
   const [lang, setLang] = useState<Lang>(VOICES.find((v) => v.id === initialVoice)!.lang);
@@ -162,13 +169,15 @@ export default function GeneratePage() {
   const pickStyle = (id: string | null) => {
     setStyle(id);
     const st = STYLES.find((x) => x.id === id);
-    if (st) (setSpeed(st.speed), setNormalize(true), setLufs(st.lufs));
+    const own = id ? findVoice(voice)?.studio?.styleSpeed[id] : undefined; // e.g. Veer reads Energetic reel at 1.08×
+    if (st) (setSpeed(own ?? st.speed), setNormalize(true), setLufs(st.lufs));
   };
   const looksHinglish = !PREVIEW && lang === "h" && !transliterate && text.trim().length > 12 && latinShare(text) > 0.6;
 
   const toJob = useCallback((u: JobStatus): Job => {
-    if (u.status === "queued") return { state: "queued", position: u.position || 1 };
-    if (u.status === "running") return { state: "running", progress: u.progress };
+    const studio = u.stage ? { stage: u.stage, estimate: u.estimate_sec } : undefined;
+    if (u.status === "queued") return { state: "queued", position: u.position || 1, studio };
+    if (u.status === "running") return { state: "running", progress: u.progress, studio };
     if (u.status === "error") return { state: "error", message: u.error || "Something went wrong while generating." };
     const r = lastReq.current;
     return {
@@ -220,10 +229,11 @@ export default function GeneratePage() {
     }
   }, [track]);
 
-  const voices = useMemo(() => VOICES.filter((v) => v.lang === lang), [lang]);
-  const current = VOICES.find((v) => v.id === voice)!;
+  const voices = useMemo(() => allVoices.filter((v) => v.lang === lang), [allVoices, lang]);
+  const current: Voice = allVoices.find((v) => v.id === voice) ?? VOICES[0];
+  const maxChars = current.studio?.maxChars ?? MAX_CHARS;
   const chars = text.length;
-  const over = chars > MAX_CHARS;
+  const over = chars > maxChars;
   const busy = job.state === "queued" || job.state === "running";
   const canGenerate = chars > 0 && !over && !busy;
 
@@ -233,10 +243,27 @@ export default function GeneratePage() {
     if (l !== "h") setTransliterate(false);
   };
   const pickVoice = useCallback((id: string) => {
-    const v = VOICES.find((x) => x.id === id)!;
+    const v = findVoice(id);
+    if (!v) return;
     setLang(v.lang);
     setVoice(id);
+    const st = v.studio?.defaultStyle ? STYLES.find((x) => x.id === v.studio!.defaultStyle) : undefined;
+    if (st) {
+      // A studio voice brings its own style + pace (Veer: Energetic reel at 1.08×); still changeable below.
+      setStyle(st.id);
+      setSpeed(v.studio!.styleSpeed[st.id] ?? st.speed);
+      setNormalize(true);
+      setLufs(st.lufs);
+    }
   }, []);
+  // Studio voices arrive from the API after the first render: restore one picked via ?voice= or the saved draft.
+  useEffect(() => {
+    const id = wantedVoice.current;
+    if (id && findVoice(id)?.studio) {
+      wantedVoice.current = null;
+      if (voice !== id) pickVoice(id);
+    }
+  }, [allVoices, voice, pickVoice]);
 
   const generate = useCallback(async () => {
     if (!canGenerate) {
@@ -370,16 +397,22 @@ export default function GeneratePage() {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-2.5 text-xs text-muted-foreground">
               <span id="char-count" className={cn("font-mono tabular", over && "font-medium text-danger")} aria-live="polite">
-                {chars.toLocaleString("en-IN")} / {MAX_CHARS.toLocaleString("en-IN")}
+                {chars.toLocaleString("en-IN")} / {maxChars.toLocaleString("en-IN")}
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="size-3.5" aria-hidden="true" />≈ <span className="font-mono tabular">{fmtTime(estimateSeconds(chars, speed))}</span>{" "}
                 audio
+                {current.studio && chars > 0 && (
+                  <>
+                    {" "}· about <span className="font-mono tabular">{fmtWait(studioEstimate(current, chars, speed))}</span> to make
+                  </>
+                )}
               </span>
               {over && (
                 <span className="flex items-center gap-1 text-danger">
                   <AlertCircle className="size-3.5" aria-hidden="true" />
-                  {(chars - MAX_CHARS).toLocaleString("en-IN")} characters over the limit
+                  {(chars - maxChars).toLocaleString("en-IN")} characters over the limit
+                  {current.studio && ` (${current.name} is a studio voice: up to ${maxChars.toLocaleString("en-IN")} per voiceover)`}
                 </span>
               )}
               <span className="flex items-center gap-3">
@@ -417,6 +450,16 @@ export default function GeneratePage() {
               </p>
             </div>
           )}
+          {current.studio && (
+            <p className="flex items-start gap-2 rounded-xl border bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-brand" aria-hidden="true" />
+              <span>
+                <span className="font-medium text-foreground">{current.name}</span> is a studio voice
+                {current.studio.isPublic ? "" : " (private to your account)"}. It takes about 2½ times as long as the other
+                voices on our CPU: a 60-second reel ≈ 2½ minutes. Up to {maxChars.toLocaleString("en-IN")} characters per voiceover.
+              </span>
+            </p>
+          )}
           <ResultPanel job={job} onRetry={() => void generate()} reduce={!!reduce} />
           {!PREVIEW && <RecentList refreshKey={recentKey} />}
         </section>
@@ -442,10 +485,10 @@ export default function GeneratePage() {
             </Field>
 
             <Field label="Voice" hint={`${voices.length} voices`}>
-              <div role="radiogroup" aria-label="Voice" className="grid gap-2">
+              <div role="radiogroup" aria-label="Voice" className="grid grid-cols-[minmax(0,1fr)] gap-2">
                 {loadingVoices
                   ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)
-                  : voices.map((v) => <VoiceCard key={v.id} voice={v} checked={voice === v.id} onSelect={setVoice} />)}
+                  : voices.map((v) => <VoiceCard key={v.id} voice={v} checked={voice === v.id} onSelect={pickVoice} />)}
               </div>
             </Field>
 
@@ -467,8 +510,9 @@ export default function GeneratePage() {
               <p className="text-xs leading-5 text-muted-foreground">
                 {currentStyle ? (
                   <>
-                    {currentStyle.description} {currentStyle.speed.toFixed(2)}×, {currentStyle.pauses}, {currentStyle.lufs} LUFS.{" "}
-                    {voice !== currentStyle.suggestedVoice && (
+                    {currentStyle.description} {(current.studio?.styleSpeed[currentStyle.id] ?? currentStyle.speed).toFixed(2)}×,{" "}
+                    {currentStyle.pauses}, {currentStyle.lufs} LUFS.{" "}
+                    {!current.studio && voice !== currentStyle.suggestedVoice && (
                       <button type="button" className="font-medium text-brand underline-offset-2 hover:underline" onClick={() => pickVoice(currentStyle.suggestedVoice)}>
                         Try it with {VOICES.find((v) => v.id === currentStyle.suggestedVoice)!.name}
                       </button>
@@ -640,7 +684,13 @@ function ResultPanel({ job, onRetry, reduce }: { job: Job; onRetry: () => void; 
                   <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
                   <span className="relative inline-flex size-2 rounded-full bg-primary" />
                 </span>
-                {job.state === "queued" ? "Waiting in queue" : "Synthesizing voice"}
+                {job.studio?.stage === "studio-queue"
+                  ? "Waiting for the studio voice"
+                  : job.studio?.stage === "studio"
+                    ? "Converting to the studio voice"
+                    : job.state === "queued"
+                      ? "Waiting in queue"
+                      : "Synthesizing voice"}
               </span>
               <span className="font-mono text-xs text-muted-foreground tabular">
                 {job.state === "queued" ? `position ${job.position}` : `${Math.round(job.progress * 100)}%`}
@@ -649,9 +699,11 @@ function ResultPanel({ job, onRetry, reduce }: { job: Job; onRetry: () => void; 
             <LiveWaveform mode="active" bars={64} className="h-16" progress={job.state === "running" ? job.progress : 0} />
             <Progress value={job.state === "running" ? job.progress * 100 : 4} aria-label="Generation progress" className="h-1" />
             <p className="text-xs text-muted-foreground">
-              {job.state === "queued"
-                ? "One voiceover is rendered at a time. Yours starts right after the current one."
-                : "Splitting sentences, synthesizing, then leveling to your loudness target…"}
+              {job.studio?.estimate
+                ? `Studio voice: about ${fmtWait(job.studio.estimate)} in total once it starts. You can leave this page; it keeps going and lands in History.`
+                : job.state === "queued"
+                  ? "One voiceover is rendered at a time. Yours starts right after the current one."
+                  : "Splitting sentences, synthesizing, then leveling to your loudness target…"}
             </p>
           </motion.div>
         )}
@@ -679,7 +731,8 @@ function ResultPanel({ job, onRetry, reduce }: { job: Job; onRetry: () => void; 
 
 function DoneView({ job, anim }: { job: Extract<Job, { state: "done" }>; anim: object }) {
   const [copied, setCopied] = useState(false);
-  const v = VOICES.find((x) => x.id === job.voice)!;
+  useVoices();
+  const v = findVoice(job.voice) ?? { name: job.voice, lang: "h" as Lang };
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(new URL(job.url, location.href).href);
@@ -768,7 +821,7 @@ function RecentList({ refreshKey }: { refreshKey: number }) {
               </li>
             ))
           : items.map((it) => {
-              const v = VOICES.find((x) => x.id === it.voice);
+              const v = findVoice(it.voice);
               const on = playing === it.id;
               return (
                 <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">

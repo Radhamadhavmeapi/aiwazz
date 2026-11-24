@@ -4,17 +4,18 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { usePreviewPlayer } from "@/components/audio/preview-player";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { LANGS, sampleUrl, VOICES } from "@/lib/voices";
+import { LANGS, previewUrl, useVoices } from "@/lib/voices";
 
 export default function VoicesPage() {
   const { playing, toggle } = usePreviewPlayer();
+  const voices = useVoices();
   return (
     <AppShell title="Voices">
       <div className="mx-auto max-w-5xl space-y-8 p-3 sm:p-5 lg:p-6">
         <div>
           <h2 className="text-h2 font-semibold">Voices</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {VOICES.length} voices in {LANGS.length} languages. Every preview is real output, levelled to -14 LUFS.
+            {voices.length} voices in {LANGS.length} languages. Every preview is real output, levelled to -14 LUFS.
           </p>
         </div>
         {LANGS.map((l) => (
@@ -23,7 +24,7 @@ export default function VoicesPage() {
               {l.label}
             </h3>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {VOICES.filter((v) => v.lang === l.id).map((v) => {
+              {voices.filter((v) => v.lang === l.id).map((v) => {
                 const on = playing === v.id;
                 return (
                   <li
@@ -36,7 +37,7 @@ export default function VoicesPage() {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => toggle(v.id, sampleUrl(v.id))}
+                        onClick={() => toggle(v.id, previewUrl(v))}
                         aria-label={on ? `Stop ${v.name}` : `Play ${v.name} preview`}
                         aria-pressed={on}
                         className={cn(
@@ -47,7 +48,14 @@ export default function VoicesPage() {
                         {on ? <Pause className="size-4 fill-current" /> : <Play className="ml-0.5 size-4 fill-current" />}
                       </button>
                       <div className="min-w-0">
-                        <p className="font-medium">{v.name}</p>
+                        <p className="flex items-center gap-2 font-medium">
+                          {v.name}
+                          {v.studio && (
+                            <span className="rounded-full border border-brand/40 bg-brand/10 px-1.5 py-px text-[10px] font-semibold tracking-wide text-brand uppercase">
+                              Studio
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {v.gender === "female" ? "Female" : "Male"} · {v.tone}
                         </p>

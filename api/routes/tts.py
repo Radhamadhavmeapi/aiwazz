@@ -10,14 +10,16 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.deps import Principal, csrf_protect, current_principal
+from auth.deps import Principal, csrf_protect, current_principal, optional_principal
 from db import get_db, utcnow
-from models import Generation
+from models import Generation, VoiceConsent
 from usage import get_usage
 from settings import get_settings
 from tts.hinglish import latin_share, to_devanagari
 from tts import pronounce
 from tts.jobs import ID_RE, Job, JobManager, QueueFull, TooManyPending, TTSRequest
+from tts.clone_client import CloneError
+from tts.clone_voices import CloneVoice
 from tts.styles import STYLES
 from tts.voices import DEFAULT_VOICE, VOICES
 
@@ -46,7 +48,7 @@ class PronunciationIn(BaseModel):
 
 class TTSIn(BaseModel):
     text: str = Field(min_length=1)
-    engine: Literal["kokoro"] = "kokoro"
+    engine: Literal["kokoro", "clone"] = "kokoro"   # clone voices are recognised by id; engine may stay "kokoro"
     voice: str = DEFAULT_VOICE
     lang: str | None = None                       # derived from the voice when omitted
     speed: float = Field(1.0, ge=0.7, le=1.3)
@@ -67,7 +69,9 @@ class TTSIn(BaseModel):
         if len(self.text) > s.max_chars:
             raise ValueError(f"text is longer than {s.max_chars} characters")
         v = VOICES.get(self.voice)
-        if v is None or v.engine != self.engine:
+        if v is None:
+            return self   # maybe a custom (clone) voice: checked in the route (needs the user + consent record)
+        if v.engine != self.engine:
             raise ValueError(f"unknown voice '{self.voice}' for engine '{self.engine}'")
         if self.lang is None:
             self.lang = v.lang
@@ -143,9 +147,35 @@ async def health(request: Request):
     return JSONResponse(body, status_code=200 if ready else 503)
 
 
+async def usable_clone_voice(request: Request, db: AsyncSession, p: Principal | None, voice_id: str) -> CloneVoice | None:
+    """A clone voice the caller may use: it exists, has an active consent record, and is public or the caller is an
+    admin (owner-only voices). Anything else looks exactly like an unknown voice."""
+    v = getattr(request.app.state, "clone_voices", {}).get(voice_id)
+    if v is None or p is None or not (v.is_public or p.user.is_admin):
+        return None
+    ok = await db.scalar(select(VoiceConsent.id).where(VoiceConsent.voice_id == v.id, VoiceConsent.status == "active",
+                                                       VoiceConsent.revoked_at.is_(None)).limit(1))
+    return v if ok else None
+
+
 @router.get("/voices")
-async def voices():
-    return {"voices": [v.to_dict() for v in VOICES.values()]}
+async def voices(request: Request, p: Principal | None = Depends(optional_principal), db: AsyncSession = Depends(get_db)):
+    out = [v.to_dict() for v in VOICES.values()]
+    for vid in getattr(request.app.state, "clone_voices", {}):
+        if cv := await usable_clone_voice(request, db, p, vid):
+            out.append(cv.to_public_dict())
+    return {"voices": out}
+
+
+@router.get("/voices/{voice_id}/preview")
+async def voice_preview(voice_id: str, request: Request, p: Principal | None = Depends(optional_principal),
+                        db: AsyncSession = Depends(get_db)):
+    """Preview MP3 of a custom voice (data/voices/<id>/preview.mp3), only for those who may use the voice."""
+    v = await usable_clone_voice(request, db, p, voice_id)
+    path = get_settings().data_dir / "voices" / v.id / "preview.mp3" if v else None
+    if path is None or not path.is_file():
+        raise HTTPException(404, "Not found")
+    return FileResponse(path, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.post("/tts", dependencies=[Depends(csrf_protect)])
@@ -160,7 +190,30 @@ async def create_tts(
     if not jm.engine.ready:
         raise HTTPException(503, "TTS engine is still loading, try again in a few seconds")
     s = get_settings()
-    style = STYLES.get(body.style) if body.style else None
+    clone: CloneVoice | None = None
+    if body.voice not in VOICES:
+        clone = await usable_clone_voice(request, db, p, body.voice)
+        if clone is None:
+            raise HTTPException(422, f"unknown voice '{body.voice}'")
+        if body.lang not in (None, clone.lang):
+            raise HTTPException(422, f"voice '{body.voice}' is language '{clone.lang}', not '{body.lang}'")
+        if body.transliterate and clone.lang != "h":
+            raise HTTPException(422, "transliterate works with Hindi voices only")
+        if len(body.text) > clone.max_chars:
+            raise HTTPException(422, f"{clone.name} is a studio voice: up to {clone.max_chars:,} characters per "
+                                     f"voiceover (this script has {len(body.text):,}). Split it into parts.")
+        try:
+            health = await asyncio.to_thread(jm.cloner.health) if jm.cloner else {}
+        except CloneError:
+            health = {}
+        if clone.id not in health.get("voices", []):
+            raise HTTPException(503, "The studio voice is unavailable right now. Please try again in a few minutes.")
+        body.lang, body.engine = clone.lang, "clone"
+    elif body.engine == "clone":
+        raise HTTPException(422, f"unknown voice '{body.voice}' for engine 'clone'")
+    # A clone voice brings its default style (Veer: Energetic reel) unless the request sets a style or a speed.
+    style_id = body.style or (clone.default_style if clone and "speed" not in body.model_fields_set else None)
+    style = STYLES.get(style_id) if style_id else None
     text = prepare_text(body.text, body.transliterate, await pronunciation_entries(db, p.user.id, body.pronunciations))
     if len(text) > 2 * s.max_chars:   # characters are counted on the original; don't let replacements blow it up
         raise HTTPException(422, "Pronunciation replacements make this script too long. Shorten the script or the replacements.")
@@ -170,12 +223,15 @@ async def create_tts(
         lufs = style.loudness_lufs if style else s.loudness_lufs
     # A style sets the speed unless the request gives one explicitly.
     speed = style.speed if style and "speed" not in body.model_fields_set else body.speed
+    if clone and "speed" not in body.model_fields_set:
+        speed = clone.speed_for(style_id, style.speed if style else None)
     req = TTSRequest(text=text, engine=body.engine, voice=body.voice, lang=body.lang, speed=speed, format=body.format,
                      loudness_lufs=lufs if body.normalize else None,
                      sentence_pause_ms=style.sentence_pause_ms if style else None,
-                     paragraph_pause_ms=style.paragraph_pause_ms if style else None)
+                     paragraph_pause_ms=style.paragraph_pause_ms if style else None,
+                     source_voice=clone.source_voice if clone else None)
     try:
-        jm.check_capacity(p.user.id)
+        jm.check_capacity(p.user.id, clone=clone is not None)
     except QueueFull:
         raise HTTPException(429, "The queue is full, please try again in a minute")
     except TooManyPending:
@@ -189,12 +245,13 @@ async def create_tts(
     gen = Generation(
         id=secrets.token_hex(16), user_id=p.user.id, api_key_id=p.api_key.id if p.api_key else None,
         engine=req.engine, voice=req.voice, lang=req.lang, speed=req.speed, format=req.format,
-        loudness_target=req.loudness_lufs, style=body.style, text_chars=len(body.text),
+        loudness_target=req.loudness_lufs, style=style_id, text_chars=len(body.text),
         text_excerpt=" ".join(pronounce.strip_inline(body.text).split())[:160],
     )
     db.add(gen)
     await db.commit()
-    job = jm.submit(req, job_id=gen.id, user_id=p.user.id)
+    job = jm.submit(req, job_id=gen.id, user_id=p.user.id,
+                    estimate_sec=clone.estimate_sec(len(text), speed) if clone else None)
 
     if wait:
         try:

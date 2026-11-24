@@ -2,7 +2,7 @@
 """Render the hidden Voice Lab page (login.aiwazz.in/preview/voice-lab/) from samples/manifest.json
 (track A, written by api/scripts/voice_lab.py) and an optional tracks.json (tracks B/C notes).
 Notes (👍/👎 + text) are stored only in the viewer's browser (localStorage), no backend.
-Usage: python3 tools/voice_lab_page.py /www/wwwroot/login.aiwazz.in/preview/voice-lab
+Usage: python3 tools/voice_lab_page.py /www/aiwazz/data/preview/voice-lab   (served admin-only at /api/preview/voice-lab/)
 (copy the Noto Sans Devanagari woff2 to <dir>/fonts/noto-deva.woff2 so Hindi renders on every device)
 """
 import html
